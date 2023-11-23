@@ -12,6 +12,8 @@ import (
 	"github.com/KiraCore/interx/types"
 	kiratypes "github.com/KiraCore/sekai/types"
 	multistaking "github.com/KiraCore/sekai/x/multistaking/types"
+	abciTypes "github.com/cometbft/cometbft/abci/types"
+	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/signing"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -19,8 +21,6 @@ import (
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
-	tmTypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // RegisterBlockRoutes registers block/transaction query routers.

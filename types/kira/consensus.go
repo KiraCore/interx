@@ -3,7 +3,7 @@ package kira
 import (
 	"time"
 
-	tmConsTypes "github.com/tendermint/tendermint/consensus/types"
+	tmConsTypes "github.com/cometbft/cometbft/consensus/types"
 )
 
 type Validator struct {

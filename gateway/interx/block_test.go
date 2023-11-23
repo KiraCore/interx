@@ -12,11 +12,11 @@ import (
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/test"
 	"github.com/KiraCore/interx/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmRPCTypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
+	tmTypes "github.com/cometbft/cometbft/types"
 	"github.com/stretchr/testify/suite"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmRPCTypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmJsonRPCTypes "github.com/tendermint/tendermint/rpc/jsonrpc/types"
-	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 type BlockQueryTestSuite struct {

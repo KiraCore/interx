@@ -10,11 +10,13 @@ echoInfo "INFO: $TEST_NAME - Integration Test - START"
 VALIDATOR_ADDRESS=$(showAddress validator)
 addAccount testuser9
 TESTUSER_ADDRESS=$(showAddress testuser9)
-RESULT=$(sekaid tx bank send validator $TESTUSER_ADDRESS 5ukex --keyring-backend=test --chain-id=$NETWORK_NAME --fees 100ukex --broadcast-mode=block --output=json --yes --home=$SEKAID_HOME 2> /dev/null || exit 1)
-TX_HASH=0x$(echo $RESULT | jsonQuickParse "txhash" | tr -d '"')
+RESULT=$(sekaid tx bank send validator $TESTUSER_ADDRESS 5ukex --keyring-backend=test --chain-id=$NETWORK_NAME --fees 100ukex --broadcast-mode=async --output=json --yes --home=$SEKAID_HOME 2> /dev/null || exit 1)
+TX_HASH=0x$(echo $RESULT | jsonQuickParse "txhash")
+
+sleep 5
 
 INTERX_GATEWAY="127.0.0.1:11000"
-RESULT_FROM_INTERX=$(curl --fail $INTERX_GATEWAY/api/transactions?address=$TESTUSER_ADDRESS&type=send || exit 1)
+RESULT_FROM_INTERX=$(curl --fail "$INTERX_GATEWAY/api/transactions?address=$TESTUSER_ADDRESS&type=send" || exit 1)
 
 RESULT_TOTAL_COUNT=$(echo $RESULT_FROM_INTERX | jq '.total_count' | tr -d '"')
 RESULT_TX_HASH=$(echo $RESULT_FROM_INTERX | jq '.transactions[0].hash' | tr -d '"')

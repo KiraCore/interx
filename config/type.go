@@ -2,8 +2,8 @@ package config
 
 import (
 	"github.com/KiraCore/interx/types"
+	"github.com/cometbft/cometbft/p2p"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
-	"github.com/tendermint/tendermint/p2p"
 )
 
 // FaucetConfig is a struct to be used for Faucet configuration

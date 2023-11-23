@@ -1,9 +1,9 @@
 package config
 
 const (
-	InterxVersion = "v0.4.40"
-	SekaiVersion  = "v0.3.29"
-	CosmosVersion = "v0.45.10"
+	InterxVersion = "v0.4.41"
+	SekaiVersion  = "v0.3.38"
+	CosmosVersion = "v0.47.5"
 
 	QueryDashboard = "/api/dashboard"
 
@@ -44,6 +44,7 @@ const (
 
 	QueryStakingPool           = "/api/kira/staking-pool"
 	QueryDelegations           = "/api/kira/delegations"
+	QueryUndelegations         = "/api/kira/undelegations"
 	QuerySpendingPools         = "/api/kira/spending-pools"
 	QuerySpendingPoolProposals = "/api/kira/spending-pool-proposals"
 

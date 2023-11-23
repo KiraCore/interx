@@ -203,6 +203,19 @@ type QueryValidatorPoolResult struct {
 	Tokens          []string   `json:"tokens"`
 }
 
+type Undelegation struct {
+	ID         uint64   `json:"id,string"`
+	Address    string   `json:"address"`
+	ValAddress string   `json:"valaddress"`
+	Expiry     string   `json:"expiry"`
+	Amount     []string `json:"amount"`
+}
+
+// QueryDelegationsResult is a struct to be used for query delegations response
+type QueryUndelegationsResult struct {
+	Undelegations []Undelegation `json:"undelegations"`
+}
+
 type Delegation struct {
 	ValidatorInfo struct {
 		Moniker string `json:"moniker,omitempty"`

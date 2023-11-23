@@ -93,6 +93,7 @@ func GetGrpcServeMux(grpcAddr string) (*runtime.ServeMux, error) {
 	}
 
 	gwCosmosmux := runtime.NewServeMux()
+
 	err = cosmosBank.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register gateway: %w", err)

@@ -16,11 +16,11 @@ import (
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
 	"github.com/KiraCore/interx/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmTypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmJsonRPCTypes "github.com/tendermint/tendermint/rpc/jsonrpc/types"
 )
 
 // MakeTendermintRPCRequest is a function to make GET request

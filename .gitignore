@@ -5,8 +5,7 @@ interx.mnemonic
 proto-gen
 postman.json
 third_party/proto
-proto/cosmos
-proto/kira
+proto/
 codec/
 bin
 nfpm_*

@@ -13,10 +13,10 @@ import (
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/kira"
+	tmRPCTypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	tmRPCTypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // RegisterValidatorsQueryRoutes registers validators query routers.

@@ -10,7 +10,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/types"
-	legacytx "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	legacytx "github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -160,7 +160,7 @@ func encodeTransactionHandle(r *http.Request, request types.InterxRequest, rpcAd
 		return common.ServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
-	signBytes := legacytx.StdSignBytes(req.ChainID, req.AccountNumber, req.Sequence, 0, req.Tx.Fee, req.Tx.Msgs, req.Tx.Memo)
+	signBytes := legacytx.StdSignBytes(req.ChainID, req.AccountNumber, req.Sequence, 0, req.Tx.Fee, req.Tx.Msgs, req.Tx.Memo, req.Tx.GetTip())
 
 	// TxEncodeResponse defines base64 encoded transaction.
 	type TxEncodeResponse struct {

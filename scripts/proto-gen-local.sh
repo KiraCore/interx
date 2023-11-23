@@ -8,15 +8,17 @@ echoInfo "Generating protobuf files..."
 for dir in $proto_dirs; do
     proto_fils=$(find "${dir}" -maxdepth 1 -name '*.proto') 
     for fil in $proto_fils; do
-        buf protoc \
-          -I "./proto" \
-          -I third_party/grpc-gateway/ \
-		  -I third_party/googleapis/ \
-		  -I third_party/proto/ \
-          --go_out=paths=source_relative:./proto-gen \
-          --go-grpc_out=paths=source_relative:./proto-gen \
-          --grpc-gateway_out=logtostderr=true,paths=source_relative:./proto-gen \
-          $fil || ( echoErr "ERROR: Failed proto build for: ${fil}" && sleep 2 && exit 1 )
+        if grep -q "option go_package" "$fil"; then
+            buf protoc \
+            -I "./proto" \
+            -I third_party/grpc-gateway/ \
+            -I third_party/googleapis/ \
+            -I third_party/proto/ \
+            --go_out=paths=source_relative:./proto-gen \
+            --go-grpc_out=paths=source_relative:./proto-gen \
+            --grpc-gateway_out=logtostderr=true,paths=source_relative:./proto-gen \
+            $fil || ( echoErr "ERROR: Failed proto build for: ${fil}" && sleep 2 && exit 1 )
+        fi
     done
 done
 

@@ -12,14 +12,14 @@ import (
 	"github.com/KiraCore/interx/types"
 	sekaiapp "github.com/KiraCore/sekai/app"
 	sekaiappparams "github.com/KiraCore/sekai/app/params"
+	"github.com/cometbft/cometbft/crypto"
+	"github.com/cometbft/cometbft/crypto/sr25519"
+	"github.com/cometbft/cometbft/p2p"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	bytesize "github.com/inhies/go-bytesize"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/sr25519"
-	"github.com/tendermint/tendermint/p2p"
 	"github.com/tyler-smith/go-bip39"
 )
 

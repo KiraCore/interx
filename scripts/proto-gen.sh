@@ -21,7 +21,7 @@ fi
 
 # install golang if needed
 if  ($(isNullOrEmpty "$GO_VER")) || ($(isNullOrEmpty "$GOBIN")) ; then
-    GO_VERSION="1.18.3" && ARCH=$(([[ "$(uname -m)" == *"arm"* ]] || [[ "$(uname -m)" == *"aarch"* ]]) && echo "arm64" || echo "amd64") && \
+    GO_VERSION="1.19" && ARCH=$(([[ "$(uname -m)" == *"arm"* ]] || [[ "$(uname -m)" == *"aarch"* ]]) && echo "arm64" || echo "amd64") && \
      OS_VERSION=$(uname) && GO_TAR=go${GO_VERSION}.${OS_VERSION,,}-${ARCH}.tar.gz && rm -rfv /usr/local/go && cd /tmp && rm -fv ./$GO_TAR && \
      wget https://dl.google.com/go/${GO_TAR} && \
      tar -C /usr/local -xvf $GO_TAR && rm -fv ./$GO_TAR && \
@@ -141,7 +141,7 @@ if ($(isNullOrEmpty "$BUF_VER")) || [ "$INTERX_PROTO_DEP_VER" != "$EXPECTED_INTE
     go install github.com/regen-network/cosmos-proto/protoc-gen-gocosmos@v0.3.1 2> /dev/null || : 
     go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
     setGlobEnv INTERX_PROTO_DEP_VER "$EXPECTED_INTERX_PROTO_DEP_VER"
 fi
 
@@ -151,20 +151,19 @@ SEKAI_BRANCH=$(grep -Fn -m 1 'SekaiVersion ' $CONSTANS_FILE | rev | cut -d "=" -
 ($(isNullOrEmpty "$COSMOS_BRANCH")) && ( echoErr "ERROR: CosmosVersion was NOT found in contants '$CONSTANS_FILE' !" && sleep 5 && exit 1 )
 ($(isNullOrEmpty "$SEKAI_BRANCH")) && ( echoErr "ERROR: SekaiVersion was NOT found in contants '$CONSTANS_FILE' !" && sleep 5 && exit 1 )
 
-go get github.com/KiraCore/sekai@$SEKAI_BRANCH
 go get github.com/cosmos/cosmos-sdk@$COSMOS_BRANCH
 
 echoInfo "Cleaning up proto gen files..."
 rm -rfv ./proto-gen
+mkdir -p ./proto-gen
 mkdir -p ./proto-gen ./proto
-kira_dir=$(go list -f '{{ .Dir }}' -m github.com/KiraCore/sekai@$SEKAI_BRANCH)
 cosmos_sdk_dir=$(go list -f '{{ .Dir }}' -m github.com/cosmos/cosmos-sdk@$COSMOS_BRANCH)
 
-rm -rfv ./proto/cosmos ./proto/kira ./third_party/proto
+rm -rfv ./third_party/proto ./proto/cosmos ./proto/kira
 mkdir -p ./third_party/proto
 cp -rfv $cosmos_sdk_dir/proto/cosmos ./proto
-cp -rfv $cosmos_sdk_dir/third_party/proto/* ./third_party/proto
-# cp -rfv $kira_dir/proto/kira ./proto
+cp -rfv $cosmos_sdk_dir/proto/amino ./proto
+tar -C ./third_party/ -xvf ./third_party_cosmos_proto.tar.xz
 
 wget https://github.com/KiraCore/sekai/releases/download/$SEKAI_BRANCH/source-code.tar.gz
 mkdir -p sekai
@@ -176,8 +175,8 @@ rm -rfv ./sekai
 ### This part is required by gocosmos_out
 rm -rfv ./codec && mkdir -p codec/types
 buf protoc -I "third_party/proto" --gogotypes_out=./codec/types third_party/proto/google/protobuf/any.proto
-mv codec/types/google/protobuf/any.pb.go codec/types
-rm -rfv codec/types/third_party
+mv codec/types/google.golang.org/protobuf/types/known/anypb/any.pb.go codec/types
+rm -rfv codec/types/google.golang.org/protobuf/types/known/anypb
 rm -rfv ./third_party/proto/gogoproto
 rm -rfv ./third_party/proto/google
 ###
@@ -210,15 +209,17 @@ echoInfo "Generating protobuf files..."
 for dir in $proto_dirs; do
     proto_fils=$(find "${dir}" -maxdepth 1 -name '*.proto') 
     for fil in $proto_fils; do
-        buf protoc \
-          -I "./proto" \
-          -I third_party/grpc-gateway/ \
-		  -I third_party/googleapis/ \
-		  -I third_party/proto/ \
-          --go_out=paths=source_relative:./proto-gen \
-          --go-grpc_out=paths=source_relative:./proto-gen \
-          --grpc-gateway_out=logtostderr=true,paths=source_relative:./proto-gen \
-          $fil || ( echoErr "ERROR: Failed proto build for: ${fil}" && sleep 2 && exit 1 )
+        if grep -q "option go_package" "$fil"; then
+            buf protoc \
+            -I "./proto" \
+            -I third_party/grpc-gateway/ \
+            -I third_party/googleapis/ \
+            -I third_party/proto/ \
+            --go_out=paths=source_relative:./proto-gen \
+            --go-grpc_out=paths=source_relative:./proto-gen \
+            --grpc-gateway_out=logtostderr=true,paths=source_relative:./proto-gen \
+            $fil || ( echoErr "ERROR: Failed proto build for: ${fil}" && sleep 2 && exit 1 )
+        fi
     done
 done
 

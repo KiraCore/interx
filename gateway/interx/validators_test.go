@@ -17,8 +17,8 @@ import (
 	multiStakingTypes "github.com/KiraCore/sekai/x/multistaking/types"
 	slashingTypes "github.com/KiraCore/sekai/x/slashing/types"
 	stakingTypes "github.com/KiraCore/sekai/x/staking/types"
+	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/stretchr/testify/suite"
-	tmJsonRPCTypes "github.com/tendermint/tendermint/rpc/jsonrpc/types"
 	"google.golang.org/grpc"
 )
 

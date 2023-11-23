@@ -32,7 +32,7 @@ function pcgRelease() {
     mkdir -p $BIN_PATH $RELEASE_DIR
 
     echoInfo "INFO: Building $ARCH package for $PLATFORM..."
-    env GOOS=$PLATFORM GOARCH=$ARCH go build -o $BIN_PATH
+    env GOOS=$PLATFORM GOARCH=$ARCH go build -ldflags "-X google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=ignore" -o $BIN_PATH
     TMP_PKG_CONFIG_FILE=./nfpm_${ARCH}_${PLATFORM}.yaml
     rm -rfv $TMP_PKG_CONFIG_FILE && cp -v $PKG_CONFIG_FILE $TMP_PKG_CONFIG_FILE
 

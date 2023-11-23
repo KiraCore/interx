@@ -11,8 +11,9 @@ VALIDATOR_ADDRESS=$(showAddress validator)
 addAccount testuser5
 TESTUSER_ADDRESS=$(showAddress testuser5)
 
-RESULT=$(sekaid tx bank send validator $TESTUSER_ADDRESS 5ukex --keyring-backend=test --chain-id=$NETWORK_NAME --fees 100ukex --broadcast-mode=block --output=json --yes --home=$SEKAID_HOME 2> /dev/null || exit 1)
-TX_HASH=$(echo $RESULT | jsonQuickParse "txhash" | tr -d '"')
+RESULT=$(sekaid tx bank send validator $TESTUSER_ADDRESS 5ukex --keyring-backend=test --chain-id=$NETWORK_NAME --fees 100ukex --broadcast-mode=async --output=json --yes --home=$SEKAID_HOME 2> /dev/null || exit 1)
+TX_HASH=$(echo $RESULT | jsonQuickParse "txhash")
+sleep 5
 
 INTERX_GATEWAY="127.0.0.1:11000"
 RESULT_FROM_INTERX=$(curl --fail $INTERX_GATEWAY/api/transactions/0x$TX_HASH || exit 1)

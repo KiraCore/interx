@@ -8,7 +8,7 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
-	tmTypes "github.com/tendermint/tendermint/rpc/core/types"
+	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
 )
 
 // GetTransactions is a function to get user transactions from cache

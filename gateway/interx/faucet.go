@@ -11,7 +11,8 @@ import (
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	legacytx "github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	legacytx "github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -158,9 +159,10 @@ func serveFaucet(r *http.Request, gwCosmosmux *runtime.ServeMux, request types.I
 	msgs := []sdk.Msg{msgSend}
 	fee := legacytx.NewStdFee(200000, sdk.NewCoins(feeAmount)) //Fee handling
 	memo := "Faucet Transfer"
+	tip := &tx.Tip{Amount: msgSend.Amount, Tipper: "test"}
 
 	sigs := make([]legacytx.StdSignature, 1)
-	signBytes := legacytx.StdSignBytes(common.NodeStatus.Chainid, accountNumber, sequence, 0, fee, msgs, memo)
+	signBytes := legacytx.StdSignBytes(common.NodeStatus.Chainid, accountNumber, sequence, 0, fee, msgs, memo, tip)
 
 	sig, err := config.Config.Faucet.PrivKey.Sign(signBytes)
 	if err != nil {

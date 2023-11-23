@@ -17,12 +17,12 @@ import (
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/types"
 	kiratypes "github.com/KiraCore/sekai/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/signing"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmTypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmJsonRPCTypes "github.com/tendermint/tendermint/rpc/jsonrpc/types"
 	"golang.org/x/exp/slices"
 )
 
