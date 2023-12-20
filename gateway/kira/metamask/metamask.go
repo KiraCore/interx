@@ -231,7 +231,6 @@ func MetamaskRequestHandler(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 				return
 			}
 
-			// TODO: check after token sending
 			result = fmt.Sprintf("0x%x", sequence)
 		case "eth_sendTransaction":
 			// var params EthSendTransaction

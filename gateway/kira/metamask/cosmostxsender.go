@@ -93,11 +93,17 @@ const (
 
 var grpcConn *grpc.ClientConn
 
+// decode 256bit param like bool, uint, hex-typed address etc
 func Decode256Bit(data *[]byte, params *[][]byte) {
 	*params = append(*params, (*data)[:32])
 	*data = (*data)[32:]
 }
 
+// decode string-typed param
+// structure:
+// * offset - offset of the string in the data 	: 32byte
+// * length - length of the string 				: 32byte
+// * content - content of the string			: (length/32+1)*32byte
 func DecodeString(data *[]byte, params *[][]byte) {
 	// offset := data[:32] // string value offset
 	*data = (*data)[32:]
@@ -109,6 +115,13 @@ func DecodeString(data *[]byte, params *[][]byte) {
 	*data = (*data)[(length/32+1)*32:]
 }
 
+// decode string-typed params - if string-typed params are consecutive, offsets are placed on top
+// and length, contents are placed in order
+// structure:
+// * offsets - offsets of the strings in the data 	: length*32byte
+// * array of below data
+// ** length - length of the string 				: 32byte
+// ** content - content of the string				: (length/32+1)*32byte
 func DecodeStrings(data *[]byte, params *[][]byte, paramLen int) {
 	// remove offset of each string
 	*data = (*data)[32*paramLen:]
@@ -121,6 +134,13 @@ func DecodeStrings(data *[]byte, params *[][]byte, paramLen int) {
 	}
 }
 
+// decode string-array-typed param
+// structure:
+// * offset - offset of the strings in the data 	: 32byte
+// * offsets - offsets of the string in the data 	: length*32byte
+// * array of below data
+// ** length - length of the string 				: 32byte
+// ** content - content of the string				: (length/32+1)*32byte
 func DecodeStringArray(data *[]byte, params *[][]byte) {
 	// offset := data[:32] // string value offset
 	*data = (*data)[32:]
@@ -140,6 +160,12 @@ func DecodeStringArray(data *[]byte, params *[][]byte) {
 	}
 }
 
+// decode hex-array-typed param
+// structure:
+// * offset - offset of the hex-array in the data 	: 32byte
+// * length - length of the hex 					: 32byte
+// * array of below data
+// ** content - content of the hex					: 32byte
 func DecodeHexArray(data *[]byte, params *[][]byte) {
 	// offset := data[:32] // string value offset
 	*data = (*data)[32:]

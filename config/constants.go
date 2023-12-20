@@ -10,8 +10,7 @@ const (
 	DefaultKiraValAddrPrefix = "kiravaloper"
 	DefaultKiraDenom         = "ukex"
 
-	// TODO: change endpoint to api/kira/evm
-	MetamaskEndpoint     = "/api/k/evm"
+	MetamaskEndpoint     = "api/kira/evm"
 	RegisterAddrEndpoint = "/api/kira/evm/register_address/{eth_addr}{cosmos_addr}"
 
 	QueryDashboard = "/api/dashboard"
