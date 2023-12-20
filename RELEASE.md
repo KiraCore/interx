@@ -1,5 +1,5 @@
 
 Features:
 
-* Implement QueryUndelegations endpoint
-* Bump sekai version to v0.3.38
+* Implement KIP-87 : broadcast metamask coin send transaction to sekai
+* Implement KIP-87 : broadcast eip-712 signed transaction to sekai
