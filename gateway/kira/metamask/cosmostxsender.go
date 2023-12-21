@@ -124,6 +124,7 @@ func DecodeString(data *[]byte, params *[][]byte) {
 // ** content - content of the string				: (length/32+1)*32byte
 func DecodeStrings(data *[]byte, params *[][]byte, paramLen int) {
 	// remove offset of each string
+	*data = (*data)[32:]
 	*data = (*data)[32*paramLen:]
 	for i := 0; i < paramLen; i++ {
 		length, _ := bytes2uint64((*data)[:32])
@@ -142,9 +143,6 @@ func DecodeStrings(data *[]byte, params *[][]byte, paramLen int) {
 // ** length - length of the string 				: 32byte
 // ** content - content of the string				: (length/32+1)*32byte
 func DecodeStringArray(data *[]byte, params *[][]byte) {
-	// offset := data[:32] // string value offset
-	*data = (*data)[32:]
-
 	length, _ := bytes2uint64((*data)[:32])
 	*params = append(*params, (*data)[:32])
 	*data = (*data)[32:]
@@ -1293,6 +1291,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 		msg = custodytypes.NewMsgDeclineCustodyTransaction(from, to, string(params[5]))
 	}
+
+	fmt.Println(msg)
 	err = txBuilder.SetMsgs(msg)
 	if err != nil {
 		return nil, err
