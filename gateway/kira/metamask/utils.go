@@ -11,6 +11,7 @@ import (
 	"github.com/KiraCore/interx/config"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 const (
@@ -134,10 +135,21 @@ func bytes2int32(param []byte) (int32, error) {
 	return int32(integer), nil
 }
 
-func intToBytes(num int64) []byte {
-	byteArr := make([]byte, 8) // Assuming int64, which is 8 bytes
-	binary.LittleEndian.PutUint64(byteArr, uint64(num))
-	return byteArr
+func uint32To32Bytes(val uint32) []byte {
+	byteArr := make([]byte, 4)
+	binary.BigEndian.PutUint32(byteArr, val)
+
+	paddedByteArr := addPaddingTo32Bytes(byteArr)
+
+	return paddedByteArr
+}
+
+func addPaddingTo32Bytes(byteArr []byte) []byte {
+	// Pad the byte array with leading zeros to get the desired length
+	paddedByteArr := make([]byte, 32)
+	copy(paddedByteArr[32-len(byteArr):], byteArr)
+
+	return paddedByteArr
 }
 
 func bytes2cosmosAddr(param []byte) (cosmostypes.AccAddress, error) {
@@ -171,4 +183,32 @@ func bytes2cosmosValAddr(param []byte) (cosmostypes.ValAddress, error) {
 
 func bytes2bool(param []byte) bool {
 	return (param[len(param)-1] == 0x01)
+}
+
+func PackABIParams(abi abi.ABI, name string, args ...interface{}) ([]byte, error) {
+	method, exist := abi.Methods[name]
+	if !exist {
+		return nil, fmt.Errorf("method '%s' not found", name)
+	}
+	arguments, err := method.Inputs.Pack(args...)
+	if err != nil {
+		return nil, err
+	}
+	// Pack up the method ID too if not a constructor and return
+	return arguments, nil
+}
+
+func convertByteArr2Bytes32(val []byte) [32]byte {
+	var returnVal [32]byte
+	copy(returnVal[:], val)
+	return returnVal
+}
+
+func getSignature(r, s, v []byte) []byte {
+	sig := make([]byte, 65)
+	copy(sig[:32], r)
+	copy(sig[32:64], s)
+	copy(sig[64:], v)
+	sig[64] = sig[64] - 27
+	return sig
 }

@@ -253,7 +253,7 @@ func MetamaskRequestHandler(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 				return
 			}
 
-			txHash, err := SendTx(strData, gwCosmosmux, r)
+			txHash, err := sendTx(strData, gwCosmosmux, r)
 			if err != nil {
 				fmt.Println("eth_sendRawTransaction err:", err)
 				return

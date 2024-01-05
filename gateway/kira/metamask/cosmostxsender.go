@@ -29,7 +29,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	xauthsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )
@@ -87,11 +89,26 @@ const (
 	MsgDropCustodyCustodians
 	MsgRemoveFromCustodyWhiteList
 	MsgDropCustodyWhiteList
-	MsgApproveCustodyTransaction
-	MsgDeclineCustodyTransaction
+	MsgApproveCustodyTx
+	MsgDeclineCustodyTx
 )
 
 var grpcConn *grpc.ClientConn
+
+type DelegateParam struct {
+	Amount string `json:"amount"`
+	// If true it returns the full transaction objects, if false only the hashes of the transactions
+	To string `json:"to"`
+}
+
+type UpsertTokenAliasParam struct {
+	Symbol      string   `json:"symbol"`
+	Name        string   `json:"name"`
+	Icon        string   `json:"icon"`
+	Decimals    uint32   `json:"decimals"`
+	Denoms      []string `json:"denoms"`
+	Invalidated bool     `json:"invalidated"`
+}
 
 // decode 256bit param like bool, uint, hex-typed address etc
 func Decode256Bit(data *[]byte, params *[][]byte) {
@@ -115,65 +132,6 @@ func DecodeString(data *[]byte, params *[][]byte) {
 	*data = (*data)[(length/32+1)*32:]
 }
 
-// decode string-typed params - if string-typed params are consecutive, offsets are placed on top
-// and length, contents are placed in order
-// structure:
-// * offsets - offsets of the strings in the data 	: length*32byte
-// * array of below data
-// ** length - length of the string 				: 32byte
-// ** content - content of the string				: (length/32+1)*32byte
-func DecodeStrings(data *[]byte, params *[][]byte, paramLen int) {
-	// remove offset of each string
-	*data = (*data)[32:]
-	*data = (*data)[32*paramLen:]
-	for i := 0; i < paramLen; i++ {
-		length, _ := bytes2uint64((*data)[:32])
-		*data = (*data)[32:]
-
-		*params = append(*params, (*data)[:length])
-		*data = (*data)[(length/32+1)*32:]
-	}
-}
-
-// decode string-array-typed param
-// structure:
-// * offset - offset of the strings in the data 	: 32byte
-// * offsets - offsets of the string in the data 	: length*32byte
-// * array of below data
-// ** length - length of the string 				: 32byte
-// ** content - content of the string				: (length/32+1)*32byte
-func DecodeStringArray(data *[]byte, params *[][]byte) {
-	length, _ := bytes2uint64((*data)[:32])
-	*params = append(*params, (*data)[:32])
-	*data = (*data)[32:]
-
-	// remove offset of each string
-	*data = (*data)[32*length:]
-	for i := uint64(0); i < length; i++ {
-		length, _ := bytes2uint64((*data)[:32])
-		*data = (*data)[32:]
-
-		*params = append(*params, (*data)[:length])
-		*data = (*data)[(length/32+1)*32:]
-	}
-}
-
-// decode hex-array-typed param
-// structure:
-// * offset - offset of the hex-array in the data 	: 32byte
-// * length - length of the hex 					: 32byte
-// * array of below data
-// ** content - content of the hex					: 32byte
-func DecodeHexArray(data *[]byte, params *[][]byte) {
-	// offset := data[:32] // string value offset
-	*data = (*data)[32:]
-
-	length, _ := bytes2uint64((*data)[:32])
-	*data = (*data)[32:]
-
-	*params = append(*params, (*data)[:length])
-}
-
 func DecodeParam(data []byte, txType int) [][]byte {
 	if txType == MsgBankSend {
 		return nil
@@ -186,191 +144,13 @@ func DecodeParam(data []byte, txType int) [][]byte {
 		Decode256Bit(&data, &params)
 	}
 
-	switch txType {
-	case MsgSubmitEvidence: // TODO: test
-		// height, power, time, consensusAddr
-		Decode256Bit(&data, &params)
-		Decode256Bit(&data, &params)
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgSubmitProposal:
-	case MsgVoteProposal: // TODO: test
-		// proposalID, option, slash
-		Decode256Bit(&data, &params)
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgRegisterIdentityRecords:
-		// identityInfo,
-		DecodeString(&data, &params)
-	case MsgDeleteIdentityRecord:
-		// len, keys
-		DecodeStringArray(&data, &params)
-	case MsgRequestIdentityRecordsVerify:
-		// tip, verifier, recordIds
-		DecodeStrings(&data, &params, 2)
-
-		// recordIds
-		DecodeHexArray(&data, &params)
-	case MsgHandleIdentityRecordsVerifyRequest:
-		// requestId, isApprove
-		Decode256Bit(&data, &params)
-		Decode256Bit(&data, &params)
-	case MsgCancelIdentityRecordsVerifyRequest:
-		// verifyRequestId
-		Decode256Bit(&data, &params)
-	case MsgSetNetworkProperties:
-		// len, boolParamsList, len, uintParamsList, len, strParamsList, len, legacyDecParamsList
-
-		// len, boolParamsList
-		DecodeHexArray(&data, &params)
-
-		// len, uintParamsList
-		DecodeHexArray(&data, &params)
-
-		// len, strParamsList
-		DecodeStringArray(&data, &params)
-
-		// len, legacyDecParamsList
-		DecodeStringArray(&data, &params)
-	case MsgSetExecutionFee:
-		// executionFee, failureFee, timeout, defaultParams, transactionType
-		for i := 0; i < 4; i++ {
-			Decode256Bit(&data, &params)
-		}
-
-		// transactionType
-		DecodeString(&data, &params)
-	case MsgClaimCouncilor:
-		// moniker string, username string, description string, social string, contact string, avatar string
-		DecodeStrings(&data, &params, 6)
-	case MsgWhitelistPermissions:
-		// permission uint, controlledAddr address
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgBlacklistPermissions:
-		// permission uint, addr address
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgCreateRole:
-		// sid string, description string
-		DecodeString(&data, &params)
-		DecodeString(&data, &params)
-	case MsgAssignRole:
-		// roleid uint32, controller address
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgUnassignRole:
-		// roleid uint32, controller address
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgWhitelistRolePermission:
-		// permission uint32, roleIdentifier string
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgBlacklistRolePermission:
-		// permission uint32, roleIdentifier string
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgRemoveWhitelistRolePermission:
-		// permission uint32, roleIdentifier string
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgRemoveBlacklistRolePermission:
-		// permission uint32, roleIdentifier string
-		Decode256Bit(&data, &params)
-		DecodeString(&data, &params)
-	case MsgClaimValidator:
-	case MsgUpsertTokenAlias:
-		// invalidated bool, decimals uint32, symbol string, name string, icon string, len, denoms []string
-		Decode256Bit(&data, &params)
-		Decode256Bit(&data, &params)
-		DecodeStrings(&data, &params, 3)
-		// denoms
-		DecodeStringArray(&data, &params)
-	case MsgUpsertTokenRate:
-		// feePayments bool, stakeToken bool, invalidated bool, denom string, rate cosmostypes.Dec,
-		// stakeCap cosmostypes.Dec, stakeMin cosmostypes.Int
-		for i := 0; i < 3; i++ {
-			Decode256Bit(&data, &params)
-		}
-
-		DecodeStrings(&data, &params, 4)
-	case MsgActivate:
-	case MsgPause:
-	case MsgUnpause:
-	case MsgCreateSpendingPool:
-	case MsgDepositSpendingPool:
-		// amount cosmostypes.Coins, name string
-		DecodeStrings(&data, &params, 2)
-	case MsgRegisterSpendingPoolBeneficiary:
-		// name string
-		DecodeString(&data, &params)
-	case MsgClaimSpendingPool:
-		// name string
-		DecodeString(&data, &params)
-	case MsgUpsertStakingPool:
-		// enabled bool, validator string, commission cosmostypes.Dec
-		Decode256Bit(&data, &params)
-		DecodeStrings(&data, &params, 2)
-	case MsgDelegate:
-		// amount, validator
-		DecodeStrings(&data, &params, 2)
-	case MsgUndelegate:
-		// amount, validator
-		DecodeStrings(&data, &params, 2)
-	case MsgClaimRewards:
-	case MsgClaimUndelegation:
-		// undelegationId uint64
-		Decode256Bit(&data, &params)
-	case MsgSetCompoundInfo:
-		// allDenom bool, len, denoms []string
-		Decode256Bit(&data, &params)
-		DecodeStringArray(&data, &params)
-	case MsgRegisterDelegator:
-	case MsgCreateCustody:
-		// V, R, S, signer, custodyMode uint256, key string, nextController string, len, boolArr, len, strArr
-		for i := 0; i < 4; i++ {
-			Decode256Bit(&data, &params)
-		}
-
-		DecodeStrings(&data, &params, 2)
-
-		DecodeHexArray(&data, &params)
-		DecodeStringArray(&data, &params)
-	case MsgAddToCustodyWhiteList:
-		// oldKey string, newKey string, next string, target string, len, newAddr []string
-		DecodeStrings(&data, &params, 4)
-		DecodeStringArray(&data, &params)
-	case MsgAddToCustodyCustodians:
-		// oldKey string, newKey string, next string, target string, len, newAddr []string
-		DecodeStrings(&data, &params, 4)
-		DecodeStringArray(&data, &params)
-	case MsgRemoveFromCustodyCustodians:
-		// newAddr string, oldKey string, newKey string, next string, target string
-		DecodeStrings(&data, &params, 5)
-	case MsgDropCustodyCustodians:
-		// oldKey string, newKey string, next string, target string
-		DecodeStrings(&data, &params, 4)
-	case MsgRemoveFromCustodyWhiteList:
-		// newAddr string, oldKey string, newKey string, next string, target string
-		DecodeStrings(&data, &params, 5)
-	case MsgDropCustodyWhiteList:
-		// oldKey string, newKey string, next string, target string
-		DecodeStrings(&data, &params, 4)
-	case MsgApproveCustodyTransaction:
-		// to string, hash string
-		DecodeStrings(&data, &params, 2)
-	case MsgDeclineCustodyTransaction:
-		// to string, hash string
-		DecodeStrings(&data, &params, 2)
-	default:
-
-	}
+	// decode param string
+	DecodeString(&data, &params)
 
 	return params
 }
 
-func SendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (string, error) {
+func sendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (string, error) {
 	byteData, err := hex.DecodeString(txRawData[2:])
 	if err != nil {
 		return "", err
@@ -384,52 +164,52 @@ func SendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 
 	var txBytes []byte
 
-	submitEvidencePrefix, _ := hex.DecodeString("33104ff7")
+	submitEvidencePrefix, _ := hex.DecodeString("85db2453")
 	submitProposalPrefix, _ := hex.DecodeString("00000000")
-	voteProposalPrefix, _ := hex.DecodeString("24d03a8b")
+	voteProposalPrefix, _ := hex.DecodeString("7f1f06dc")
 	registerIdentityRecordsPrefix, _ := hex.DecodeString("bc05f106")
-	deleteIdentityRecordPrefix, _ := hex.DecodeString("2ac0ca03")
-	requestIdentityRecordsVerifyPrefix, _ := hex.DecodeString("f7c51612")
-	handleIdentityRecordsVerifyRequestPrefix, _ := hex.DecodeString("2facbfe8")
-	cancelIdentityRecordsVerifyRequestPrefix, _ := hex.DecodeString("9b66f097")
-	setNetworkPropertiesPrefix, _ := hex.DecodeString("3a91d2ba")
-	setExecutionFeePrefix, _ := hex.DecodeString("fa02785e")
-	claimCouncilorPrefix, _ := hex.DecodeString("9dd85dbf")
-	whitelistPermissionsPrefix, _ := hex.DecodeString("4db4bc0b")
-	blacklistPermissionsPrefix, _ := hex.DecodeString("675ed828")
-	createRolePrefix, _ := hex.DecodeString("7b0fadab")
-	assignRolePrefix, _ := hex.DecodeString("83b3d393")
-	unassignRolePrefix, _ := hex.DecodeString("2fa24c7a")
-	whitelistRolePermissionPrefix, _ := hex.DecodeString("557f0e63")
-	blacklistRolePermissionPrefix, _ := hex.DecodeString("7e7595fe")
-	removeWhitelistRolePermissionPrefix, _ := hex.DecodeString("e9830bd8")
-	removeBlacklistRolePermissionPrefix, _ := hex.DecodeString("45e2144c")
+	deleteIdentityRecordPrefix, _ := hex.DecodeString("25581f17")
+	requestIdentityRecordsVerifyPrefix, _ := hex.DecodeString("9765358e")
+	handleIdentityRecordsVerifyRequestPrefix, _ := hex.DecodeString("4335ed0c")
+	cancelIdentityRecordsVerifyRequestPrefix, _ := hex.DecodeString("eeaa0488")
+	setNetworkPropertiesPrefix, _ := hex.DecodeString("f8060fb5")
+	setExecutionFeePrefix, _ := hex.DecodeString("c7586de8")
+	claimCouncilorPrefix, _ := hex.DecodeString("b7b8ff46")
+	whitelistPermissionsPrefix, _ := hex.DecodeString("2f313ab8")
+	blacklistPermissionsPrefix, _ := hex.DecodeString("3864f845")
+	createRolePrefix, _ := hex.DecodeString("2d8abfdf")
+	assignRolePrefix, _ := hex.DecodeString("fcc121b5")
+	unassignRolePrefix, _ := hex.DecodeString("c79ca19d")
+	whitelistRolePermissionPrefix, _ := hex.DecodeString("59472362")
+	blacklistRolePermissionPrefix, _ := hex.DecodeString("99c557da")
+	removeWhitelistRolePermissionPrefix, _ := hex.DecodeString("2a11d702")
+	removeBlacklistRolePermissionPrefix, _ := hex.DecodeString("f5f865e4")
 	claimValidatorPrefix, _ := hex.DecodeString("00000000")
-	upsertTokenAliasPrefix, _ := hex.DecodeString("59122e45")
-	upsertTokenRatePrefix, _ := hex.DecodeString("fb7e4c17")
+	upsertTokenAliasPrefix, _ := hex.DecodeString("f69a4787")
+	upsertTokenRatePrefix, _ := hex.DecodeString("3b30a97a")
 	activatePrefix, _ := hex.DecodeString("a1374dc2")
 	pausePrefix, _ := hex.DecodeString("1371cf19")
 	unpausePrefix, _ := hex.DecodeString("b9179894")
 	createSpendingPoolPrefix, _ := hex.DecodeString("00000000")
-	depositSpendingPoolPrefix, _ := hex.DecodeString("9fff5508")
+	depositSpendingPoolPrefix, _ := hex.DecodeString("e10c925c")
 	registerSpendingPoolBeneficiaryPrefix, _ := hex.DecodeString("7ab7eecf")
 	claimSpendingPoolPrefix, _ := hex.DecodeString("efeed4a0")
-	upsertStakingPoolPrefix, _ := hex.DecodeString("1f0da7b4")
-	delegatePrefix, _ := hex.DecodeString("4563230c")
-	undelegatePrefix, _ := hex.DecodeString("d8e05398")
+	upsertStakingPoolPrefix, _ := hex.DecodeString("fb24f5cc")
+	delegatePrefix, _ := hex.DecodeString("4b193c09")
+	undelegatePrefix, _ := hex.DecodeString("94574f0c")
 	claimRewardsPrefix, _ := hex.DecodeString("9e796524")
-	claimUndelegationPrefix, _ := hex.DecodeString("505b0330")
-	setCompoundInfoPrefix, _ := hex.DecodeString("fb1257e6")
+	claimUndelegationPrefix, _ := hex.DecodeString("2f608d76")
+	setCompoundInfoPrefix, _ := hex.DecodeString("e2d6a093")
 	registerDelegatorPrefix, _ := hex.DecodeString("99db185d")
-	createCustodyPrefix, _ := hex.DecodeString("d486e9de")
-	addToCustodyWhiteListPrefix, _ := hex.DecodeString("25d1857d")
-	addToCustodyCustodiansPrefix, _ := hex.DecodeString("9c4f31a9")
-	removeFromCustodyCustodiansPrefix, _ := hex.DecodeString("8ec62788")
-	dropCustodyCustodiansPrefix, _ := hex.DecodeString("07d33244")
-	removeFromCustodyWhiteListPrefix, _ := hex.DecodeString("b99abc7d")
-	dropCustodyWhiteListPrefix, _ := hex.DecodeString("4db07a4e")
-	approveCustodyTransactionPrefix, _ := hex.DecodeString("e6d41e78")
-	declineCustodyTransactionPrefix, _ := hex.DecodeString("21ebd09e")
+	createCustodyPrefix, _ := hex.DecodeString("bebde6d1")
+	addToCustodyWhiteListPrefix, _ := hex.DecodeString("25a1d834")
+	addToCustodyCustodiansPrefix, _ := hex.DecodeString("8c7fdb91")
+	removeFromCustodyCustodiansPrefix, _ := hex.DecodeString("90be51cf")
+	dropCustodyCustodiansPrefix, _ := hex.DecodeString("0ca697b4")
+	removeFromCustodyWhiteListPrefix, _ := hex.DecodeString("fa431c3e")
+	dropCustodyWhiteListPrefix, _ := hex.DecodeString("bc65010a")
+	approveCustodyTxPrefix, _ := hex.DecodeString("5da292d4")
+	declineCustodyTxPrefix, _ := hex.DecodeString("dce4399a")
 
 	var msgType int
 	switch {
@@ -523,10 +303,10 @@ func SendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 		msgType = MsgRemoveFromCustodyWhiteList
 	case bytes.Equal(ethTxData.Data[:4], dropCustodyWhiteListPrefix):
 		msgType = MsgDropCustodyWhiteList
-	case bytes.Equal(ethTxData.Data[:4], approveCustodyTransactionPrefix):
-		msgType = MsgApproveCustodyTransaction
-	case bytes.Equal(ethTxData.Data[:4], declineCustodyTransactionPrefix):
-		msgType = MsgDeclineCustodyTransaction
+	case bytes.Equal(ethTxData.Data[:4], approveCustodyTxPrefix):
+		msgType = MsgApproveCustodyTx
+	case bytes.Equal(ethTxData.Data[:4], declineCustodyTxPrefix):
+		msgType = MsgDeclineCustodyTx
 	default:
 		return "", errors.New("no such functions")
 	}
@@ -539,7 +319,7 @@ func SendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 
 	// if ethTxData
 
-	txHash, err := sendTx(r.Context(), txBytes)
+	txHash, err := sendCosmosTx(r.Context(), txBytes)
 	if err != nil {
 		return "", err
 	}
@@ -547,43 +327,168 @@ func SendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 	return txHash, nil
 }
 
-func ValidateEIP712Sign(v, r, s []byte, sender ethcommon.Address, amount int, transactionType int) bool {
-	// eip712DomainSeparator := crypto.Keccak256Hash(
-	// 	[]byte("EIP712Domain(string name,string version,uint256 chainId)"),
-	// 	crypto.Keccak256([]byte("SetTest")),
-	// 	crypto.Keccak256([]byte("1")),
-	// 	intToBytes(config.DefaultChainID),
-	// )
+func getStructHash(txType int, valParam string) ethcommon.Hash {
+	abiPack := abi.ABI{}
+	var structABIPack []byte
 
-	// // Define the hash of the struct
-	// hashStruct := crypto.Keccak256Hash(
-	// 	[]byte("delegate(uint amount, address sender)"),
-	// 	intToBytes(int64(amount)),
-	// 	sender.Bytes(),
-	// )
+	var funcSig []byte
 
-	// // Define the final hash
-	// hash := crypto.Keccak256Hash(
-	// 	[]byte("\x19\x01"),
-	// 	eip712DomainSeparator.Bytes(),
-	// 	hashStruct.Bytes(),
-	// )
+	switch txType {
+	case MsgSubmitEvidence:
+		funcSig = crypto.Keccak256([]byte("submitEvidence(string param)"))
+	case MsgSubmitProposal:
+		funcSig = crypto.Keccak256([]byte("submitProposal(string param)"))
+	case MsgVoteProposal:
+		funcSig = crypto.Keccak256([]byte("voteProposal(string param)"))
+	case MsgRegisterIdentityRecords:
+		funcSig = crypto.Keccak256([]byte("registerIdentityRecords(string param)"))
+	case MsgDeleteIdentityRecord:
+		funcSig = crypto.Keccak256([]byte("deleteIdentityRecord(string param)"))
+	case MsgRequestIdentityRecordsVerify:
+		funcSig = crypto.Keccak256([]byte("requestIdentityRecordsVerify(string param)"))
+	case MsgHandleIdentityRecordsVerifyRequest:
+		funcSig = crypto.Keccak256([]byte("handleIdentityRecordsVerifyRequest(string param)"))
+	case MsgCancelIdentityRecordsVerifyRequest:
+		funcSig = crypto.Keccak256([]byte("cancelIdentityRecordsVerifyRequest(string param)"))
+	case MsgSetNetworkProperties:
+		funcSig = crypto.Keccak256([]byte("setNetworkProperties(string param)"))
+	case MsgSetExecutionFee:
+		funcSig = crypto.Keccak256([]byte("setExecutionFee(string param)"))
+	case MsgClaimCouncilor:
+		funcSig = crypto.Keccak256([]byte("claimCouncilor(string param)"))
+	case MsgWhitelistPermissions:
+		funcSig = crypto.Keccak256([]byte("whitelistPermissions(string param)"))
+	case MsgBlacklistPermissions:
+		funcSig = crypto.Keccak256([]byte("blacklistPermissions(string param)"))
+	case MsgCreateRole:
+		funcSig = crypto.Keccak256([]byte("createRole(string param)"))
+	case MsgAssignRole:
+		funcSig = crypto.Keccak256([]byte("assignRole(string param)"))
+	case MsgUnassignRole:
+		funcSig = crypto.Keccak256([]byte("unassignRole(string param)"))
+	case MsgWhitelistRolePermission:
+		funcSig = crypto.Keccak256([]byte("whitelistRolePermission(string param)"))
+	case MsgBlacklistRolePermission:
+		funcSig = crypto.Keccak256([]byte("blacklistRolePermission(string param)"))
+	case MsgRemoveWhitelistRolePermission:
+		funcSig = crypto.Keccak256([]byte("removeWhitelistRolePermission(string param)"))
+	case MsgRemoveBlacklistRolePermission:
+		funcSig = crypto.Keccak256([]byte("removeBlacklistRolePermission(string param)"))
+	case MsgClaimValidator:
+		// funcSig = crypto.Keccak256([]byte("delegate(string param)"))
+	case MsgUpsertTokenAlias:
+		funcSig = crypto.Keccak256([]byte("upsertTokenAlias(string param)"))
+	case MsgUpsertTokenRate:
+		funcSig = crypto.Keccak256([]byte("upsertTokenRate(string param)"))
+	case MsgActivate:
+		funcSig = crypto.Keccak256([]byte("activate()"))
+	case MsgPause:
+		funcSig = crypto.Keccak256([]byte("pause()"))
+	case MsgUnpause:
+		funcSig = crypto.Keccak256([]byte("unpause()"))
+	case MsgCreateSpendingPool:
+		// funcSig = crypto.Keccak256([]byte("delegate(string param)"))
+	case MsgDepositSpendingPool:
+		funcSig = crypto.Keccak256([]byte("depositSpendingPool(string param)"))
+	case MsgRegisterSpendingPoolBeneficiary:
+		funcSig = crypto.Keccak256([]byte("registerSpendingPoolBeneficiary(string param)"))
+	case MsgClaimSpendingPool:
+		funcSig = crypto.Keccak256([]byte("claimSpendingPool(string param)"))
+	case MsgUpsertStakingPool:
+		funcSig = crypto.Keccak256([]byte("upsertStakingPool(string param)"))
+	case MsgDelegate:
+		funcSig = crypto.Keccak256([]byte("delegate(string param)"))
+	case MsgUndelegate:
+		funcSig = crypto.Keccak256([]byte("undelegate(string param)"))
+	case MsgClaimRewards:
+		funcSig = crypto.Keccak256([]byte("claimRewards()"))
+	case MsgClaimUndelegation:
+		funcSig = crypto.Keccak256([]byte("claimUndelegation(string param)"))
+	case MsgSetCompoundInfo:
+		funcSig = crypto.Keccak256([]byte("setCompoundInfo(string param)"))
+	case MsgRegisterDelegator:
+		funcSig = crypto.Keccak256([]byte("registerDelegator()"))
+	case MsgCreateCustody:
+		funcSig = crypto.Keccak256([]byte("createCustody(string param)"))
+	case MsgAddToCustodyWhiteList:
+		funcSig = crypto.Keccak256([]byte("addToCustodyWhiteList(string param)"))
+	case MsgAddToCustodyCustodians:
+		funcSig = crypto.Keccak256([]byte("addToCustodyCustodians(string param)"))
+	case MsgRemoveFromCustodyCustodians:
+		funcSig = crypto.Keccak256([]byte("removeFromCustodyCustodians(string param)"))
+	case MsgDropCustodyCustodians:
+		funcSig = crypto.Keccak256([]byte("dropCustodyCustodians(string param)"))
+	case MsgRemoveFromCustodyWhiteList:
+		funcSig = crypto.Keccak256([]byte("removeFromCustodyWhiteList(string param)"))
+	case MsgDropCustodyWhiteList:
+		funcSig = crypto.Keccak256([]byte("dropCustodyWhiteList(string param)"))
+	case MsgApproveCustodyTx:
+		funcSig = crypto.Keccak256([]byte("approveCustodyTransaction(string param)"))
+	case MsgDeclineCustodyTx:
+		funcSig = crypto.Keccak256([]byte("declineCustodyTransaction(string param)"))
+	default:
 
-	// signature := append(append(r, s...), v...)
+	}
 
-	// // Recover the public key from the signature
-	// pubKey, err := crypto.Ecrecover(hash.Bytes(), signature)
-	// if err != nil {
-	// 	return false
-	// }
+	structJsonData := []byte(`[{"Type":"function","Name":"encode","Inputs":[{"Type":"bytes32","Name":"funcsig"},{"Type":"bytes32","Name":"param"}],"Outputs":[]}]`)
+	_ = abiPack.UnmarshalJSON(structJsonData)
 
-	// // Derive the signer's address from the public key
-	// signerAddress := crypto.PubkeyToAddress(*pubKey)
+	var funcSignature [32]byte
+	copy(funcSignature[:], funcSig)
 
-	// if signerAddress != senderAddr {
-	// 	return false
-	// }
-	return true
+	structABIPack, _ = PackABIParams(abiPack,
+		"encode",
+		convertByteArr2Bytes32(funcSig),
+		convertByteArr2Bytes32(crypto.Keccak256([]byte(valParam))),
+	)
+
+	structHash := crypto.Keccak256Hash(structABIPack)
+
+	return structHash
+}
+
+func ValidateEIP712Sign(v, r, s []byte, sender ethcommon.Address, valParam string, txType int) bool {
+	abiPack := abi.ABI{}
+
+	// get EIP712DomainHash
+	jsonData := []byte(`[{"Type":"function","Name":"encode","Inputs":[{"Type":"bytes32","Name":"funcsig"},{"Type":"bytes32","Name":"name"},{"Type":"bytes32","Name":"version"},{"Type":"bytes32","Name":"chainId"}],"Outputs":[]}]`)
+	abiPack.UnmarshalJSON(jsonData)
+	funcSig := crypto.Keccak256([]byte("EIP712Domain(string name,string version,uint256 chainId)"))
+
+	eip712DomainSeparatorABIPack, _ := PackABIParams(abiPack,
+		"encode",
+		convertByteArr2Bytes32(funcSig),
+		convertByteArr2Bytes32(crypto.Keccak256([]byte("Kira"))),
+		convertByteArr2Bytes32(crypto.Keccak256([]byte("1"))),
+		convertByteArr2Bytes32(uint32To32Bytes(8789)),
+	)
+	eip712DomainSeparator := crypto.Keccak256Hash(eip712DomainSeparatorABIPack)
+
+	// get StructHash
+	structHash := getStructHash(txType, valParam)
+
+	// Define the final hash
+	hash := crypto.Keccak256Hash(
+		append(append([]byte("\x19\x01"), eip712DomainSeparator.Bytes()...), structHash.Bytes()...),
+	)
+
+	signature := getSignature(r, s, v)
+
+	// Recover the public key from the signature
+	pubKey, err := crypto.SigToPub(hash.Bytes(), signature)
+	// pbBytes, err := crypto.Ecrecover(hash.Bytes(), signature)
+	// fmt.Println(string(pbBytes), err)
+	// pubKey, err := crypto.UnmarshalPubkey(pbBytes)
+
+	if err != nil {
+		fmt.Println("eip712 err", err)
+		return false
+	}
+
+	// Derive the signer's address from the public key
+	signerAddress := crypto.PubkeyToAddress(*pubKey)
+
+	return signerAddress.Hex() == sender.Hex()
 }
 
 func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request, txType int) ([]byte, error) {
@@ -834,7 +739,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 
 		msg = customgovtypes.NewMsgSetNetworkProperties(proposer, &networkProperties)
 	case MsgSetExecutionFee:
-		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams, transactionType
+		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams, txType
 		proposer, err := bytes2cosmosAddr(params[3][12:])
 		executionFee, _ := bytes2uint64(params[4])
 		failureFee, _ := bytes2uint64(params[5])
@@ -973,23 +878,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		// 	return nil, err
 		// }
 	case MsgUpsertTokenAlias:
-		// V, R, S, signer, invalidated bool, decimals uint32, symbol string, name string, icon string, len, denoms []string
+		// V, R, S, signer, param
 		proposer, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
 
-		isInvalidated := bytes2bool(params[4])
-		decimals, _ := bytes2uint32(params[5])
+		var upsertTokenAliasParam UpsertTokenAliasParam
+		err = json.Unmarshal(params[4], &upsertTokenAliasParam)
+		fmt.Println(upsertTokenAliasParam, err)
 
-		var denoms []string
-		len, _ := bytes2int32(params[9])
-		for i := int32(0); i < len; i++ {
-			denoms = append(denoms, string(params[i+10]))
-		}
-
-		msg = tokenstypes.NewMsgUpsertTokenAlias(proposer, string(params[6]), string(params[7]), string(params[8]),
-			uint32(decimals), denoms, isInvalidated)
+		msg = tokenstypes.NewMsgUpsertTokenAlias(proposer, upsertTokenAliasParam.Symbol, upsertTokenAliasParam.Name,
+			upsertTokenAliasParam.Icon, upsertTokenAliasParam.Decimals, upsertTokenAliasParam.Denoms, upsertTokenAliasParam.Invalidated)
 	case MsgUpsertTokenRate:
 		// V, R, S, signer, feePayments bool, stakeToken bool, invalidated bool, denom string, rate cosmostypes.Dec,
 		// stakeCap cosmostypes.Dec, stakeMin cosmostypes.Int
@@ -1086,10 +986,20 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		msg = multistakingtypes.NewMsgUpsertStakingPool(from, string(params[5]), enabled, commission)
 	case MsgDelegate:
 		// TODO: check eip712 validation
-		// V, R, S, signer, amount, validator
-		// validateTx()
+		// V, R, S, signer, param
 
-		balance, err := cosmostypes.ParseCoinsNormalized(string(params[4]))
+		valParam := string(params[4])
+
+		validation := ValidateEIP712Sign(params[0][len(params[0])-1:], params[1], params[2], ethcommon.BytesToAddress(params[3][12:]), valParam, txType)
+		if !validation {
+			return nil, errors.New("eip712 validation is failed")
+		}
+
+		var delegateParam DelegateParam
+		err = json.Unmarshal(params[4], &delegateParam)
+		fmt.Println(delegateParam, err)
+
+		balance, err := cosmostypes.ParseCoinsNormalized(delegateParam.Amount)
 		if err != nil {
 			return nil, err
 		}
@@ -1099,7 +1009,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		to := string(params[5])
+		to := delegateParam.To
 
 		msg = multistakingtypes.NewMsgDelegate(from, to, balance)
 	case MsgUndelegate:
@@ -1268,7 +1178,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 		msg = custodytypes.NewMsgDropCustodyWhiteList(from, string(params[4]), string(params[5]),
 			string(params[6]), string(params[7]))
-	case MsgApproveCustodyTransaction:
+	case MsgApproveCustodyTx:
 		// V, R, S, signer, to string, hash string
 		from, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
@@ -1279,7 +1189,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 		msg = custodytypes.NewMsgApproveCustodyTransaction(from, to, string(params[5]))
-	case MsgDeclineCustodyTransaction:
+	case MsgDeclineCustodyTx:
 		// V, R, S, signer, to string, hash string
 		from, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
@@ -1298,7 +1208,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		return nil, err
 	}
 	txBuilder.SetGasLimit(ethTxData.GasLimit)
-	// TODO: set fee amount - how can I get the fee amount from eth transaction? or fix this?
+	// TODO: set fee amount - how can I get the fee amount from eth tx? or fix this?
 	txBuilder.SetFeeAmount(cosmostypes.NewCoins(cosmostypes.NewInt64Coin(config.DefaultKiraDenom, 200)))
 	// txBuilder.SetMemo()
 	// txBuilder.SetTimeoutHeight()
@@ -1362,7 +1272,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 	return txBytes, err
 }
 
-func sendTx(ctx context.Context, txBytes []byte) (string, error) {
+func sendCosmosTx(ctx context.Context, txBytes []byte) (string, error) {
 	// --snip--
 
 	// Create a connection to the gRPC server.
@@ -1389,7 +1299,7 @@ func sendTx(ctx context.Context, txBytes []byte) (string, error) {
 		ctx,
 		&tx.BroadcastTxRequest{
 			Mode:    tx.BroadcastMode_BROADCAST_MODE_SYNC,
-			TxBytes: txBytes, // Proto-binary of the signed transaction, see previous step.
+			TxBytes: txBytes, // Proto-binary of the signed tx, see previous step.
 		},
 	)
 
