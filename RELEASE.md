@@ -1,5 +1,5 @@
 
 Features:
 
-* Implement QueryUndelegations endpoint
-* Bump sekai version to v0.3.38
+* Add DefaultDenom and Bech32Prefix to QueryKiraTokensAliases endpoint
+* Bump sekai version to v0.3.40

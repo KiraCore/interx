@@ -23,7 +23,7 @@ func RegisterKiraTokensRoutes(r *mux.Router, gwCosmosmux *runtime.ServeMux, rpcA
 }
 
 func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (interface{}, interface{}, int) {
-	type TokenAliasesResult struct {
+	type TokenAliasesData struct {
 		Decimals int64    `json:"decimals"`
 		Denoms   []string `json:"denoms"`
 		Name     string   `json:"name"`
@@ -31,17 +31,22 @@ func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMu
 		Icon     string   `json:"icon"`
 		Amount   sdk.Int  `json:"amount"`
 	}
+	type TokenAliasesResult struct {
+		Data         []TokenAliasesData `json:"token_aliases_data"`
+		DefaultDenom string             `json:"default_denom"`
+		Bech32Prefix string             `json:"bech32_prefix"`
+	}
 
-	tokens := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
+	tokens, defaultDenom, bech32Prefix := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
 	tokensSupply := common.GetTokenSupply(gwCosmosmux, r.Clone(r.Context()))
 
-	result := make([]TokenAliasesResult, 0)
+	data := make([]TokenAliasesData, 0)
 	for _, token := range tokens {
 		flag := false
 		for _, denom := range token.Denoms {
 			for _, supply := range tokensSupply {
 				if denom == supply.Denom {
-					result = append(result, TokenAliasesResult{
+					data = append(data, TokenAliasesData{
 						Decimals: token.Decimals,
 						Denoms:   token.Denoms,
 						Name:     token.Name,
@@ -58,6 +63,12 @@ func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMu
 				break
 			}
 		}
+	}
+
+	result := TokenAliasesResult{
+		Data:         data,
+		DefaultDenom: defaultDenom,
+		Bech32Prefix: bech32Prefix,
 	}
 
 	return result, nil, http.StatusOK

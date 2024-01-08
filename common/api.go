@@ -309,7 +309,7 @@ func GetBlockNanoTime(rpcAddr string, height int64) (int64, error) {
 }
 
 // GetTokenAliases is a function to get token aliases
-func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.TokenAlias {
+func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.TokenAlias, string, string) {
 	// tokens, err := database.GetTokenAliases()
 	// if err == nil {
 	// 	return tokens
@@ -320,16 +320,18 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.Tok
 	r.Method = "GET"
 
 	// GetLogger().Info("[grpc-call] Entering grpc call: ", r.URL.Path)
-
 	recorder := httptest.NewRecorder()
 	gwCosmosmux.ServeHTTP(recorder, r)
 	resp := recorder.Result()
 
 	type TokenAliasesResponse struct {
-		Data []types.TokenAlias `json:"data"`
+		Data         []types.TokenAlias `json:"data"`
+		DefaultDenom string             `json:"defaultDenom"`
+		Bech32Prefix string             `json:"bech32Prefix"`
 	}
 
 	result := TokenAliasesResponse{}
+
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
@@ -341,7 +343,7 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.Tok
 		GetLogger().Error("[grpc-call] Unable to save response")
 	}
 
-	return result.Data
+	return result.Data, result.DefaultDenom, result.Bech32Prefix
 }
 
 // GetTokenSupply is a function to get token supply
