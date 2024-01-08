@@ -166,8 +166,8 @@ func bytes2cosmosAddr(param []byte) (cosmostypes.AccAddress, error) {
 	return addr, nil
 }
 
-func string2cosmosAddr(param []byte) (cosmostypes.AccAddress, error) {
-	addr, err := cosmostypes.AccAddressFromBech32(string(param))
+func string2cosmosAddr(param string) (cosmostypes.AccAddress, error) {
+	addr, err := cosmostypes.AccAddressFromBech32(param)
 
 	return addr, err
 }

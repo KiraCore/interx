@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/big"
 	"net/http"
-	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/KiraCore/interx/common"
@@ -95,12 +94,6 @@ const (
 
 var grpcConn *grpc.ClientConn
 
-type DelegateParam struct {
-	Amount string `json:"amount"`
-	// If true it returns the full transaction objects, if false only the hashes of the transactions
-	To string `json:"to"`
-}
-
 type UpsertTokenAliasParam struct {
 	Symbol      string   `json:"symbol"`
 	Name        string   `json:"name"`
@@ -108,6 +101,21 @@ type UpsertTokenAliasParam struct {
 	Decimals    uint32   `json:"decimals"`
 	Denoms      []string `json:"denoms"`
 	Invalidated bool     `json:"invalidated"`
+}
+
+type ListRoleParam struct {
+	RoleIdentifier string `json:"role_identifier"`
+	Permission     uint32 `json:"permission"`
+}
+
+type PermissionsParam struct {
+	Permission     uint32 `json:"permission"`
+	ControlledAddr string `json:"controlled_addr"`
+}
+
+type RoleParam struct {
+	RoleId     uint32 `json:"role_id"`
+	Controller string `json:"controller"`
 }
 
 // decode 256bit param like bool, uint, hex-typed address etc
@@ -427,7 +435,6 @@ func getStructHash(txType int, valParam string) ethcommon.Hash {
 	case MsgDeclineCustodyTx:
 		funcSig = crypto.Keccak256([]byte("declineCustodyTransaction(string param)"))
 	default:
-
 	}
 
 	structJsonData := []byte(`[{"Type":"function","Name":"encode","Inputs":[{"Type":"bytes32","Name":"funcsig"},{"Type":"bytes32","Name":"param"}],"Outputs":[]}]`)
@@ -506,6 +513,15 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 
 	params := DecodeParam(ethTxData.Data[4:], txType)
 
+	if txType != MsgBankSend {
+		valParam := string(params[4])
+
+		validation := ValidateEIP712Sign(params[0][len(params[0])-1:], params[1], params[2], ethcommon.BytesToAddress(params[3][12:]), valParam, txType)
+		if !validation {
+			return nil, errors.New("eip712 validation is failed")
+		}
+	}
+
 	var msg cosmostypes.Msg
 
 	switch txType {
@@ -529,37 +545,40 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		height, _ := bytes2int64(params[4])
-		power, _ := bytes2int64(params[5])
-		unixTime, _ := bytes2int64(params[6])
-
-		consensusAddr := string(params[7])
-
-		evidence := &evidencetypes.Equivocation{
-			Height:           height,
-			Power:            power,
-			Time:             time.UnixMicro(unixTime),
-			ConsensusAddress: consensusAddr,
+		var evidenceParam evidencetypes.Equivocation
+		err = json.Unmarshal(params[4], &evidenceParam)
+		if err != nil {
+			return nil, err
 		}
 
-		msg, err = evidencetypes.NewMsgSubmitEvidence(from, evidence)
+		msg, err = evidencetypes.NewMsgSubmitEvidence(from, &evidenceParam)
 		if err != nil {
 			return nil, err
 		}
 	case MsgSubmitProposal:
 		// msg := customgovtypes.NewMsgSubmitProposal(from)
 	case MsgVoteProposal:
-		// V, R, S, signer, proposalID, option, slash
+		// V, R, S, signer, param
 		from, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
 
-		proposalID, _ := bytes2uint64(params[4])
-		option, _ := bytes2uint64(params[5])
-		slash, _ := sdkmath.LegacyNewDecFromStr(string(params[6]))
+		type VoteProposalParam struct {
+			ProposalID uint64 `json:"proposal_id"`
+			Option     uint64 `json:"option"`
+			Slash      string `json:"slash"`
+		}
 
-		msg = customgovtypes.NewMsgVoteProposal(proposalID, from, customgovtypes.VoteOption(option), slash)
+		var voteParam VoteProposalParam
+		err = json.Unmarshal(params[4], &voteParam)
+		if err != nil {
+			return nil, err
+		}
+
+		slash, _ := sdkmath.LegacyNewDecFromStr(voteParam.Slash)
+
+		msg = customgovtypes.NewMsgVoteProposal(voteParam.ProposalID, from, customgovtypes.VoteOption(voteParam.Option), slash)
 	case MsgRegisterIdentityRecords:
 		// V, R, S, signer, identityInfo,
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -567,21 +586,17 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		var infosStr map[string]string
-		err = json.Unmarshal(params[4], &infosStr)
+		type IdentityRecordParam struct {
+			Infos []customgovtypes.IdentityInfoEntry `json:"identity_infos"`
+		}
+
+		var recordParam IdentityRecordParam
+		err = json.Unmarshal(params[4], &recordParam)
 		if err != nil {
 			return nil, err
 		}
 
-		var infos []customgovtypes.IdentityInfoEntry
-		for key := range infosStr {
-			infos = append(infos, customgovtypes.IdentityInfoEntry{
-				Key:  key,
-				Info: infosStr[key],
-			})
-		}
-
-		msg = customgovtypes.NewMsgRegisterIdentityRecords(from, infos)
+		msg = customgovtypes.NewMsgRegisterIdentityRecords(from, recordParam.Infos)
 	case MsgDeleteIdentityRecord:
 		// V, R, S, signer, len, keys,
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -589,13 +604,17 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		var keys []string
-		len, _ := bytes2uint64(params[4])
-		for i := uint64(0); i < len; i++ {
-			keys = append(keys, string(params[5+i]))
+		type IdentityRecordParam struct {
+			Keys []string `json:"keys"`
 		}
 
-		msg = customgovtypes.NewMsgDeleteIdentityRecords(from, keys)
+		var recordParam IdentityRecordParam
+		err = json.Unmarshal(params[4], &recordParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgDeleteIdentityRecords(from, recordParam.Keys)
 	case MsgRequestIdentityRecordsVerify:
 		// V, R, S, signer, tip, verifier, len, recordIds
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -603,24 +622,29 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		balance, err := cosmostypes.ParseCoinNormalized(string(params[4]))
+		type IdentityRecordParam struct {
+			Balance   string   `json:"balance"`
+			Verifier  string   `json:"verifier"`
+			RecordIds []uint64 `json:"record_ids"`
+		}
+
+		var recordParam IdentityRecordParam
+		err = json.Unmarshal(params[4], &recordParam)
 		if err != nil {
 			return nil, err
 		}
 
-		verifier, err := string2cosmosAddr(params[5])
+		balance, err := cosmostypes.ParseCoinNormalized(recordParam.Balance)
 		if err != nil {
 			return nil, err
 		}
 
-		var recordIds []uint64
-		len, _ := bytes2int64(params[6])
-		for i := 0; i < int(len); i++ {
-			recordId, _ := bytes2uint64(params[7+i])
-			recordIds = append(recordIds, recordId)
+		verifier, err := string2cosmosAddr(recordParam.Verifier)
+		if err != nil {
+			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordIds, balance)
+		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordParam.RecordIds, balance)
 	case MsgHandleIdentityRecordsVerifyRequest:
 		// V, R, S, signer, requestId, isApprove
 		verifier, err := bytes2cosmosAddr(params[3][12:])
@@ -628,10 +652,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		isApprove := bytes2bool(params[5])
-		requestId, _ := bytes2uint64(params[4])
+		type IdentityRecordParam struct {
+			RequestID  uint64 `json:"request_id"`
+			IsApproved bool   `json:"is_approved"`
+		}
 
-		msg = customgovtypes.NewMsgHandleIdentityRecordsVerifyRequest(verifier, requestId, isApprove)
+		var recordParam IdentityRecordParam
+		err = json.Unmarshal(params[4], &recordParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgHandleIdentityRecordsVerifyRequest(verifier, recordParam.RequestID, recordParam.IsApproved)
 	case MsgCancelIdentityRecordsVerifyRequest:
 		// V, R, S, signer, verifyRequestId
 		executor, err := bytes2cosmosAddr(params[3][12:])
@@ -639,117 +671,53 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		verifyRequestId, _ := bytes2uint64(params[4])
+		type IdentityRecordParam struct {
+			VerifyRequestId uint64 `json:"verify_request_id"`
+		}
 
-		msg = customgovtypes.NewMsgCancelIdentityRecordsVerifyRequest(executor, verifyRequestId)
+		var recordParam IdentityRecordParam
+		err = json.Unmarshal(params[4], &recordParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgCancelIdentityRecordsVerifyRequest(executor, recordParam.VerifyRequestId)
 	case MsgSetNetworkProperties:
-		// V, R, S, signer, len, boolParamsList, len, uintParamsList, len, strParamsList, len, legacyDecParamsList
+		// V, R, S, signer, networkProperties
 		proposer, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
 
-		var boolParams []bool
-		var uintParams []uint64
-		var strParams []string
-		var legacyDecParams []sdkmath.LegacyDec
-
-		boolLen, _ := bytes2uint64(params[4])
-		for i := uint64(0); i < boolLen; i++ {
-			boolParams = append(boolParams, bytes2bool(params[5+i]))
+		type NetworkPropertiesParam struct {
+			NetworkProperties customgovtypes.NetworkProperties `json:"network_properties"`
 		}
 
-		uintLen, _ := bytes2uint64(params[5+boolLen])
-		for i := uint64(0); i < uintLen; i++ {
-			uintParam, _ := bytes2uint64(params[6+boolLen+i])
-			uintParams = append(uintParams, uintParam)
+		var networkProperties NetworkPropertiesParam
+		err = json.Unmarshal(params[4], &networkProperties)
+		if err != nil {
+			return nil, err
 		}
 
-		strLen, _ := bytes2uint64(params[6+boolLen+uintLen])
-		for i := uint64(0); i < strLen; i++ {
-			strParams = append(strParams, string(params[7+boolLen+uintLen+i]))
-		}
-
-		legacyDecLen, _ := bytes2uint64(params[7+boolLen+uintLen+strLen])
-		for i := uint64(0); i < legacyDecLen; i++ {
-			legacyDecParam, _ := sdkmath.LegacyNewDecFromStr(string(params[8+boolLen+uintLen+strLen+i]))
-			legacyDecParams = append(legacyDecParams, legacyDecParam)
-		}
-
-		networkProperties := customgovtypes.NetworkProperties{
-			EnableForeignFeePayments:        boolParams[0],
-			EnableTokenWhitelist:            boolParams[1],
-			EnableTokenBlacklist:            boolParams[2],
-			MinTxFee:                        uintParams[0],
-			MaxTxFee:                        uintParams[1],
-			VoteQuorum:                      uintParams[2],
-			MinimumProposalEndTime:          uintParams[3],
-			ProposalEnactmentTime:           uintParams[4],
-			MinProposalEndBlocks:            uintParams[5],
-			MinProposalEnactmentBlocks:      uintParams[6],
-			MaxMischance:                    uintParams[7],
-			MischanceConfidence:             uintParams[8],
-			MinValidators:                   uintParams[9],
-			PoorNetworkMaxBankSend:          uintParams[10],
-			UnjailMaxTime:                   uintParams[11],
-			MinIdentityApprovalTip:          uintParams[12],
-			UbiHardcap:                      uintParams[13],
-			InflationPeriod:                 uintParams[14],
-			UnstakingPeriod:                 uintParams[15],
-			MaxDelegators:                   uintParams[16],
-			MinDelegationPushout:            uintParams[17],
-			SlashingPeriod:                  uintParams[18],
-			MinCustodyReward:                uintParams[19],
-			MaxCustodyBufferSize:            uintParams[20],
-			MaxCustodyTxSize:                uintParams[21],
-			AbstentionRankDecreaseAmount:    uintParams[22],
-			MaxAbstention:                   uintParams[23],
-			MinCollectiveBond:               uintParams[24],
-			MinCollectiveBondingTime:        uintParams[25],
-			MaxCollectiveOutputs:            uintParams[26],
-			MinCollectiveClaimPeriod:        uintParams[27],
-			ValidatorRecoveryBond:           uintParams[28],
-			MaxProposalTitleSize:            uintParams[29],
-			MaxProposalDescriptionSize:      uintParams[30],
-			MaxProposalPollOptionSize:       uintParams[31],
-			MaxProposalPollOptionCount:      uintParams[32],
-			MaxProposalReferenceSize:        uintParams[33],
-			MaxProposalChecksumSize:         uintParams[34],
-			MinDappBond:                     uintParams[35],
-			MaxDappBond:                     uintParams[36],
-			DappLiquidationThreshold:        uintParams[37],
-			DappLiquidationPeriod:           uintParams[38],
-			DappBondDuration:                uintParams[39],
-			DappAutoDenounceTime:            uintParams[40],
-			DappMaxMischance:                uintParams[41],
-			DappInactiveRankDecreasePercent: uintParams[42],
-			MintingFtFee:                    uintParams[43],
-			MintingNftFee:                   uintParams[44],
-			UniqueIdentityKeys:              strParams[0],
-			InactiveRankDecreasePercent:     legacyDecParams[0],
-			ValidatorsFeeShare:              legacyDecParams[1],
-			InflationRate:                   legacyDecParams[2],
-			MaxJailedPercentage:             legacyDecParams[3],
-			MaxSlashingPercentage:           legacyDecParams[4],
-			MaxAnnualInflation:              legacyDecParams[5],
-			DappVerifierBond:                legacyDecParams[6],
-			DappPoolSlippageDefault:         legacyDecParams[7],
-			VetoThreshold:                   legacyDecParams[8],
-		}
-
-		msg = customgovtypes.NewMsgSetNetworkProperties(proposer, &networkProperties)
+		msg = customgovtypes.NewMsgSetNetworkProperties(proposer, &networkProperties.NetworkProperties)
 	case MsgSetExecutionFee:
-		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams, txType
+		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams
 		proposer, err := bytes2cosmosAddr(params[3][12:])
-		executionFee, _ := bytes2uint64(params[4])
-		failureFee, _ := bytes2uint64(params[5])
-		timeout, _ := bytes2uint64(params[6])
-		defaultParams, _ := bytes2uint64(params[7])
+
+		type ExecutionFeeParam struct {
+			ExecutionFee  uint64 `json:"execution_fee"`
+			FailureFee    uint64 `json:"failure_fee"`
+			Timeout       uint64 `json:"timeout"`
+			DefaultParams uint64 `json:"default_params"`
+		}
+
+		var feeParam ExecutionFeeParam
+		err = json.Unmarshal(params[4], &feeParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgSetExecutionFee(string(params[8]), executionFee, failureFee, timeout, defaultParams, proposer)
+		msg = customgovtypes.NewMsgSetExecutionFee(string(params[8]), feeParam.ExecutionFee, feeParam.FailureFee, feeParam.Timeout, feeParam.DefaultParams, proposer)
 	case MsgClaimCouncilor:
 		// V, R, S, signer, moniker string, username string, description string, social string, contact string, avatar string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -757,8 +725,23 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgClaimCouncilor(sender, string(params[4]), string(params[5]), string(params[6]),
-			string(params[7]), string(params[8]), string(params[9]))
+		type ClaimCouncilorParam struct {
+			Moniker     string `json:"moniker"`
+			Username    string `json:"username"`
+			Description string `json:"description"`
+			Social      string `json:"social"`
+			Contact     string `json:"contact"`
+			Avatar      string `json:"avatar"`
+		}
+
+		var councilorParam ClaimCouncilorParam
+		err = json.Unmarshal(params[4], &councilorParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgClaimCouncilor(sender, councilorParam.Moniker, councilorParam.Username, councilorParam.Description,
+			councilorParam.Social, councilorParam.Contact, councilorParam.Avatar)
 	case MsgWhitelistPermissions:
 		// V, R, S, signer, permission uint256, controlledAddr string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -766,13 +749,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
-		controlledAddr, err := string2cosmosAddr(params[5])
+		var permissionParam PermissionsParam
+		err = json.Unmarshal(params[4], &permissionParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgWhitelistPermissions(sender, controlledAddr, permission)
+		controlledAddr, err := string2cosmosAddr(permissionParam.ControlledAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgWhitelistPermissions(sender, controlledAddr, permissionParam.Permission)
 	case MsgBlacklistPermissions:
 		// V, R, S, signer, permission uint256, controlledAddr string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -780,13 +768,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
-		controlledAddr, err := string2cosmosAddr(params[5])
+		var permissionParam PermissionsParam
+		err = json.Unmarshal(params[4], &permissionParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgBlacklistPermissions(sender, controlledAddr, permission)
+		controlledAddr, err := string2cosmosAddr(permissionParam.ControlledAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgBlacklistPermissions(sender, controlledAddr, permissionParam.Permission)
 	case MsgCreateRole:
 		// V, R, S, signer, sid string, description string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -794,7 +787,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgCreateRole(sender, string(params[4]), string(params[5]))
+		type RoleParam struct {
+			Sid         string `json:"sid"`
+			Description string `json:"description"`
+		}
+
+		var roleParam RoleParam
+		err = json.Unmarshal(params[4], &roleParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgCreateRole(sender, roleParam.Sid, roleParam.Description)
 	case MsgAssignRole:
 		// V, R, S, signer, roleid uint32, controller string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -802,13 +806,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		roleId, _ := bytes2uint32(params[4])
-		controller, err := string2cosmosAddr(params[5])
+		var roleParam RoleParam
+		err = json.Unmarshal(params[4], &roleParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgAssignRole(sender, controller, roleId)
+		controller, err := string2cosmosAddr(roleParam.Controller)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgAssignRole(sender, controller, roleParam.RoleId)
 	case MsgUnassignRole:
 		// V, R, S, signer, roleid uint32, controller address
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -816,13 +825,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		roleId, _ := bytes2uint32(params[4])
-		controller, err := string2cosmosAddr(params[5])
+		var roleParam RoleParam
+		err = json.Unmarshal(params[4], &roleParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgUnassignRole(sender, controller, roleId)
+		controller, err := string2cosmosAddr(roleParam.Controller)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = customgovtypes.NewMsgUnassignRole(sender, controller, roleParam.RoleId)
 	case MsgWhitelistRolePermission:
 		// V, R, S, signer, permission uint32, roleIdentifier string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -830,9 +844,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
+		var roleParam ListRoleParam
+		err = json.Unmarshal(params[4], &roleParam)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = customgovtypes.NewMsgWhitelistRolePermission(sender, string(params[5]), permission)
+		msg = customgovtypes.NewMsgWhitelistRolePermission(sender, roleParam.RoleIdentifier, roleParam.Permission)
 	case MsgBlacklistRolePermission:
 		// V, R, S, signer, permission uint32, roleIdentifier string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -840,9 +858,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
+		var roleParam ListRoleParam
+		err = json.Unmarshal(params[4], &roleParam)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = customgovtypes.NewMsgBlacklistRolePermission(sender, string(params[5]), permission)
+		msg = customgovtypes.NewMsgBlacklistRolePermission(sender, roleParam.RoleIdentifier, roleParam.Permission)
 	case MsgRemoveWhitelistRolePermission:
 		// V, R, S, signer, permission uint32, roleIdentifier string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -850,9 +872,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
+		var roleParam ListRoleParam
+		err = json.Unmarshal(params[4], &roleParam)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = customgovtypes.NewMsgRemoveWhitelistRolePermission(sender, string(params[5]), permission)
+		msg = customgovtypes.NewMsgRemoveWhitelistRolePermission(sender, roleParam.RoleIdentifier, roleParam.Permission)
 	case MsgRemoveBlacklistRolePermission:
 		// V, R, S, signer, permission uint32, roleIdentifier string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -860,9 +886,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		permission, _ := bytes2uint32(params[4])
+		var roleParam ListRoleParam
+		err = json.Unmarshal(params[4], &roleParam)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = customgovtypes.NewMsgRemoveBlacklistRolePermission(sender, string(params[5]), permission)
+		msg = customgovtypes.NewMsgRemoveBlacklistRolePermission(sender, roleParam.RoleIdentifier, roleParam.Permission)
 	case MsgClaimValidator:
 		// V, R, S, signer, moniker string, valKey cosmostypes.ValAddress, pubKey cryptotypes.PubKey
 
@@ -993,6 +1023,11 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		validation := ValidateEIP712Sign(params[0][len(params[0])-1:], params[1], params[2], ethcommon.BytesToAddress(params[3][12:]), valParam, txType)
 		if !validation {
 			return nil, errors.New("eip712 validation is failed")
+		}
+
+		type DelegateParam struct {
+			Amount string `json:"amount"`
+			To     string `json:"to"`
 		}
 
 		var delegateParam DelegateParam
