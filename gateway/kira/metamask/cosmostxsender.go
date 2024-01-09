@@ -21,6 +21,7 @@ import (
 	multistakingtypes "github.com/KiraCore/sekai/x/multistaking/types"
 	slashingtypes "github.com/KiraCore/sekai/x/slashing/types"
 	spendingtypes "github.com/KiraCore/sekai/x/spending/types"
+	stakingtypes "github.com/KiraCore/sekai/x/staking/types"
 	tokenstypes "github.com/KiraCore/sekai/x/tokens/types"
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -94,15 +95,6 @@ const (
 
 var grpcConn *grpc.ClientConn
 
-type UpsertTokenAliasParam struct {
-	Symbol      string   `json:"symbol"`
-	Name        string   `json:"name"`
-	Icon        string   `json:"icon"`
-	Decimals    uint32   `json:"decimals"`
-	Denoms      []string `json:"denoms"`
-	Invalidated bool     `json:"invalidated"`
-}
-
 type ListRoleParam struct {
 	RoleIdentifier string `json:"role_identifier"`
 	Permission     uint32 `json:"permission"`
@@ -118,10 +110,27 @@ type RoleParam struct {
 	Controller string `json:"controller"`
 }
 
+type DelegateParam struct {
+	Amounts cosmostypes.Coins `json:"amounts"`
+	To      string            `json:"to"`
+}
+
+type CustodianParam struct {
+	NewAddrs []cosmostypes.AccAddress `json:"new_addrs"`
+	OldKey   string                   `json:"old_key"`
+	NewKey   string                   `json:"new_key"`
+	Next     string                   `json:"next"`
+	Target   string                   `json:"target"`
+}
+
 // decode 256bit param like bool, uint, hex-typed address etc
-func Decode256Bit(data *[]byte, params *[][]byte) {
+func Decode256Bit(data *[]byte, params *[][]byte) error {
+	if len(*data) < 32 {
+		return errors.New("decoding 256bit failed, not enough length")
+	}
 	*params = append(*params, (*data)[:32])
 	*data = (*data)[32:]
+	return nil
 }
 
 // decode string-typed param
@@ -129,33 +138,40 @@ func Decode256Bit(data *[]byte, params *[][]byte) {
 // * offset - offset of the string in the data 	: 32byte
 // * length - length of the string 				: 32byte
 // * content - content of the string			: (length/32+1)*32byte
-func DecodeString(data *[]byte, params *[][]byte) {
+func DecodeString(data *[]byte, params *[][]byte) error {
 	// offset := data[:32] // string value offset
 	*data = (*data)[32:]
 
-	length, _ := bytes2uint64((*data)[:32])
+	length, err := bytes2uint64((*data)[:32])
+	if err != nil {
+		return err
+	}
 	*data = (*data)[32:]
 
 	*params = append(*params, (*data)[:length])
 	*data = (*data)[(length/32+1)*32:]
+	return nil
 }
 
-func DecodeParam(data []byte, txType int) [][]byte {
+func DecodeParam(data []byte, txType int) ([][]byte, error) {
 	if txType == MsgBankSend {
-		return nil
+		return nil, nil
 	}
 
 	var params [][]byte
 
 	// decode data field v, r, s, sender
 	for i := 0; i < 4; i++ {
-		Decode256Bit(&data, &params)
+		err := Decode256Bit(&data, &params)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// decode param string
-	DecodeString(&data, &params)
+	err := DecodeString(&data, &params)
 
-	return params
+	return params, err
 }
 
 func sendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (string, error) {
@@ -511,7 +527,10 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		return nil, err
 	}
 
-	params := DecodeParam(ethTxData.Data[4:], txType)
+	params, err := DecodeParam(ethTxData.Data[4:], txType)
+	if err != nil {
+		return nil, err
+	}
 
 	if txType != MsgBankSend {
 		valParam := string(params[4])
@@ -556,7 +575,27 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 	case MsgSubmitProposal:
-		// msg := customgovtypes.NewMsgSubmitProposal(from)
+		// from, err := bytes2cosmosAddr(params[3][12:])
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// type SubmitProposalParam struct {
+		// 	Title       string `json:"title"`
+		// 	Description string `json:"description"`
+		// 	Content     string `json:"content"`
+		// }
+
+		// var proposalParam SubmitProposalParam
+		// err = json.Unmarshal(params[4], &proposalParam)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// msg, err := customgovtypes.NewMsgSubmitProposal(from)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	case MsgVoteProposal:
 		// V, R, S, signer, param
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -570,15 +609,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			Slash      string `json:"slash"`
 		}
 
-		var voteParam VoteProposalParam
-		err = json.Unmarshal(params[4], &voteParam)
+		var proposalParam VoteProposalParam
+		err = json.Unmarshal(params[4], &proposalParam)
 		if err != nil {
 			return nil, err
 		}
 
-		slash, _ := sdkmath.LegacyNewDecFromStr(voteParam.Slash)
+		slash, err := sdkmath.LegacyNewDecFromStr(proposalParam.Slash)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = customgovtypes.NewMsgVoteProposal(voteParam.ProposalID, from, customgovtypes.VoteOption(voteParam.Option), slash)
+		msg = customgovtypes.NewMsgVoteProposal(proposalParam.ProposalID, from, customgovtypes.VoteOption(proposalParam.Option), slash)
 	case MsgRegisterIdentityRecords:
 		// V, R, S, signer, identityInfo,
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -703,12 +745,16 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 	case MsgSetExecutionFee:
 		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams
 		proposer, err := bytes2cosmosAddr(params[3][12:])
+		if err != nil {
+			return nil, err
+		}
 
 		type ExecutionFeeParam struct {
-			ExecutionFee  uint64 `json:"execution_fee"`
-			FailureFee    uint64 `json:"failure_fee"`
-			Timeout       uint64 `json:"timeout"`
-			DefaultParams uint64 `json:"default_params"`
+			TransactionType string `json:"transaction_type"`
+			ExecutionFee    uint64 `json:"execution_fee"`
+			FailureFee      uint64 `json:"failure_fee"`
+			Timeout         uint64 `json:"timeout"`
+			DefaultParams   uint64 `json:"default_params"`
 		}
 
 		var feeParam ExecutionFeeParam
@@ -717,7 +763,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgSetExecutionFee(string(params[8]), feeParam.ExecutionFee, feeParam.FailureFee, feeParam.Timeout, feeParam.DefaultParams, proposer)
+		msg = customgovtypes.NewMsgSetExecutionFee(feeParam.TransactionType, feeParam.ExecutionFee, feeParam.FailureFee,
+			feeParam.Timeout, feeParam.DefaultParams, proposer)
 	case MsgClaimCouncilor:
 		// V, R, S, signer, moniker string, username string, description string, social string, contact string, avatar string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -896,17 +943,27 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 	case MsgClaimValidator:
 		// V, R, S, signer, moniker string, valKey cosmostypes.ValAddress, pubKey cryptotypes.PubKey
 
-		// valKey, err := cosmostypes.ValAddressFromBech32(string(params[5]))
-		// if err != nil {
-		// 	return nil, err
-		// }
+		type ClaimParam struct {
+			Moniker string             `json:"moniker"`
+			ValKey  string             `json:"val_key"`
+			PubKey  cryptotypes.PubKey `json:"pub_key"`
+		}
 
-		// TODO: get public key from str
-		// publicKey, err := secp256k1.PubKeySecp256k1([]byte(params[6]))
-		// msg, err := stakingtypes.NewMsgClaimValidator(string(params[4]), valKey, publicKey)
-		// if err != nil {
-		// 	return nil, err
-		// }
+		var claimParam ClaimParam
+		err = json.Unmarshal(params[4], &claimParam)
+		if err != nil {
+			return nil, err
+		}
+
+		valKey, err := cosmostypes.ValAddressFromBech32(claimParam.ValKey)
+		if err != nil {
+			return nil, err
+		}
+
+		msg, err = stakingtypes.NewMsgClaimValidator(claimParam.Moniker, valKey, claimParam.PubKey)
+		if err != nil {
+			return nil, err
+		}
 	case MsgUpsertTokenAlias:
 		// V, R, S, signer, param
 		proposer, err := bytes2cosmosAddr(params[3][12:])
@@ -914,9 +971,20 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
+		type UpsertTokenAliasParam struct {
+			Symbol      string   `json:"symbol"`
+			Name        string   `json:"name"`
+			Icon        string   `json:"icon"`
+			Decimals    uint32   `json:"decimals"`
+			Denoms      []string `json:"denoms"`
+			Invalidated bool     `json:"invalidated"`
+		}
+
 		var upsertTokenAliasParam UpsertTokenAliasParam
 		err = json.Unmarshal(params[4], &upsertTokenAliasParam)
-		fmt.Println(upsertTokenAliasParam, err)
+		if err != nil {
+			return nil, err
+		}
 
 		msg = tokenstypes.NewMsgUpsertTokenAlias(proposer, upsertTokenAliasParam.Symbol, upsertTokenAliasParam.Name,
 			upsertTokenAliasParam.Icon, upsertTokenAliasParam.Decimals, upsertTokenAliasParam.Denoms, upsertTokenAliasParam.Invalidated)
@@ -928,25 +996,24 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		isFeePayments := bytes2bool(params[4])
-		isStakeToken := bytes2bool(params[5])
-		isInvalidated := bytes2bool(params[6])
-		denom := string(params[7])
-		rate, err := cosmostypes.NewDecFromStr(hex.EncodeToString(params[8]))
-		if err != nil {
-			return nil, err
+		type UpsertTokenRateParam struct {
+			Denom         string          `json:"denom"`
+			Rate          cosmostypes.Dec `json:"rate"`
+			IsFeePayments bool            `json:"is_fee_payments"`
+			StakeCap      cosmostypes.Dec `json:"stake_cap"`
+			StakeMin      cosmostypes.Int `json:"stake_min"`
+			IsStakeToken  bool            `json:"is_stake_token"`
+			Invalidated   bool            `json:"invalidated"`
 		}
-		stakeCap, err := cosmostypes.NewDecFromStr(hex.EncodeToString(params[9]))
+
+		var upsertParam UpsertTokenRateParam
+		err = json.Unmarshal(params[4], &upsertParam)
 		if err != nil {
-			return nil, err
-		}
-		stakeMin, ok := cosmostypes.NewIntFromString(hex.EncodeToString(params[10]))
-		if !ok {
 			return nil, err
 		}
 
-		msg = tokenstypes.NewMsgUpsertTokenRate(proposer, denom, rate, isFeePayments, stakeCap, stakeMin,
-			isStakeToken, isInvalidated)
+		msg = tokenstypes.NewMsgUpsertTokenRate(proposer, upsertParam.Denom, upsertParam.Rate, upsertParam.IsFeePayments,
+			upsertParam.StakeCap, upsertParam.StakeMin, upsertParam.IsStakeToken, upsertParam.Invalidated)
 	case MsgActivate:
 		// V, R, S, signer
 		validator, err := bytes2cosmosValAddr(params[3][12:])
@@ -972,34 +1039,89 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		// V, R, S, signer, name string, claimStart uint64, claimEnd uint64, rates cosmostypes.DecCoins, voteQuorum uint64,
 		// votePeriod uint64, voteEnactment uint64, owners spendingtypes.PermInfo, beneficiaries spendingtypes.WeightedPermInfo,
 		// sender cosmostypes.AccAddress, dynamicRate bool, dynamicRatePeriod uint64
+		sender, err := bytes2cosmosAddr(params[3][12:])
+		if err != nil {
+			return nil, err
+		}
 
-		// msg = spendingtypes.NewMsgCreateSpendingPool()
+		type SpendingPoolParam struct {
+			Name              string                         `json:"name"`
+			ClaimStart        uint64                         `json:"claim_start"`
+			ClaimEnd          uint64                         `json:"claim_end"`
+			Rates             cosmostypes.DecCoins           `json:"rates"`
+			VoteQuorum        uint64                         `json:"vote_quorum"`
+			VotePeriod        uint64                         `json:"vote_period"`
+			VoteEnactment     uint64                         `json:"vote_enactment"`
+			Owners            spendingtypes.PermInfo         `json:"owners"`
+			Beneficiaries     spendingtypes.WeightedPermInfo `json:"beneficiaries"`
+			IsDynamicRate     bool                           `json:"is_dynamic_rate"`
+			DynamicRatePeriod uint64                         `json:"dynamic_rate_period"`
+		}
+
+		var poolParam SpendingPoolParam
+		err = json.Unmarshal(params[4], &poolParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = spendingtypes.NewMsgCreateSpendingPool(poolParam.Name, poolParam.ClaimStart, poolParam.ClaimEnd, poolParam.Rates,
+			poolParam.VoteQuorum, poolParam.VotePeriod, poolParam.VoteEnactment, poolParam.Owners, poolParam.Beneficiaries,
+			sender, poolParam.IsDynamicRate, poolParam.DynamicRatePeriod)
 	case MsgDepositSpendingPool:
 		// V, R, S, signer, amount string, name string
 		sender, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
-		amount, err := cosmostypes.ParseCoinsNormalized(string(params[4]))
+
+		type SpendingPoolParam struct {
+			Name   string            `json:"Name"`
+			Amount cosmostypes.Coins `json:"Amount"`
+		}
+
+		var poolParam SpendingPoolParam
+		err = json.Unmarshal(params[4], &poolParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = spendingtypes.NewMsgDepositSpendingPool(string(params[5]), amount, sender)
+		msg = spendingtypes.NewMsgDepositSpendingPool(poolParam.Name, poolParam.Amount, sender)
 	case MsgRegisterSpendingPoolBeneficiary:
 		// V, R, S, signer, name string
 		sender, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
-		msg = spendingtypes.NewMsgRegisterSpendingPoolBeneficiary(string(params[4]), sender)
+
+		type SpendingPoolParam struct {
+			Name string `json:"Name"`
+		}
+
+		var poolParam SpendingPoolParam
+		err = json.Unmarshal(params[4], &poolParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = spendingtypes.NewMsgRegisterSpendingPoolBeneficiary(poolParam.Name, sender)
 	case MsgClaimSpendingPool:
 		// V, R, S, signer, name string
 		sender, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
-		msg = spendingtypes.NewMsgClaimSpendingPool(string(params[4]), sender)
+
+		type SpendingPoolParam struct {
+			Name string `json:"Name"`
+		}
+
+		var poolParam SpendingPoolParam
+		err = json.Unmarshal(params[4], &poolParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = spendingtypes.NewMsgClaimSpendingPool(poolParam.Name, sender)
 	case MsgUpsertStakingPool:
 		// V, R, S, signer, enabled bool, validator string, commission cosmostypes.Dec
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1007,59 +1129,47 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		enabled := bytes2bool(params[4])
-		commission, err := cosmostypes.NewDecFromStr(string(params[5]))
+		type StakingPoolParam struct {
+			Validator  string          `json:"validator"`
+			Enabled    bool            `json:"enabled"`
+			Commission cosmostypes.Dec `json:"commission"`
+		}
+
+		var poolParam StakingPoolParam
+		err = json.Unmarshal(params[4], &poolParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = multistakingtypes.NewMsgUpsertStakingPool(from, string(params[5]), enabled, commission)
+		msg = multistakingtypes.NewMsgUpsertStakingPool(from, poolParam.Validator, poolParam.Enabled, poolParam.Commission)
 	case MsgDelegate:
-		// TODO: check eip712 validation
 		// V, R, S, signer, param
-
-		valParam := string(params[4])
-
-		validation := ValidateEIP712Sign(params[0][len(params[0])-1:], params[1], params[2], ethcommon.BytesToAddress(params[3][12:]), valParam, txType)
-		if !validation {
-			return nil, errors.New("eip712 validation is failed")
-		}
-
-		type DelegateParam struct {
-			Amount string `json:"amount"`
-			To     string `json:"to"`
-		}
-
-		var delegateParam DelegateParam
-		err = json.Unmarshal(params[4], &delegateParam)
-		fmt.Println(delegateParam, err)
-
-		balance, err := cosmostypes.ParseCoinsNormalized(delegateParam.Amount)
-		if err != nil {
-			return nil, err
-		}
-
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
 		if err != nil {
 			return nil, err
 		}
 
-		to := delegateParam.To
+		var delegateParam DelegateParam
+		err = json.Unmarshal(params[4], &delegateParam)
+		if err != nil {
+			return nil, err
+		}
 
-		msg = multistakingtypes.NewMsgDelegate(from, to, balance)
+		msg = multistakingtypes.NewMsgDelegate(from, delegateParam.To, delegateParam.Amounts)
 	case MsgUndelegate:
 		// V, R, S, signer, amount, validator
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
 		if err != nil {
 			return nil, err
 		}
-		balance, err := cosmostypes.ParseCoinsNormalized(string(params[4]))
+
+		var delegateParam DelegateParam
+		err = json.Unmarshal(params[4], &delegateParam)
 		if err != nil {
 			return nil, err
 		}
-		to := string(params[5])
 
-		msg = multistakingtypes.NewMsgUndelegate(from, to, balance)
+		msg = multistakingtypes.NewMsgUndelegate(from, delegateParam.To, delegateParam.Amounts)
 	case MsgClaimRewards:
 		// V, R, S, signer
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1073,22 +1183,37 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		undelegationId, _ := bytes2uint64(params[4])
 
-		msg = multistakingtypes.NewMsgClaimUndelegation(from, undelegationId)
+		type UndelegationParam struct {
+			UndelegationId uint64 `json:"undelegation_id"`
+		}
+
+		var undelegationParam UndelegationParam
+		err = json.Unmarshal(params[4], &undelegationParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = multistakingtypes.NewMsgClaimUndelegation(from, undelegationParam.UndelegationId)
 	case MsgSetCompoundInfo:
 		// V, R, S, signer, allDenom bool, len, denoms []string
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
 		if err != nil {
 			return nil, err
 		}
-		allDenom := bytes2bool(params[4])
-		var denoms []string
-		len, _ := bytes2uint64(params[5])
-		for i := uint64(0); i < len; i++ {
-			denoms = append(denoms, string(params[i+6]))
+
+		type UndelegationParam struct {
+			IsAllDenom bool     `json:"is_all_denom"`
+			Denoms     []string `json:"denoms"`
 		}
-		msg = multistakingtypes.NewMsgSetCompoundInfo(from, allDenom, denoms)
+
+		var undelegationParam UndelegationParam
+		err = json.Unmarshal(params[4], &undelegationParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = multistakingtypes.NewMsgSetCompoundInfo(from, undelegationParam.IsAllDenom, undelegationParam.Denoms)
 	case MsgRegisterDelegator:
 		// V, R, S, signer
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1104,33 +1229,22 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		custodyMode, _ := bytes2uint64(params[4])
-
-		var boolArr []bool
-		boolArrLen, _ := bytes2uint64(params[7])
-		for i := uint64(0); i < boolArrLen; i++ {
-			boolParam := bytes2bool(params[i+8])
-			boolArr = append(boolArr, boolParam)
+		type CustodyParam struct {
+			CustodySettings custodytypes.CustodySettings `json:"custody_settings"`
+			OldKey          string                       `json:"old_key"`
+			NewKey          string                       `json:"new_key"`
+			Next            string                       `json:"next"`
+			Target          string                       `json:"target"`
 		}
 
-		var strArr []string
-		strArrLen, _ := bytes2uint64(params[8+boolArrLen])
-		for i := uint64(0); i < strArrLen; i++ {
-			param := string(params[i+9+boolArrLen])
-			strArr = append(strArr, param)
+		var custodyParam CustodyParam
+		err = json.Unmarshal(params[4], &custodyParam)
+		if err != nil {
+			return nil, err
 		}
 
-		custodySettings := custodytypes.CustodySettings{
-			CustodyEnabled: boolArr[0],
-			UsePassword:    boolArr[1],
-			UseWhiteList:   boolArr[2],
-			UseLimits:      boolArr[3],
-			CustodyMode:    custodyMode,
-			Key:            string(params[5]),
-			NextController: string(params[6]),
-		}
-		msg = custodytypes.NewMsgCreateCustody(from, custodySettings, strArr[0], strArr[1],
-			strArr[2], strArr[3])
+		msg = custodytypes.NewMsgCreateCustody(from, custodyParam.CustodySettings, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgAddToCustodyWhiteList:
 		// V, R, S, signer, oldKey string, newKey string, next string, target string
 		// len, newAddr []string,
@@ -1138,18 +1252,15 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		var newAddrs []cosmostypes.AccAddress
-		len, _ := bytes2uint64(params[8])
-		for i := uint64(0); i < len; i++ {
-			newddr, err := string2cosmosAddr(params[i+9])
-			if err != nil {
-				return nil, err
-			}
-			newAddrs = append(newAddrs, newddr)
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
+		if err != nil {
+			return nil, err
 		}
 
-		msg = custodytypes.NewMsgAddToCustodyWhiteList(from, newAddrs, string(params[4]), string(params[5]),
-			string(params[6]), string(params[7]))
+		msg = custodytypes.NewMsgAddToCustodyWhiteList(from, custodyParam.NewAddrs, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgAddToCustodyCustodians:
 		// V, R, S, signer, oldKey string, newKey string, next string, target string
 		// len, newAddr []string
@@ -1157,18 +1268,15 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		var newAddrs []cosmostypes.AccAddress
-		len, _ := bytes2uint64(params[8])
-		for i := uint64(0); i < len; i++ {
-			newddr, err := string2cosmosAddr(params[i+9])
-			if err != nil {
-				return nil, err
-			}
-			newAddrs = append(newAddrs, newddr)
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
+		if err != nil {
+			return nil, err
 		}
 
-		msg = custodytypes.NewMsgAddToCustodyCustodians(from, newAddrs, string(params[4]), string(params[5]),
-			string(params[6]), string(params[7]))
+		msg = custodytypes.NewMsgAddToCustodyCustodians(from, custodyParam.NewAddrs, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgRemoveFromCustodyCustodians:
 		// V, R, S, signer, newAddr cosmostypes.AccAddress,
 		// oldKey string, newKey string, next string, target string
@@ -1176,12 +1284,23 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		newAddr, err := string2cosmosAddr(params[4])
+
+		type CustodianParam struct {
+			NewAddr cosmostypes.AccAddress `json:"new_addr"`
+			OldKey  string                 `json:"old_key"`
+			NewKey  string                 `json:"new_key"`
+			Next    string                 `json:"next"`
+			Target  string                 `json:"target"`
+		}
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgRemoveFromCustodyCustodians(from, newAddr, string(params[5]), string(params[6]),
-			string(params[7]), string(params[8]))
+
+		msg = custodytypes.NewMsgRemoveFromCustodyCustodians(from, custodyParam.NewAddr, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgDropCustodyCustodians:
 		// V, R, S, signer
 		// oldKey string, newKey string, next string, target string
@@ -1189,8 +1308,15 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgDropCustodyCustodians(from, string(params[4]), string(params[5]),
-			string(params[6]), string(params[7]))
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgDropCustodyCustodians(from, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgRemoveFromCustodyWhiteList:
 		// V, R, S, signer, newAddr string,
 		// oldKey string, newKey string, next string, target string
@@ -1198,12 +1324,23 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		newAddr, err := string2cosmosAddr(params[4])
+
+		type CustodianParam struct {
+			NewAddr cosmostypes.AccAddress `json:"new_addr"`
+			OldKey  string                 `json:"old_key"`
+			NewKey  string                 `json:"new_key"`
+			Next    string                 `json:"next"`
+			Target  string                 `json:"target"`
+		}
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgRemoveFromCustodyWhiteList(from, newAddr, string(params[5]), string(params[6]),
-			string(params[7]), string(params[8]))
+
+		msg = custodytypes.NewMsgRemoveFromCustodyWhiteList(from, custodyParam.NewAddr, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgDropCustodyWhiteList:
 		// V, R, S, signer
 		// oldKey string, newKey string, next string, target string
@@ -1211,30 +1348,53 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgDropCustodyWhiteList(from, string(params[4]), string(params[5]),
-			string(params[6]), string(params[7]))
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgDropCustodyWhiteList(from, custodyParam.OldKey, custodyParam.NewKey,
+			custodyParam.Next, custodyParam.Target)
 	case MsgApproveCustodyTx:
 		// V, R, S, signer, to string, hash string
 		from, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
-		to, err := string2cosmosAddr(params[4])
+
+		type CustodianParam struct {
+			To   cosmostypes.AccAddress `json:"to"`
+			Hash string                 `json:"hash"`
+		}
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgApproveCustodyTransaction(from, to, string(params[5]))
+
+		msg = custodytypes.NewMsgApproveCustodyTransaction(from, custodyParam.To, custodyParam.Hash)
 	case MsgDeclineCustodyTx:
 		// V, R, S, signer, to string, hash string
 		from, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
 		}
-		to, err := string2cosmosAddr(params[4])
+
+		type CustodianParam struct {
+			To   cosmostypes.AccAddress `json:"to"`
+			Hash string                 `json:"hash"`
+		}
+
+		var custodyParam CustodianParam
+		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
-		msg = custodytypes.NewMsgDeclineCustodyTransaction(from, to, string(params[5]))
+
+		msg = custodytypes.NewMsgDeclineCustodyTransaction(from, custodyParam.To, custodyParam.Hash)
 	}
 
 	fmt.Println(msg)
