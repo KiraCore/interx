@@ -10,6 +10,8 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"strconv"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/KiraCore/interx/common"
@@ -21,7 +23,6 @@ import (
 	multistakingtypes "github.com/KiraCore/sekai/x/multistaking/types"
 	slashingtypes "github.com/KiraCore/sekai/x/slashing/types"
 	spendingtypes "github.com/KiraCore/sekai/x/spending/types"
-	stakingtypes "github.com/KiraCore/sekai/x/staking/types"
 	tokenstypes "github.com/KiraCore/sekai/x/tokens/types"
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -97,30 +98,43 @@ var grpcConn *grpc.ClientConn
 
 type ListRoleParam struct {
 	RoleIdentifier string `json:"role_identifier"`
-	Permission     uint32 `json:"permission"`
+	Permission     uint32 `json:"permission,string"`
 }
 
 type PermissionsParam struct {
-	Permission     uint32 `json:"permission"`
+	Permission     uint32 `json:"permission,string"`
 	ControlledAddr string `json:"controlled_addr"`
 }
 
 type RoleParam struct {
-	RoleId     uint32 `json:"role_id"`
+	RoleId     uint32 `json:"role_id,string"`
 	Controller string `json:"controller"`
 }
 
 type DelegateParam struct {
-	Amounts cosmostypes.Coins `json:"amounts"`
-	To      string            `json:"to"`
+	Amounts string `json:"amounts"`
+	To      string `json:"to"`
 }
 
 type CustodianParam struct {
-	NewAddrs []cosmostypes.AccAddress `json:"new_addrs"`
-	OldKey   string                   `json:"old_key"`
-	NewKey   string                   `json:"new_key"`
-	Next     string                   `json:"next"`
-	Target   string                   `json:"target"`
+	NewAddrs []string `json:"new_addrs"`
+	OldKey   string   `json:"old_key"`
+	NewKey   string   `json:"new_key"`
+	Next     string   `json:"next"`
+	Target   string   `json:"target"`
+}
+
+type SingleCustodianParam struct {
+	NewAddr string `json:"new_addr"`
+	OldKey  string `json:"old_key"`
+	NewKey  string `json:"new_key"`
+	Next    string `json:"next"`
+	Target  string `json:"target"`
+}
+
+type CustodyParam struct {
+	To   string `json:"to"`
+	Hash string `json:"hash"`
 }
 
 // decode 256bit param like bool, uint, hex-typed address etc
@@ -130,6 +144,7 @@ func Decode256Bit(data *[]byte, params *[][]byte) error {
 	}
 	*params = append(*params, (*data)[:32])
 	*data = (*data)[32:]
+
 	return nil
 }
 
@@ -564,10 +579,24 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		var evidenceParam evidencetypes.Equivocation
-		err = json.Unmarshal(params[4], &evidenceParam)
+		type Equivocation struct {
+			Height           int64     `json:"height,string"`
+			Time             time.Time `json:"time"`
+			Power            int64     `json:"power,string"`
+			ConsensusAddress string    `json:"consensus_address"`
+		}
+
+		var evidenceJsonParam Equivocation
+		err = json.Unmarshal(params[4], &evidenceJsonParam)
 		if err != nil {
 			return nil, err
+		}
+
+		evidenceParam := evidencetypes.Equivocation{
+			Height:           evidenceJsonParam.Height,
+			Time:             evidenceJsonParam.Time,
+			Power:            evidenceJsonParam.Power,
+			ConsensusAddress: evidenceJsonParam.ConsensusAddress,
 		}
 
 		msg, err = evidencetypes.NewMsgSubmitEvidence(from, &evidenceParam)
@@ -604,8 +633,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type VoteProposalParam struct {
-			ProposalID uint64 `json:"proposal_id"`
-			Option     uint64 `json:"option"`
+			ProposalID uint64 `json:"proposal_id,string"`
+			Option     uint64 `json:"option,string"`
 			Slash      string `json:"slash"`
 		}
 
@@ -667,7 +696,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		type IdentityRecordParam struct {
 			Balance   string   `json:"balance"`
 			Verifier  string   `json:"verifier"`
-			RecordIds []uint64 `json:"record_ids"`
+			RecordIds []string `json:"record_ids"`
 		}
 
 		var recordParam IdentityRecordParam
@@ -686,7 +715,16 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordParam.RecordIds, balance)
+		var recordIds []uint64
+		for _, idStr := range recordParam.RecordIds {
+			id, err := strconv.ParseUint(idStr, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			recordIds = append(recordIds, id)
+		}
+
+		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordIds, balance)
 	case MsgHandleIdentityRecordsVerifyRequest:
 		// V, R, S, signer, requestId, isApprove
 		verifier, err := bytes2cosmosAddr(params[3][12:])
@@ -695,7 +733,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type IdentityRecordParam struct {
-			RequestID  uint64 `json:"request_id"`
+			RequestID  uint64 `json:"request_id,string"`
 			IsApproved bool   `json:"is_approved"`
 		}
 
@@ -714,7 +752,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type IdentityRecordParam struct {
-			VerifyRequestId uint64 `json:"verify_request_id"`
+			VerifyRequestId uint64 `json:"verify_request_id,string"`
 		}
 
 		var recordParam IdentityRecordParam
@@ -731,8 +769,71 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
+		type NetworkProperties struct {
+			MinTxFee                        uint64 `json:"min_tx_fee,string"`
+			MaxTxFee                        uint64 `json:"max_tx_fee,string"`
+			VoteQuorum                      uint64 `json:"vote_quorum,string"`
+			MinimumProposalEndTime          uint64 `json:"minimum_proposal_end_time,string"`
+			ProposalEnactmentTime           uint64 `json:"proposal_enactment_time,string"`
+			MinProposalEndBlocks            uint64 `json:"min_proposal_end_blocks,string"`
+			MinProposalEnactmentBlocks      uint64 `json:"min_proposal_enactment_blocks,string"`
+			EnableForeignFeePayments        bool   `json:"enable_foreign_fee_payments,string"`
+			MischanceRankDecreaseAmount     uint64 `json:"mischance_rank_decrease_amount,string"`
+			MaxMischance                    uint64 `json:"max_mischance,string"`
+			MischanceConfidence             uint64 `json:"mischance_confidence,string"`
+			InactiveRankDecreasePercent     string `json:"inactive_rank_decrease_percent"`
+			MinValidators                   uint64 `json:"min_validators,string"`
+			PoorNetworkMaxBankSend          uint64 `json:"poor_network_max_bank_send,string"`
+			UnjailMaxTime                   uint64 `json:"unjail_max_time,string"`
+			EnableTokenWhitelist            bool   `json:"enable_token_whitelist,string"`
+			EnableTokenBlacklist            bool   `json:"enable_token_blacklist,string"`
+			MinIdentityApprovalTip          uint64 `json:"min_identity_approval_tip,string"`
+			UniqueIdentityKeys              string `json:"unique_identity_keys,string"`
+			UbiHardcap                      uint64 `json:"ubi_hardcap,string"`
+			ValidatorsFeeShare              string `json:"validators_fee_share"`
+			InflationRate                   string `json:"inflation_rate"`
+			InflationPeriod                 uint64 `json:"inflation_period,string"`
+			UnstakingPeriod                 uint64 `json:"unstaking_period,string"`
+			MaxDelegators                   uint64 `json:"max_delegators,string"`
+			MinDelegationPushout            uint64 `json:"min_delegation_pushout,string"`
+			SlashingPeriod                  uint64 `json:"slashing_period,string"`
+			MaxJailedPercentage             string `json:"max_jailed_percentage"`
+			MaxSlashingPercentage           string `json:"max_slashing_percentage"`
+			MinCustodyReward                uint64 `json:"min_custody_reward,string"`
+			MaxCustodyBufferSize            uint64 `json:"max_custody_buffer_size,string"`
+			MaxCustodyTxSize                uint64 `json:"max_custody_tx_size,string"`
+			AbstentionRankDecreaseAmount    uint64 `json:"abstention_rank_decrease_amount,string"`
+			MaxAbstention                   uint64 `json:"max_abstention,string"`
+			MinCollectiveBond               uint64 `json:"min_collective_bond,string"`
+			MinCollectiveBondingTime        uint64 `json:"min_collective_bonding_time,string"`
+			MaxCollectiveOutputs            uint64 `json:"max_collective_outputs,string"`
+			MinCollectiveClaimPeriod        uint64 `json:"min_collective_claim_period,string"`
+			ValidatorRecoveryBond           uint64 `json:"validator_recovery_bond,string"`
+			MaxAnnualInflation              string `json:"max_annual_inflation"`
+			MaxProposalTitleSize            uint64 `json:"max_proposal_title_size,string"`
+			MaxProposalDescriptionSize      uint64 `json:"max_proposal_description_size,string"`
+			MaxProposalPollOptionSize       uint64 `json:"max_proposal_poll_option_size,string"`
+			MaxProposalPollOptionCount      uint64 `json:"max_proposal_poll_option_count,string"`
+			MaxProposalReferenceSize        uint64 `json:"max_proposal_reference_size,string"`
+			MaxProposalChecksumSize         uint64 `json:"max_proposal_checksum_size,string"`
+			MinDappBond                     uint64 `json:"min_dapp_bond,string"`
+			MaxDappBond                     uint64 `json:"max_dapp_bond,string"`
+			DappLiquidationThreshold        uint64 `json:"dapp_liquidation_threshold,string"`
+			DappLiquidationPeriod           uint64 `json:"dapp_liquidation_period,string"`
+			DappBondDuration                uint64 `json:"dapp_bond_duration,string"`
+			DappVerifierBond                string `json:"dapp_verifier_bond"`
+			DappAutoDenounceTime            uint64 `json:"dapp_auto_denounce_time,string"`
+			DappMischanceRankDecreaseAmount uint64 `json:"dapp_mischance_rank_decrease_amount,string"`
+			DappMaxMischance                uint64 `json:"dapp_max_mischance,string"`
+			DappInactiveRankDecreasePercent uint64 `json:"dapp_inactive_rank_decrease_percent,string"`
+			DappPoolSlippageDefault         string `json:"dapp_pool_slippage_default"`
+			MintingFtFee                    uint64 `json:"minting_ft_fee,string"`
+			MintingNftFee                   uint64 `json:"minting_nft_fee,string"`
+			VetoThreshold                   string `json:"veto_threshold"`
+		}
+
 		type NetworkPropertiesParam struct {
-			NetworkProperties customgovtypes.NetworkProperties `json:"network_properties"`
+			NetworkProperties NetworkProperties `json:"network_properties"`
 		}
 
 		var networkProperties NetworkPropertiesParam
@@ -741,7 +842,107 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = customgovtypes.NewMsgSetNetworkProperties(proposer, &networkProperties.NetworkProperties)
+		inActiveRankDecreasePercent, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.InactiveRankDecreasePercent)
+		if err != nil {
+			return nil, err
+		}
+		validatorsFeeShare, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.ValidatorsFeeShare)
+		if err != nil {
+			return nil, err
+		}
+		inflationRate, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.InflationRate)
+		if err != nil {
+			return nil, err
+		}
+		maxJailedPercentage, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxJailedPercentage)
+		if err != nil {
+			return nil, err
+		}
+		maxSlashingPercentage, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxSlashingPercentage)
+		if err != nil {
+			return nil, err
+		}
+		maxAnnualInflation, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxAnnualInflation)
+		if err != nil {
+			return nil, err
+		}
+		dappVerifierBond, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.DappVerifierBond)
+		if err != nil {
+			return nil, err
+		}
+		dappPoolSlippageDefault, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.DappPoolSlippageDefault)
+		if err != nil {
+			return nil, err
+		}
+		vetoThreshold, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.VetoThreshold)
+		if err != nil {
+			return nil, err
+		}
+
+		networkPropertiesParam := customgovtypes.NetworkProperties{
+			MinTxFee:                        networkProperties.NetworkProperties.MinTxFee,
+			MaxTxFee:                        networkProperties.NetworkProperties.MaxTxFee,
+			VoteQuorum:                      networkProperties.NetworkProperties.VoteQuorum,
+			MinimumProposalEndTime:          networkProperties.NetworkProperties.MinimumProposalEndTime,
+			ProposalEnactmentTime:           networkProperties.NetworkProperties.ProposalEnactmentTime,
+			MinProposalEndBlocks:            networkProperties.NetworkProperties.MinProposalEndBlocks,
+			MinProposalEnactmentBlocks:      networkProperties.NetworkProperties.MinProposalEnactmentBlocks,
+			EnableForeignFeePayments:        networkProperties.NetworkProperties.EnableForeignFeePayments,
+			MischanceRankDecreaseAmount:     networkProperties.NetworkProperties.MischanceRankDecreaseAmount,
+			MaxMischance:                    networkProperties.NetworkProperties.MaxMischance,
+			MischanceConfidence:             networkProperties.NetworkProperties.MischanceConfidence,
+			InactiveRankDecreasePercent:     inActiveRankDecreasePercent,
+			MinValidators:                   networkProperties.NetworkProperties.MinValidators,
+			PoorNetworkMaxBankSend:          networkProperties.NetworkProperties.PoorNetworkMaxBankSend,
+			UnjailMaxTime:                   networkProperties.NetworkProperties.UnjailMaxTime,
+			EnableTokenWhitelist:            networkProperties.NetworkProperties.EnableTokenWhitelist,
+			EnableTokenBlacklist:            networkProperties.NetworkProperties.EnableTokenBlacklist,
+			MinIdentityApprovalTip:          networkProperties.NetworkProperties.MinIdentityApprovalTip,
+			UniqueIdentityKeys:              networkProperties.NetworkProperties.UniqueIdentityKeys,
+			UbiHardcap:                      networkProperties.NetworkProperties.UbiHardcap,
+			ValidatorsFeeShare:              validatorsFeeShare,
+			InflationRate:                   inflationRate,
+			InflationPeriod:                 networkProperties.NetworkProperties.InflationPeriod,
+			UnstakingPeriod:                 networkProperties.NetworkProperties.UnstakingPeriod,
+			MaxDelegators:                   networkProperties.NetworkProperties.MaxDelegators,
+			MinDelegationPushout:            networkProperties.NetworkProperties.MinDelegationPushout,
+			SlashingPeriod:                  networkProperties.NetworkProperties.SlashingPeriod,
+			MaxJailedPercentage:             maxJailedPercentage,
+			MaxSlashingPercentage:           maxSlashingPercentage,
+			MinCustodyReward:                networkProperties.NetworkProperties.MinCustodyReward,
+			MaxCustodyBufferSize:            networkProperties.NetworkProperties.MaxCustodyBufferSize,
+			MaxCustodyTxSize:                networkProperties.NetworkProperties.MaxCustodyTxSize,
+			AbstentionRankDecreaseAmount:    networkProperties.NetworkProperties.AbstentionRankDecreaseAmount,
+			MaxAbstention:                   networkProperties.NetworkProperties.MaxAbstention,
+			MinCollectiveBond:               networkProperties.NetworkProperties.MinCollectiveBond,
+			MinCollectiveBondingTime:        networkProperties.NetworkProperties.MinCollectiveBondingTime,
+			MaxCollectiveOutputs:            networkProperties.NetworkProperties.MaxCollectiveOutputs,
+			MinCollectiveClaimPeriod:        networkProperties.NetworkProperties.MinCollectiveClaimPeriod,
+			ValidatorRecoveryBond:           networkProperties.NetworkProperties.ValidatorRecoveryBond,
+			MaxAnnualInflation:              maxAnnualInflation,
+			MaxProposalTitleSize:            networkProperties.NetworkProperties.MaxProposalTitleSize,
+			MaxProposalDescriptionSize:      networkProperties.NetworkProperties.MaxProposalDescriptionSize,
+			MaxProposalPollOptionSize:       networkProperties.NetworkProperties.MaxProposalPollOptionSize,
+			MaxProposalPollOptionCount:      networkProperties.NetworkProperties.MaxProposalPollOptionCount,
+			MaxProposalReferenceSize:        networkProperties.NetworkProperties.MaxProposalReferenceSize,
+			MaxProposalChecksumSize:         networkProperties.NetworkProperties.MaxProposalChecksumSize,
+			MinDappBond:                     networkProperties.NetworkProperties.MinDappBond,
+			MaxDappBond:                     networkProperties.NetworkProperties.MaxDappBond,
+			DappLiquidationThreshold:        networkProperties.NetworkProperties.DappLiquidationThreshold,
+			DappLiquidationPeriod:           networkProperties.NetworkProperties.DappLiquidationPeriod,
+			DappBondDuration:                networkProperties.NetworkProperties.DappBondDuration,
+			DappVerifierBond:                dappVerifierBond,
+			DappAutoDenounceTime:            networkProperties.NetworkProperties.DappAutoDenounceTime,
+			DappMischanceRankDecreaseAmount: networkProperties.NetworkProperties.DappMischanceRankDecreaseAmount,
+			DappMaxMischance:                networkProperties.NetworkProperties.DappMaxMischance,
+			DappInactiveRankDecreasePercent: networkProperties.NetworkProperties.DappInactiveRankDecreasePercent,
+			DappPoolSlippageDefault:         dappPoolSlippageDefault,
+			MintingFtFee:                    networkProperties.NetworkProperties.MintingFtFee,
+			MintingNftFee:                   networkProperties.NetworkProperties.MintingNftFee,
+			VetoThreshold:                   vetoThreshold,
+		}
+
+		msg = customgovtypes.NewMsgSetNetworkProperties(proposer, &networkPropertiesParam)
 	case MsgSetExecutionFee:
 		// V, R, S, signer, executionFee, failureFee, timeout, defaultParams
 		proposer, err := bytes2cosmosAddr(params[3][12:])
@@ -751,10 +952,10 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 
 		type ExecutionFeeParam struct {
 			TransactionType string `json:"transaction_type"`
-			ExecutionFee    uint64 `json:"execution_fee"`
-			FailureFee      uint64 `json:"failure_fee"`
-			Timeout         uint64 `json:"timeout"`
-			DefaultParams   uint64 `json:"default_params"`
+			ExecutionFee    uint64 `json:"execution_fee,string"`
+			FailureFee      uint64 `json:"failure_fee,string"`
+			Timeout         uint64 `json:"timeout,string"`
+			DefaultParams   uint64 `json:"default_params,string"`
 		}
 
 		var feeParam ExecutionFeeParam
@@ -943,27 +1144,30 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 	case MsgClaimValidator:
 		// V, R, S, signer, moniker string, valKey cosmostypes.ValAddress, pubKey cryptotypes.PubKey
 
-		type ClaimParam struct {
-			Moniker string             `json:"moniker"`
-			ValKey  string             `json:"val_key"`
-			PubKey  cryptotypes.PubKey `json:"pub_key"`
-		}
+		// type ClaimParam struct {
+		// 	Moniker string `json:"moniker"`
+		// 	ValKey  string `json:"val_key"`
+		// 	PubKey  string `json:"pub_key"`
+		// }
 
-		var claimParam ClaimParam
-		err = json.Unmarshal(params[4], &claimParam)
-		if err != nil {
-			return nil, err
-		}
+		// var claimParam ClaimParam
+		// err = json.Unmarshal(params[4], &claimParam)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		valKey, err := cosmostypes.ValAddressFromBech32(claimParam.ValKey)
-		if err != nil {
-			return nil, err
-		}
+		// valKey, err := cosmostypes.ValAddressFromBech32(claimParam.ValKey)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		msg, err = stakingtypes.NewMsgClaimValidator(claimParam.Moniker, valKey, claimParam.PubKey)
-		if err != nil {
-			return nil, err
-		}
+		// // how to get pub key from string?
+		// cryptotypes
+
+		// msg, err = stakingtypes.NewMsgClaimValidator(claimParam.Moniker, valKey, claimParam.PubKey)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	case MsgUpsertTokenAlias:
 		// V, R, S, signer, param
 		proposer, err := bytes2cosmosAddr(params[3][12:])
@@ -975,7 +1179,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			Symbol      string   `json:"symbol"`
 			Name        string   `json:"name"`
 			Icon        string   `json:"icon"`
-			Decimals    uint32   `json:"decimals"`
+			Decimals    uint32   `json:"decimals,string"`
 			Denoms      []string `json:"denoms"`
 			Invalidated bool     `json:"invalidated"`
 		}
@@ -997,13 +1201,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type UpsertTokenRateParam struct {
-			Denom         string          `json:"denom"`
-			Rate          cosmostypes.Dec `json:"rate"`
-			IsFeePayments bool            `json:"is_fee_payments"`
-			StakeCap      cosmostypes.Dec `json:"stake_cap"`
-			StakeMin      cosmostypes.Int `json:"stake_min"`
-			IsStakeToken  bool            `json:"is_stake_token"`
-			Invalidated   bool            `json:"invalidated"`
+			Denom         string `json:"denom"`
+			Rate          string `json:"rate"`
+			IsFeePayments bool   `json:"is_fee_payments"`
+			StakeCap      string `json:"stake_cap"`
+			StakeMin      string `json:"stake_min"`
+			IsStakeToken  bool   `json:"is_stake_token"`
+			Invalidated   bool   `json:"invalidated"`
 		}
 
 		var upsertParam UpsertTokenRateParam
@@ -1012,8 +1216,21 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = tokenstypes.NewMsgUpsertTokenRate(proposer, upsertParam.Denom, upsertParam.Rate, upsertParam.IsFeePayments,
-			upsertParam.StakeCap, upsertParam.StakeMin, upsertParam.IsStakeToken, upsertParam.Invalidated)
+		rate, err := cosmostypes.NewDecFromStr(upsertParam.Rate)
+		if err != nil {
+			return nil, err
+		}
+		stakeCap, err := cosmostypes.NewDecFromStr(upsertParam.StakeCap)
+		if err != nil {
+			return nil, err
+		}
+		stakeMin, ok := cosmostypes.NewIntFromString(upsertParam.StakeMin)
+		if !ok {
+			return nil, errors.New(fmt.Sprintln("StakeMin - decoding from string to Int type is failed:", upsertParam.StakeMin))
+		}
+
+		msg = tokenstypes.NewMsgUpsertTokenRate(proposer, upsertParam.Denom, rate, upsertParam.IsFeePayments,
+			stakeCap, stakeMin, upsertParam.IsStakeToken, upsertParam.Invalidated)
 	case MsgActivate:
 		// V, R, S, signer
 		validator, err := bytes2cosmosValAddr(params[3][12:])
@@ -1044,18 +1261,38 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
+		type PermInfo struct {
+			OwnerRoles    []string `json:"owner_roles"`
+			OwnerAccounts []string `json:"owner_accounts"`
+		}
+
+		type WeightedRole struct {
+			Role   uint64 `json:"role,string"`
+			Weight string `json:"weight"`
+		}
+
+		type WeightedAccount struct {
+			Account string `json:"account"`
+			Weight  string `json:"weight"`
+		}
+
+		type WeightedPermInfo struct {
+			Roles    []WeightedRole    `json:"roles"`
+			Accounts []WeightedAccount `json:"accounts"`
+		}
+
 		type SpendingPoolParam struct {
-			Name              string                         `json:"name"`
-			ClaimStart        uint64                         `json:"claim_start"`
-			ClaimEnd          uint64                         `json:"claim_end"`
-			Rates             cosmostypes.DecCoins           `json:"rates"`
-			VoteQuorum        uint64                         `json:"vote_quorum"`
-			VotePeriod        uint64                         `json:"vote_period"`
-			VoteEnactment     uint64                         `json:"vote_enactment"`
-			Owners            spendingtypes.PermInfo         `json:"owners"`
-			Beneficiaries     spendingtypes.WeightedPermInfo `json:"beneficiaries"`
-			IsDynamicRate     bool                           `json:"is_dynamic_rate"`
-			DynamicRatePeriod uint64                         `json:"dynamic_rate_period"`
+			Name              string           `json:"name"`
+			ClaimStart        uint64           `json:"claim_start,string"`
+			ClaimEnd          uint64           `json:"claim_end,string"`
+			Rates             []string         `json:"rates"`
+			VoteQuorum        uint64           `json:"vote_quorum,string"`
+			VotePeriod        uint64           `json:"vote_period,string"`
+			VoteEnactment     uint64           `json:"vote_enactment,string"`
+			Owners            PermInfo         `json:"owners"`
+			Beneficiaries     WeightedPermInfo `json:"beneficiaries"`
+			IsDynamicRate     bool             `json:"is_dynamic_rate"`
+			DynamicRatePeriod uint64           `json:"dynamic_rate_period,string"`
 		}
 
 		var poolParam SpendingPoolParam
@@ -1064,8 +1301,51 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = spendingtypes.NewMsgCreateSpendingPool(poolParam.Name, poolParam.ClaimStart, poolParam.ClaimEnd, poolParam.Rates,
-			poolParam.VoteQuorum, poolParam.VotePeriod, poolParam.VoteEnactment, poolParam.Owners, poolParam.Beneficiaries,
+		var rates cosmostypes.DecCoins
+		for _, rate := range poolParam.Rates {
+			coin, err := cosmostypes.ParseDecCoin(rate)
+			if err != nil {
+				return nil, err
+			}
+			rates.Add(coin)
+		}
+
+		var permInfo spendingtypes.PermInfo
+		for _, roleStr := range poolParam.Owners.OwnerRoles {
+			role, err := strconv.ParseUint(roleStr, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			permInfo.OwnerRoles = append(permInfo.OwnerRoles, role)
+		}
+		permInfo.OwnerAccounts = append(permInfo.OwnerAccounts, poolParam.Owners.OwnerAccounts...)
+
+		var beneficiaries spendingtypes.WeightedPermInfo
+		for _, account := range poolParam.Beneficiaries.Accounts {
+			weight, err := cosmostypes.NewDecFromStr(account.Weight)
+			if err != nil {
+				return nil, err
+			}
+			weightedAccount := spendingtypes.WeightedAccount{
+				Account: account.Account,
+				Weight:  weight,
+			}
+			beneficiaries.Accounts = append(beneficiaries.Accounts, weightedAccount)
+		}
+		for _, role := range poolParam.Beneficiaries.Roles {
+			weight, err := cosmostypes.NewDecFromStr(role.Weight)
+			if err != nil {
+				return nil, err
+			}
+			weightedRole := spendingtypes.WeightedRole{
+				Role:   role.Role,
+				Weight: weight,
+			}
+			beneficiaries.Roles = append(beneficiaries.Roles, weightedRole)
+		}
+
+		msg = spendingtypes.NewMsgCreateSpendingPool(poolParam.Name, poolParam.ClaimStart, poolParam.ClaimEnd, rates,
+			poolParam.VoteQuorum, poolParam.VotePeriod, poolParam.VoteEnactment, permInfo, beneficiaries,
 			sender, poolParam.IsDynamicRate, poolParam.DynamicRatePeriod)
 	case MsgDepositSpendingPool:
 		// V, R, S, signer, amount string, name string
@@ -1075,8 +1355,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type SpendingPoolParam struct {
-			Name   string            `json:"Name"`
-			Amount cosmostypes.Coins `json:"Amount"`
+			Name    string `json:"name"`
+			Amounts string `json:"amounts"`
 		}
 
 		var poolParam SpendingPoolParam
@@ -1085,7 +1365,12 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = spendingtypes.NewMsgDepositSpendingPool(poolParam.Name, poolParam.Amount, sender)
+		amounts, err := cosmostypes.ParseCoinsNormalized(poolParam.Amounts)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = spendingtypes.NewMsgDepositSpendingPool(poolParam.Name, amounts, sender)
 	case MsgRegisterSpendingPoolBeneficiary:
 		// V, R, S, signer, name string
 		sender, err := bytes2cosmosAddr(params[3][12:])
@@ -1130,9 +1415,9 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type StakingPoolParam struct {
-			Validator  string          `json:"validator"`
-			Enabled    bool            `json:"enabled"`
-			Commission cosmostypes.Dec `json:"commission"`
+			Validator  string `json:"validator"`
+			Enabled    bool   `json:"enabled"`
+			Commission string `json:"commission"`
 		}
 
 		var poolParam StakingPoolParam
@@ -1141,7 +1426,12 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = multistakingtypes.NewMsgUpsertStakingPool(from, poolParam.Validator, poolParam.Enabled, poolParam.Commission)
+		commission, err := cosmostypes.NewDecFromStr(poolParam.Commission)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = multistakingtypes.NewMsgUpsertStakingPool(from, poolParam.Validator, poolParam.Enabled, commission)
 	case MsgDelegate:
 		// V, R, S, signer, param
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1155,7 +1445,12 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = multistakingtypes.NewMsgDelegate(from, delegateParam.To, delegateParam.Amounts)
+		amounts, err := cosmostypes.ParseCoinsNormalized(delegateParam.Amounts)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = multistakingtypes.NewMsgDelegate(from, delegateParam.To, amounts)
 	case MsgUndelegate:
 		// V, R, S, signer, amount, validator
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1169,7 +1464,12 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = multistakingtypes.NewMsgUndelegate(from, delegateParam.To, delegateParam.Amounts)
+		amounts, err := cosmostypes.ParseCoinsNormalized(delegateParam.Amounts)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = multistakingtypes.NewMsgUndelegate(from, delegateParam.To, amounts)
 	case MsgClaimRewards:
 		// V, R, S, signer
 		from, err := hex2bech32(hex.EncodeToString(params[3][12:]), TypeKiraAddr)
@@ -1185,7 +1485,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type UndelegationParam struct {
-			UndelegationId uint64 `json:"undelegation_id"`
+			UndelegationId uint64 `json:"undelegation_id,string"`
 		}
 
 		var undelegationParam UndelegationParam
@@ -1229,12 +1529,22 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
+		type CustodySettings struct {
+			CustodyEnabled bool   `json:"custody_enabled"`
+			CustodyMode    uint64 `json:"custody_mode,string"`
+			UsePassword    bool   `json:"use_password"`
+			UseWhiteList   bool   `json:"use_white_list"`
+			UseLimits      bool   `json:"use_limits"`
+			Key            string `json:"key"`
+			NextController string `json:"next_controller"`
+		}
+
 		type CustodyParam struct {
-			CustodySettings custodytypes.CustodySettings `json:"custody_settings"`
-			OldKey          string                       `json:"old_key"`
-			NewKey          string                       `json:"new_key"`
-			Next            string                       `json:"next"`
-			Target          string                       `json:"target"`
+			CustodySettings CustodySettings `json:"custody_settings"`
+			OldKey          string          `json:"old_key"`
+			NewKey          string          `json:"new_key"`
+			Next            string          `json:"next"`
+			Target          string          `json:"target"`
 		}
 
 		var custodyParam CustodyParam
@@ -1243,7 +1553,17 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgCreateCustody(from, custodyParam.CustodySettings, custodyParam.OldKey, custodyParam.NewKey,
+		custodySettings := custodytypes.CustodySettings{
+			CustodyEnabled: custodyParam.CustodySettings.CustodyEnabled,
+			CustodyMode:    custodyParam.CustodySettings.CustodyMode,
+			UsePassword:    custodyParam.CustodySettings.UsePassword,
+			UseWhiteList:   custodyParam.CustodySettings.UseWhiteList,
+			UseLimits:      custodyParam.CustodySettings.UseLimits,
+			Key:            custodyParam.CustodySettings.Key,
+			NextController: custodyParam.CustodySettings.NextController,
+		}
+
+		msg = custodytypes.NewMsgCreateCustody(from, custodySettings, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgAddToCustodyWhiteList:
 		// V, R, S, signer, oldKey string, newKey string, next string, target string
@@ -1259,7 +1579,16 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgAddToCustodyWhiteList(from, custodyParam.NewAddrs, custodyParam.OldKey, custodyParam.NewKey,
+		var newAddrs []cosmostypes.AccAddress
+		for _, addrStr := range custodyParam.NewAddrs {
+			addr, err := cosmostypes.AccAddressFromBech32(addrStr)
+			if err != nil {
+				return nil, err
+			}
+			newAddrs = append(newAddrs, addr)
+		}
+
+		msg = custodytypes.NewMsgAddToCustodyWhiteList(from, newAddrs, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgAddToCustodyCustodians:
 		// V, R, S, signer, oldKey string, newKey string, next string, target string
@@ -1275,7 +1604,16 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgAddToCustodyCustodians(from, custodyParam.NewAddrs, custodyParam.OldKey, custodyParam.NewKey,
+		var newAddrs []cosmostypes.AccAddress
+		for _, addrStr := range custodyParam.NewAddrs {
+			addr, err := cosmostypes.AccAddressFromBech32(addrStr)
+			if err != nil {
+				return nil, err
+			}
+			newAddrs = append(newAddrs, addr)
+		}
+
+		msg = custodytypes.NewMsgAddToCustodyCustodians(from, newAddrs, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgRemoveFromCustodyCustodians:
 		// V, R, S, signer, newAddr cosmostypes.AccAddress,
@@ -1285,21 +1623,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type CustodianParam struct {
-			NewAddr cosmostypes.AccAddress `json:"new_addr"`
-			OldKey  string                 `json:"old_key"`
-			NewKey  string                 `json:"new_key"`
-			Next    string                 `json:"next"`
-			Target  string                 `json:"target"`
-		}
-
-		var custodyParam CustodianParam
+		var custodyParam SingleCustodianParam
 		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgRemoveFromCustodyCustodians(from, custodyParam.NewAddr, custodyParam.OldKey, custodyParam.NewKey,
+		newAddr, err := cosmostypes.AccAddressFromBech32(custodyParam.NewAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgRemoveFromCustodyCustodians(from, newAddr, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgDropCustodyCustodians:
 		// V, R, S, signer
@@ -1325,21 +1660,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type CustodianParam struct {
-			NewAddr cosmostypes.AccAddress `json:"new_addr"`
-			OldKey  string                 `json:"old_key"`
-			NewKey  string                 `json:"new_key"`
-			Next    string                 `json:"next"`
-			Target  string                 `json:"target"`
-		}
-
-		var custodyParam CustodianParam
+		var custodyParam SingleCustodianParam
 		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgRemoveFromCustodyWhiteList(from, custodyParam.NewAddr, custodyParam.OldKey, custodyParam.NewKey,
+		newAddr, err := cosmostypes.AccAddressFromBech32(custodyParam.NewAddr)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgRemoveFromCustodyWhiteList(from, newAddr, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgDropCustodyWhiteList:
 		// V, R, S, signer
@@ -1364,18 +1696,18 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type CustodianParam struct {
-			To   cosmostypes.AccAddress `json:"to"`
-			Hash string                 `json:"hash"`
-		}
-
-		var custodyParam CustodianParam
+		var custodyParam CustodyParam
 		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgApproveCustodyTransaction(from, custodyParam.To, custodyParam.Hash)
+		to, err := cosmostypes.AccAddressFromBech32(custodyParam.To)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgApproveCustodyTransaction(from, to, custodyParam.Hash)
 	case MsgDeclineCustodyTx:
 		// V, R, S, signer, to string, hash string
 		from, err := bytes2cosmosAddr(params[3][12:])
@@ -1383,21 +1715,21 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type CustodianParam struct {
-			To   cosmostypes.AccAddress `json:"to"`
-			Hash string                 `json:"hash"`
-		}
-
-		var custodyParam CustodianParam
+		var custodyParam CustodyParam
 		err = json.Unmarshal(params[4], &custodyParam)
 		if err != nil {
 			return nil, err
 		}
 
-		msg = custodytypes.NewMsgDeclineCustodyTransaction(from, custodyParam.To, custodyParam.Hash)
+		to, err := cosmostypes.AccAddressFromBech32(custodyParam.To)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = custodytypes.NewMsgDeclineCustodyTransaction(from, to, custodyParam.Hash)
 	}
 
-	fmt.Println(msg)
+	// fmt.Println(msg)
 	err = txBuilder.SetMsgs(msg)
 	if err != nil {
 		return nil, err
@@ -1502,7 +1834,7 @@ func sendCosmosTx(ctx context.Context, txBytes []byte) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(grpcRes.TxResponse)
+	// fmt.Println(grpcRes.TxResponse)
 
 	if grpcRes.TxResponse.Code != 0 {
 		return "", errors.New(fmt.Sprintln("send tx failed - result code: ", grpcRes.TxResponse.Code))
