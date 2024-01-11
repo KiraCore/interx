@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/big"
 	"net/http"
-	"strconv"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -98,16 +97,16 @@ var grpcConn *grpc.ClientConn
 
 type ListRoleParam struct {
 	RoleIdentifier string `json:"role_identifier"`
-	Permission     uint32 `json:"permission,string"`
+	Permission     uint32 `json:"permission"`
 }
 
 type PermissionsParam struct {
-	Permission     uint32 `json:"permission,string"`
+	Permission     uint32 `json:"permission"`
 	ControlledAddr string `json:"controlled_addr"`
 }
 
 type RoleParam struct {
-	RoleId     uint32 `json:"role_id,string"`
+	RoleId     uint32 `json:"role_id"`
 	Controller string `json:"controller"`
 }
 
@@ -135,6 +134,11 @@ type SingleCustodianParam struct {
 type CustodyParam struct {
 	To   string `json:"to"`
 	Hash string `json:"hash"`
+}
+
+type SpendingPoolParam struct {
+	Name    string `json:"name"`
+	Amounts string `json:"amounts"`
 }
 
 // decode 256bit param like bool, uint, hex-typed address etc
@@ -229,7 +233,7 @@ func sendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 	activatePrefix, _ := hex.DecodeString("a1374dc2")
 	pausePrefix, _ := hex.DecodeString("1371cf19")
 	unpausePrefix, _ := hex.DecodeString("b9179894")
-	createSpendingPoolPrefix, _ := hex.DecodeString("00000000")
+	createSpendingPoolPrefix, _ := hex.DecodeString("4ed8a0a2")
 	depositSpendingPoolPrefix, _ := hex.DecodeString("e10c925c")
 	registerSpendingPoolBeneficiaryPrefix, _ := hex.DecodeString("7ab7eecf")
 	claimSpendingPoolPrefix, _ := hex.DecodeString("efeed4a0")
@@ -329,7 +333,7 @@ func sendTx(txRawData string, gwCosmosmux *runtime.ServeMux, r *http.Request) (s
 	case bytes.Equal(ethTxData.Data[:4], registerDelegatorPrefix):
 		msgType = MsgRegisterDelegator
 	case bytes.Equal(ethTxData.Data[:4], createCustodyPrefix):
-		msgType = MsgClaimSpendingPool
+		msgType = MsgCreateCustody
 	case bytes.Equal(ethTxData.Data[:4], addToCustodyWhiteListPrefix):
 		msgType = MsgAddToCustodyWhiteList
 	case bytes.Equal(ethTxData.Data[:4], addToCustodyCustodiansPrefix):
@@ -426,7 +430,7 @@ func getStructHash(txType int, valParam string) ethcommon.Hash {
 	case MsgUnpause:
 		funcSig = crypto.Keccak256([]byte("unpause()"))
 	case MsgCreateSpendingPool:
-		// funcSig = crypto.Keccak256([]byte("delegate(string param)"))
+		funcSig = crypto.Keccak256([]byte("createSpendingPool(string param)"))
 	case MsgDepositSpendingPool:
 		funcSig = crypto.Keccak256([]byte("depositSpendingPool(string param)"))
 	case MsgRegisterSpendingPoolBeneficiary:
@@ -580,9 +584,9 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type Equivocation struct {
-			Height           int64     `json:"height,string"`
+			Height           int64     `json:"height"`
 			Time             time.Time `json:"time"`
-			Power            int64     `json:"power,string"`
+			Power            int64     `json:"power"`
 			ConsensusAddress string    `json:"consensus_address"`
 		}
 
@@ -633,8 +637,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type VoteProposalParam struct {
-			ProposalID uint64 `json:"proposal_id,string"`
-			Option     uint64 `json:"option,string"`
+			ProposalID uint64 `json:"proposal_id"`
+			Option     uint64 `json:"option"`
 			Slash      string `json:"slash"`
 		}
 
@@ -696,7 +700,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		type IdentityRecordParam struct {
 			Balance   string   `json:"balance"`
 			Verifier  string   `json:"verifier"`
-			RecordIds []string `json:"record_ids"`
+			RecordIds []uint64 `json:"record_ids"`
 		}
 
 		var recordParam IdentityRecordParam
@@ -715,16 +719,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		var recordIds []uint64
-		for _, idStr := range recordParam.RecordIds {
-			id, err := strconv.ParseUint(idStr, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			recordIds = append(recordIds, id)
-		}
-
-		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordIds, balance)
+		msg = customgovtypes.NewMsgRequestIdentityRecordsVerify(from, verifier, recordParam.RecordIds, balance)
 	case MsgHandleIdentityRecordsVerifyRequest:
 		// V, R, S, signer, requestId, isApprove
 		verifier, err := bytes2cosmosAddr(params[3][12:])
@@ -733,7 +728,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type IdentityRecordParam struct {
-			RequestID  uint64 `json:"request_id,string"`
+			RequestID  uint64 `json:"request_id"`
 			IsApproved bool   `json:"is_approved"`
 		}
 
@@ -752,7 +747,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type IdentityRecordParam struct {
-			VerifyRequestId uint64 `json:"verify_request_id,string"`
+			VerifyRequestId uint64 `json:"verify_request_id"`
 		}
 
 		var recordParam IdentityRecordParam
@@ -770,175 +765,171 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type NetworkProperties struct {
-			MinTxFee                        uint64 `json:"min_tx_fee,string"`
-			MaxTxFee                        uint64 `json:"max_tx_fee,string"`
-			VoteQuorum                      uint64 `json:"vote_quorum,string"`
-			MinimumProposalEndTime          uint64 `json:"minimum_proposal_end_time,string"`
-			ProposalEnactmentTime           uint64 `json:"proposal_enactment_time,string"`
-			MinProposalEndBlocks            uint64 `json:"min_proposal_end_blocks,string"`
-			MinProposalEnactmentBlocks      uint64 `json:"min_proposal_enactment_blocks,string"`
-			EnableForeignFeePayments        bool   `json:"enable_foreign_fee_payments,string"`
-			MischanceRankDecreaseAmount     uint64 `json:"mischance_rank_decrease_amount,string"`
-			MaxMischance                    uint64 `json:"max_mischance,string"`
-			MischanceConfidence             uint64 `json:"mischance_confidence,string"`
+			MinTxFee                        uint64 `json:"min_tx_fee"`
+			MaxTxFee                        uint64 `json:"max_tx_fee"`
+			VoteQuorum                      uint64 `json:"vote_quorum"`
+			MinimumProposalEndTime          uint64 `json:"minimum_proposal_end_time"`
+			ProposalEnactmentTime           uint64 `json:"proposal_enactment_time"`
+			MinProposalEndBlocks            uint64 `json:"min_proposal_end_blocks"`
+			MinProposalEnactmentBlocks      uint64 `json:"min_proposal_enactment_blocks"`
+			EnableForeignFeePayments        bool   `json:"enable_foreign_fee_payments"`
+			MischanceRankDecreaseAmount     uint64 `json:"mischance_rank_decrease_amount"`
+			MaxMischance                    uint64 `json:"max_mischance"`
+			MischanceConfidence             uint64 `json:"mischance_confidence"`
 			InactiveRankDecreasePercent     string `json:"inactive_rank_decrease_percent"`
-			MinValidators                   uint64 `json:"min_validators,string"`
-			PoorNetworkMaxBankSend          uint64 `json:"poor_network_max_bank_send,string"`
-			UnjailMaxTime                   uint64 `json:"unjail_max_time,string"`
-			EnableTokenWhitelist            bool   `json:"enable_token_whitelist,string"`
-			EnableTokenBlacklist            bool   `json:"enable_token_blacklist,string"`
-			MinIdentityApprovalTip          uint64 `json:"min_identity_approval_tip,string"`
-			UniqueIdentityKeys              string `json:"unique_identity_keys,string"`
-			UbiHardcap                      uint64 `json:"ubi_hardcap,string"`
+			MinValidators                   uint64 `json:"min_validators"`
+			PoorNetworkMaxBankSend          uint64 `json:"poor_network_max_bank_send"`
+			UnjailMaxTime                   uint64 `json:"unjail_max_time"`
+			EnableTokenWhitelist            bool   `json:"enable_token_whitelist"`
+			EnableTokenBlacklist            bool   `json:"enable_token_blacklist"`
+			MinIdentityApprovalTip          uint64 `json:"min_identity_approval_tip"`
+			UniqueIdentityKeys              string `json:"unique_identity_keys"`
+			UbiHardcap                      uint64 `json:"ubi_hardcap"`
 			ValidatorsFeeShare              string `json:"validators_fee_share"`
 			InflationRate                   string `json:"inflation_rate"`
-			InflationPeriod                 uint64 `json:"inflation_period,string"`
-			UnstakingPeriod                 uint64 `json:"unstaking_period,string"`
-			MaxDelegators                   uint64 `json:"max_delegators,string"`
-			MinDelegationPushout            uint64 `json:"min_delegation_pushout,string"`
-			SlashingPeriod                  uint64 `json:"slashing_period,string"`
+			InflationPeriod                 uint64 `json:"inflation_period"`
+			UnstakingPeriod                 uint64 `json:"unstaking_period"`
+			MaxDelegators                   uint64 `json:"max_delegators"`
+			MinDelegationPushout            uint64 `json:"min_delegation_pushout"`
+			SlashingPeriod                  uint64 `json:"slashing_period"`
 			MaxJailedPercentage             string `json:"max_jailed_percentage"`
 			MaxSlashingPercentage           string `json:"max_slashing_percentage"`
-			MinCustodyReward                uint64 `json:"min_custody_reward,string"`
-			MaxCustodyBufferSize            uint64 `json:"max_custody_buffer_size,string"`
-			MaxCustodyTxSize                uint64 `json:"max_custody_tx_size,string"`
-			AbstentionRankDecreaseAmount    uint64 `json:"abstention_rank_decrease_amount,string"`
-			MaxAbstention                   uint64 `json:"max_abstention,string"`
-			MinCollectiveBond               uint64 `json:"min_collective_bond,string"`
-			MinCollectiveBondingTime        uint64 `json:"min_collective_bonding_time,string"`
-			MaxCollectiveOutputs            uint64 `json:"max_collective_outputs,string"`
-			MinCollectiveClaimPeriod        uint64 `json:"min_collective_claim_period,string"`
-			ValidatorRecoveryBond           uint64 `json:"validator_recovery_bond,string"`
+			MinCustodyReward                uint64 `json:"min_custody_reward"`
+			MaxCustodyBufferSize            uint64 `json:"max_custody_buffer_size"`
+			MaxCustodyTxSize                uint64 `json:"max_custody_tx_size"`
+			AbstentionRankDecreaseAmount    uint64 `json:"abstention_rank_decrease_amount"`
+			MaxAbstention                   uint64 `json:"max_abstention"`
+			MinCollectiveBond               uint64 `json:"min_collective_bond"`
+			MinCollectiveBondingTime        uint64 `json:"min_collective_bonding_time"`
+			MaxCollectiveOutputs            uint64 `json:"max_collective_outputs"`
+			MinCollectiveClaimPeriod        uint64 `json:"min_collective_claim_period"`
+			ValidatorRecoveryBond           uint64 `json:"validator_recovery_bond"`
 			MaxAnnualInflation              string `json:"max_annual_inflation"`
-			MaxProposalTitleSize            uint64 `json:"max_proposal_title_size,string"`
-			MaxProposalDescriptionSize      uint64 `json:"max_proposal_description_size,string"`
-			MaxProposalPollOptionSize       uint64 `json:"max_proposal_poll_option_size,string"`
-			MaxProposalPollOptionCount      uint64 `json:"max_proposal_poll_option_count,string"`
-			MaxProposalReferenceSize        uint64 `json:"max_proposal_reference_size,string"`
-			MaxProposalChecksumSize         uint64 `json:"max_proposal_checksum_size,string"`
-			MinDappBond                     uint64 `json:"min_dapp_bond,string"`
-			MaxDappBond                     uint64 `json:"max_dapp_bond,string"`
-			DappLiquidationThreshold        uint64 `json:"dapp_liquidation_threshold,string"`
-			DappLiquidationPeriod           uint64 `json:"dapp_liquidation_period,string"`
-			DappBondDuration                uint64 `json:"dapp_bond_duration,string"`
+			MaxProposalTitleSize            uint64 `json:"max_proposal_title_size"`
+			MaxProposalDescriptionSize      uint64 `json:"max_proposal_description_size"`
+			MaxProposalPollOptionSize       uint64 `json:"max_proposal_poll_option_size"`
+			MaxProposalPollOptionCount      uint64 `json:"max_proposal_poll_option_count"`
+			MaxProposalReferenceSize        uint64 `json:"max_proposal_reference_size"`
+			MaxProposalChecksumSize         uint64 `json:"max_proposal_checksum_size"`
+			MinDappBond                     uint64 `json:"min_dapp_bond"`
+			MaxDappBond                     uint64 `json:"max_dapp_bond"`
+			DappLiquidationThreshold        uint64 `json:"dapp_liquidation_threshold"`
+			DappLiquidationPeriod           uint64 `json:"dapp_liquidation_period"`
+			DappBondDuration                uint64 `json:"dapp_bond_duration"`
 			DappVerifierBond                string `json:"dapp_verifier_bond"`
-			DappAutoDenounceTime            uint64 `json:"dapp_auto_denounce_time,string"`
-			DappMischanceRankDecreaseAmount uint64 `json:"dapp_mischance_rank_decrease_amount,string"`
-			DappMaxMischance                uint64 `json:"dapp_max_mischance,string"`
-			DappInactiveRankDecreasePercent uint64 `json:"dapp_inactive_rank_decrease_percent,string"`
+			DappAutoDenounceTime            uint64 `json:"dapp_auto_denounce_time"`
+			DappMischanceRankDecreaseAmount uint64 `json:"dapp_mischance_rank_decrease_amount"`
+			DappMaxMischance                uint64 `json:"dapp_max_mischance"`
+			DappInactiveRankDecreasePercent uint64 `json:"dapp_inactive_rank_decrease_percent"`
 			DappPoolSlippageDefault         string `json:"dapp_pool_slippage_default"`
-			MintingFtFee                    uint64 `json:"minting_ft_fee,string"`
-			MintingNftFee                   uint64 `json:"minting_nft_fee,string"`
+			MintingFtFee                    uint64 `json:"minting_ft_fee"`
+			MintingNftFee                   uint64 `json:"minting_nft_fee"`
 			VetoThreshold                   string `json:"veto_threshold"`
 		}
 
-		type NetworkPropertiesParam struct {
-			NetworkProperties NetworkProperties `json:"network_properties"`
-		}
-
-		var networkProperties NetworkPropertiesParam
+		var networkProperties NetworkProperties
 		err = json.Unmarshal(params[4], &networkProperties)
 		if err != nil {
 			return nil, err
 		}
 
-		inActiveRankDecreasePercent, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.InactiveRankDecreasePercent)
+		inActiveRankDecreasePercent, err := cosmostypes.NewDecFromStr(networkProperties.InactiveRankDecreasePercent)
 		if err != nil {
 			return nil, err
 		}
-		validatorsFeeShare, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.ValidatorsFeeShare)
+		validatorsFeeShare, err := cosmostypes.NewDecFromStr(networkProperties.ValidatorsFeeShare)
 		if err != nil {
 			return nil, err
 		}
-		inflationRate, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.InflationRate)
+		inflationRate, err := cosmostypes.NewDecFromStr(networkProperties.InflationRate)
 		if err != nil {
 			return nil, err
 		}
-		maxJailedPercentage, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxJailedPercentage)
+		maxJailedPercentage, err := cosmostypes.NewDecFromStr(networkProperties.MaxJailedPercentage)
 		if err != nil {
 			return nil, err
 		}
-		maxSlashingPercentage, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxSlashingPercentage)
+		maxSlashingPercentage, err := cosmostypes.NewDecFromStr(networkProperties.MaxSlashingPercentage)
 		if err != nil {
 			return nil, err
 		}
-		maxAnnualInflation, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.MaxAnnualInflation)
+		maxAnnualInflation, err := cosmostypes.NewDecFromStr(networkProperties.MaxAnnualInflation)
 		if err != nil {
 			return nil, err
 		}
-		dappVerifierBond, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.DappVerifierBond)
+		dappVerifierBond, err := cosmostypes.NewDecFromStr(networkProperties.DappVerifierBond)
 		if err != nil {
 			return nil, err
 		}
-		dappPoolSlippageDefault, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.DappPoolSlippageDefault)
+		dappPoolSlippageDefault, err := cosmostypes.NewDecFromStr(networkProperties.DappPoolSlippageDefault)
 		if err != nil {
 			return nil, err
 		}
-		vetoThreshold, err := cosmostypes.NewDecFromStr(networkProperties.NetworkProperties.VetoThreshold)
+		vetoThreshold, err := cosmostypes.NewDecFromStr(networkProperties.VetoThreshold)
 		if err != nil {
 			return nil, err
 		}
 
 		networkPropertiesParam := customgovtypes.NetworkProperties{
-			MinTxFee:                        networkProperties.NetworkProperties.MinTxFee,
-			MaxTxFee:                        networkProperties.NetworkProperties.MaxTxFee,
-			VoteQuorum:                      networkProperties.NetworkProperties.VoteQuorum,
-			MinimumProposalEndTime:          networkProperties.NetworkProperties.MinimumProposalEndTime,
-			ProposalEnactmentTime:           networkProperties.NetworkProperties.ProposalEnactmentTime,
-			MinProposalEndBlocks:            networkProperties.NetworkProperties.MinProposalEndBlocks,
-			MinProposalEnactmentBlocks:      networkProperties.NetworkProperties.MinProposalEnactmentBlocks,
-			EnableForeignFeePayments:        networkProperties.NetworkProperties.EnableForeignFeePayments,
-			MischanceRankDecreaseAmount:     networkProperties.NetworkProperties.MischanceRankDecreaseAmount,
-			MaxMischance:                    networkProperties.NetworkProperties.MaxMischance,
-			MischanceConfidence:             networkProperties.NetworkProperties.MischanceConfidence,
+			MinTxFee:                        networkProperties.MinTxFee,
+			MaxTxFee:                        networkProperties.MaxTxFee,
+			VoteQuorum:                      networkProperties.VoteQuorum,
+			MinimumProposalEndTime:          networkProperties.MinimumProposalEndTime,
+			ProposalEnactmentTime:           networkProperties.ProposalEnactmentTime,
+			MinProposalEndBlocks:            networkProperties.MinProposalEndBlocks,
+			MinProposalEnactmentBlocks:      networkProperties.MinProposalEnactmentBlocks,
+			EnableForeignFeePayments:        networkProperties.EnableForeignFeePayments,
+			MischanceRankDecreaseAmount:     networkProperties.MischanceRankDecreaseAmount,
+			MaxMischance:                    networkProperties.MaxMischance,
+			MischanceConfidence:             networkProperties.MischanceConfidence,
 			InactiveRankDecreasePercent:     inActiveRankDecreasePercent,
-			MinValidators:                   networkProperties.NetworkProperties.MinValidators,
-			PoorNetworkMaxBankSend:          networkProperties.NetworkProperties.PoorNetworkMaxBankSend,
-			UnjailMaxTime:                   networkProperties.NetworkProperties.UnjailMaxTime,
-			EnableTokenWhitelist:            networkProperties.NetworkProperties.EnableTokenWhitelist,
-			EnableTokenBlacklist:            networkProperties.NetworkProperties.EnableTokenBlacklist,
-			MinIdentityApprovalTip:          networkProperties.NetworkProperties.MinIdentityApprovalTip,
-			UniqueIdentityKeys:              networkProperties.NetworkProperties.UniqueIdentityKeys,
-			UbiHardcap:                      networkProperties.NetworkProperties.UbiHardcap,
+			MinValidators:                   networkProperties.MinValidators,
+			PoorNetworkMaxBankSend:          networkProperties.PoorNetworkMaxBankSend,
+			UnjailMaxTime:                   networkProperties.UnjailMaxTime,
+			EnableTokenWhitelist:            networkProperties.EnableTokenWhitelist,
+			EnableTokenBlacklist:            networkProperties.EnableTokenBlacklist,
+			MinIdentityApprovalTip:          networkProperties.MinIdentityApprovalTip,
+			UniqueIdentityKeys:              networkProperties.UniqueIdentityKeys,
+			UbiHardcap:                      networkProperties.UbiHardcap,
 			ValidatorsFeeShare:              validatorsFeeShare,
 			InflationRate:                   inflationRate,
-			InflationPeriod:                 networkProperties.NetworkProperties.InflationPeriod,
-			UnstakingPeriod:                 networkProperties.NetworkProperties.UnstakingPeriod,
-			MaxDelegators:                   networkProperties.NetworkProperties.MaxDelegators,
-			MinDelegationPushout:            networkProperties.NetworkProperties.MinDelegationPushout,
-			SlashingPeriod:                  networkProperties.NetworkProperties.SlashingPeriod,
+			InflationPeriod:                 networkProperties.InflationPeriod,
+			UnstakingPeriod:                 networkProperties.UnstakingPeriod,
+			MaxDelegators:                   networkProperties.MaxDelegators,
+			MinDelegationPushout:            networkProperties.MinDelegationPushout,
+			SlashingPeriod:                  networkProperties.SlashingPeriod,
 			MaxJailedPercentage:             maxJailedPercentage,
 			MaxSlashingPercentage:           maxSlashingPercentage,
-			MinCustodyReward:                networkProperties.NetworkProperties.MinCustodyReward,
-			MaxCustodyBufferSize:            networkProperties.NetworkProperties.MaxCustodyBufferSize,
-			MaxCustodyTxSize:                networkProperties.NetworkProperties.MaxCustodyTxSize,
-			AbstentionRankDecreaseAmount:    networkProperties.NetworkProperties.AbstentionRankDecreaseAmount,
-			MaxAbstention:                   networkProperties.NetworkProperties.MaxAbstention,
-			MinCollectiveBond:               networkProperties.NetworkProperties.MinCollectiveBond,
-			MinCollectiveBondingTime:        networkProperties.NetworkProperties.MinCollectiveBondingTime,
-			MaxCollectiveOutputs:            networkProperties.NetworkProperties.MaxCollectiveOutputs,
-			MinCollectiveClaimPeriod:        networkProperties.NetworkProperties.MinCollectiveClaimPeriod,
-			ValidatorRecoveryBond:           networkProperties.NetworkProperties.ValidatorRecoveryBond,
+			MinCustodyReward:                networkProperties.MinCustodyReward,
+			MaxCustodyBufferSize:            networkProperties.MaxCustodyBufferSize,
+			MaxCustodyTxSize:                networkProperties.MaxCustodyTxSize,
+			AbstentionRankDecreaseAmount:    networkProperties.AbstentionRankDecreaseAmount,
+			MaxAbstention:                   networkProperties.MaxAbstention,
+			MinCollectiveBond:               networkProperties.MinCollectiveBond,
+			MinCollectiveBondingTime:        networkProperties.MinCollectiveBondingTime,
+			MaxCollectiveOutputs:            networkProperties.MaxCollectiveOutputs,
+			MinCollectiveClaimPeriod:        networkProperties.MinCollectiveClaimPeriod,
+			ValidatorRecoveryBond:           networkProperties.ValidatorRecoveryBond,
 			MaxAnnualInflation:              maxAnnualInflation,
-			MaxProposalTitleSize:            networkProperties.NetworkProperties.MaxProposalTitleSize,
-			MaxProposalDescriptionSize:      networkProperties.NetworkProperties.MaxProposalDescriptionSize,
-			MaxProposalPollOptionSize:       networkProperties.NetworkProperties.MaxProposalPollOptionSize,
-			MaxProposalPollOptionCount:      networkProperties.NetworkProperties.MaxProposalPollOptionCount,
-			MaxProposalReferenceSize:        networkProperties.NetworkProperties.MaxProposalReferenceSize,
-			MaxProposalChecksumSize:         networkProperties.NetworkProperties.MaxProposalChecksumSize,
-			MinDappBond:                     networkProperties.NetworkProperties.MinDappBond,
-			MaxDappBond:                     networkProperties.NetworkProperties.MaxDappBond,
-			DappLiquidationThreshold:        networkProperties.NetworkProperties.DappLiquidationThreshold,
-			DappLiquidationPeriod:           networkProperties.NetworkProperties.DappLiquidationPeriod,
-			DappBondDuration:                networkProperties.NetworkProperties.DappBondDuration,
+			MaxProposalTitleSize:            networkProperties.MaxProposalTitleSize,
+			MaxProposalDescriptionSize:      networkProperties.MaxProposalDescriptionSize,
+			MaxProposalPollOptionSize:       networkProperties.MaxProposalPollOptionSize,
+			MaxProposalPollOptionCount:      networkProperties.MaxProposalPollOptionCount,
+			MaxProposalReferenceSize:        networkProperties.MaxProposalReferenceSize,
+			MaxProposalChecksumSize:         networkProperties.MaxProposalChecksumSize,
+			MinDappBond:                     networkProperties.MinDappBond,
+			MaxDappBond:                     networkProperties.MaxDappBond,
+			DappLiquidationThreshold:        networkProperties.DappLiquidationThreshold,
+			DappLiquidationPeriod:           networkProperties.DappLiquidationPeriod,
+			DappBondDuration:                networkProperties.DappBondDuration,
 			DappVerifierBond:                dappVerifierBond,
-			DappAutoDenounceTime:            networkProperties.NetworkProperties.DappAutoDenounceTime,
-			DappMischanceRankDecreaseAmount: networkProperties.NetworkProperties.DappMischanceRankDecreaseAmount,
-			DappMaxMischance:                networkProperties.NetworkProperties.DappMaxMischance,
-			DappInactiveRankDecreasePercent: networkProperties.NetworkProperties.DappInactiveRankDecreasePercent,
+			DappAutoDenounceTime:            networkProperties.DappAutoDenounceTime,
+			DappMischanceRankDecreaseAmount: networkProperties.DappMischanceRankDecreaseAmount,
+			DappMaxMischance:                networkProperties.DappMaxMischance,
+			DappInactiveRankDecreasePercent: networkProperties.DappInactiveRankDecreasePercent,
 			DappPoolSlippageDefault:         dappPoolSlippageDefault,
-			MintingFtFee:                    networkProperties.NetworkProperties.MintingFtFee,
-			MintingNftFee:                   networkProperties.NetworkProperties.MintingNftFee,
+			MintingFtFee:                    networkProperties.MintingFtFee,
+			MintingNftFee:                   networkProperties.MintingNftFee,
 			VetoThreshold:                   vetoThreshold,
 		}
 
@@ -952,10 +943,10 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 
 		type ExecutionFeeParam struct {
 			TransactionType string `json:"transaction_type"`
-			ExecutionFee    uint64 `json:"execution_fee,string"`
-			FailureFee      uint64 `json:"failure_fee,string"`
-			Timeout         uint64 `json:"timeout,string"`
-			DefaultParams   uint64 `json:"default_params,string"`
+			ExecutionFee    uint64 `json:"execution_fee"`
+			FailureFee      uint64 `json:"failure_fee"`
+			Timeout         uint64 `json:"timeout"`
+			DefaultParams   uint64 `json:"default_params"`
 		}
 
 		var feeParam ExecutionFeeParam
@@ -1179,7 +1170,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			Symbol      string   `json:"symbol"`
 			Name        string   `json:"name"`
 			Icon        string   `json:"icon"`
-			Decimals    uint32   `json:"decimals,string"`
+			Decimals    uint32   `json:"decimals"`
 			Denoms      []string `json:"denoms"`
 			Invalidated bool     `json:"invalidated"`
 		}
@@ -1261,13 +1252,8 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type PermInfo struct {
-			OwnerRoles    []string `json:"owner_roles"`
-			OwnerAccounts []string `json:"owner_accounts"`
-		}
-
 		type WeightedRole struct {
-			Role   uint64 `json:"role,string"`
+			Role   uint64 `json:"role"`
 			Weight string `json:"weight"`
 		}
 
@@ -1282,17 +1268,17 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type SpendingPoolParam struct {
-			Name              string           `json:"name"`
-			ClaimStart        uint64           `json:"claim_start,string"`
-			ClaimEnd          uint64           `json:"claim_end,string"`
-			Rates             []string         `json:"rates"`
-			VoteQuorum        uint64           `json:"vote_quorum,string"`
-			VotePeriod        uint64           `json:"vote_period,string"`
-			VoteEnactment     uint64           `json:"vote_enactment,string"`
-			Owners            PermInfo         `json:"owners"`
-			Beneficiaries     WeightedPermInfo `json:"beneficiaries"`
-			IsDynamicRate     bool             `json:"is_dynamic_rate"`
-			DynamicRatePeriod uint64           `json:"dynamic_rate_period,string"`
+			Name              string                 `json:"name"`
+			ClaimStart        uint64                 `json:"claim_start"`
+			ClaimEnd          uint64                 `json:"claim_end"`
+			Rates             []string               `json:"rates"`
+			VoteQuorum        uint64                 `json:"vote_quorum"`
+			VotePeriod        uint64                 `json:"vote_period"`
+			VoteEnactment     uint64                 `json:"vote_enactment"`
+			Owners            spendingtypes.PermInfo `json:"owners"`
+			Beneficiaries     WeightedPermInfo       `json:"beneficiaries"`
+			IsDynamicRate     bool                   `json:"is_dynamic_rate"`
+			DynamicRatePeriod uint64                 `json:"dynamic_rate_period"`
 		}
 
 		var poolParam SpendingPoolParam
@@ -1309,16 +1295,6 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			}
 			rates.Add(coin)
 		}
-
-		var permInfo spendingtypes.PermInfo
-		for _, roleStr := range poolParam.Owners.OwnerRoles {
-			role, err := strconv.ParseUint(roleStr, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			permInfo.OwnerRoles = append(permInfo.OwnerRoles, role)
-		}
-		permInfo.OwnerAccounts = append(permInfo.OwnerAccounts, poolParam.Owners.OwnerAccounts...)
 
 		var beneficiaries spendingtypes.WeightedPermInfo
 		for _, account := range poolParam.Beneficiaries.Accounts {
@@ -1345,18 +1321,13 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		msg = spendingtypes.NewMsgCreateSpendingPool(poolParam.Name, poolParam.ClaimStart, poolParam.ClaimEnd, rates,
-			poolParam.VoteQuorum, poolParam.VotePeriod, poolParam.VoteEnactment, permInfo, beneficiaries,
+			poolParam.VoteQuorum, poolParam.VotePeriod, poolParam.VoteEnactment, poolParam.Owners, beneficiaries,
 			sender, poolParam.IsDynamicRate, poolParam.DynamicRatePeriod)
 	case MsgDepositSpendingPool:
 		// V, R, S, signer, amount string, name string
 		sender, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
-		}
-
-		type SpendingPoolParam struct {
-			Name    string `json:"name"`
-			Amounts string `json:"amounts"`
 		}
 
 		var poolParam SpendingPoolParam
@@ -1378,10 +1349,6 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type SpendingPoolParam struct {
-			Name string `json:"Name"`
-		}
-
 		var poolParam SpendingPoolParam
 		err = json.Unmarshal(params[4], &poolParam)
 		if err != nil {
@@ -1394,10 +1361,6 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		sender, err := bytes2cosmosAddr(params[3][12:])
 		if err != nil {
 			return nil, err
-		}
-
-		type SpendingPoolParam struct {
-			Name string `json:"Name"`
 		}
 
 		var poolParam SpendingPoolParam
@@ -1485,7 +1448,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 		}
 
 		type UndelegationParam struct {
-			UndelegationId uint64 `json:"undelegation_id,string"`
+			UndelegationId uint64 `json:"undelegation_id"`
 		}
 
 		var undelegationParam UndelegationParam
@@ -1529,22 +1492,12 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		type CustodySettings struct {
-			CustodyEnabled bool   `json:"custody_enabled"`
-			CustodyMode    uint64 `json:"custody_mode,string"`
-			UsePassword    bool   `json:"use_password"`
-			UseWhiteList   bool   `json:"use_white_list"`
-			UseLimits      bool   `json:"use_limits"`
-			Key            string `json:"key"`
-			NextController string `json:"next_controller"`
-		}
-
 		type CustodyParam struct {
-			CustodySettings CustodySettings `json:"custody_settings"`
-			OldKey          string          `json:"old_key"`
-			NewKey          string          `json:"new_key"`
-			Next            string          `json:"next"`
-			Target          string          `json:"target"`
+			CustodySettings custodytypes.CustodySettings `json:"custody_settings"`
+			OldKey          string                       `json:"old_key"`
+			NewKey          string                       `json:"new_key"`
+			Next            string                       `json:"next"`
+			Target          string                       `json:"target"`
 		}
 
 		var custodyParam CustodyParam
@@ -1553,17 +1506,7 @@ func SignTx(ethTxData EthTxData, gwCosmosmux *runtime.ServeMux, r *http.Request,
 			return nil, err
 		}
 
-		custodySettings := custodytypes.CustodySettings{
-			CustodyEnabled: custodyParam.CustodySettings.CustodyEnabled,
-			CustodyMode:    custodyParam.CustodySettings.CustodyMode,
-			UsePassword:    custodyParam.CustodySettings.UsePassword,
-			UseWhiteList:   custodyParam.CustodySettings.UseWhiteList,
-			UseLimits:      custodyParam.CustodySettings.UseLimits,
-			Key:            custodyParam.CustodySettings.Key,
-			NextController: custodyParam.CustodySettings.NextController,
-		}
-
-		msg = custodytypes.NewMsgCreateCustody(from, custodySettings, custodyParam.OldKey, custodyParam.NewKey,
+		msg = custodytypes.NewMsgCreateCustody(from, custodyParam.CustodySettings, custodyParam.OldKey, custodyParam.NewKey,
 			custodyParam.Next, custodyParam.Target)
 	case MsgAddToCustodyWhiteList:
 		// V, R, S, signer, oldKey string, newKey string, next string, target string
