@@ -80,6 +80,7 @@ func main() {
 	initNodeDiscoveryInterxPort := initCommand.String("node_discovery_interx_port", "11000", "The default interx port to be used in node discovery")
 	initNodeDiscoveryTendermintPort := initCommand.String("node_discovery_tendermint_port", "26657", "The default tendermint port to be used in node discovery")
 	initNodeDiscoveryTimeout := initCommand.String("node_discovery_timeout", "3s", "The connection timeout to be used in node discovery")
+	initSnapShotInterval := initCommand.Uint64("snapshot_interval", 100, "The snapshot time interval amount to be used to sleep snapshot function")
 
 	startHomePtr := startCommand.String("home", homeDir+"/.interxd", "The interx configuration path. (Required)")
 
@@ -155,6 +156,7 @@ func main() {
 					*initNodeDiscoveryTendermintPort,
 					*initNodeDiscoveryTimeout,
 					nodeKey,
+					*initSnapShotInterval,
 				)
 
 				fmt.Printf("Created interx configuration file: %s\n", *initHomePtr+"/config.json")
