@@ -32,7 +32,7 @@ func queryAccountBalanceHandler(r *http.Request, request types.InterxRequest, rp
 	var response dataapi.AccountBalanceResponse
 
 	balances := common.GetAccountBalances(gwCosmosmux, r.Clone(r.Context()), req.AccountIdentifier.Address)
-	tokens := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
+	tokens, _, _ := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
 
 	response.Balances = make([]rosetta.Amount, 0)
 	for _, balance := range balances {
