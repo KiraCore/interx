@@ -5,6 +5,14 @@ const (
 	SekaiVersion  = "v0.3.40"
 	CosmosVersion = "v0.47.6"
 
+	DefaultChainID           = 8789
+	DefaultKiraAddrPrefix    = "kira"
+	DefaultKiraValAddrPrefix = "kiravaloper"
+	DefaultKiraDenom         = "ukex"
+
+	MetamaskEndpoint     = "/api/kira/evm"
+	RegisterAddrEndpoint = "/api/kira/evm/register_address/{eth_addr}{cosmos_addr}"
+
 	QueryDashboard = "/api/dashboard"
 
 	QueryAccounts        = "/api/kira/accounts/{address}"

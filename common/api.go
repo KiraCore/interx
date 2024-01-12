@@ -331,7 +331,6 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.To
 	}
 
 	result := TokenAliasesResponse{}
-
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
