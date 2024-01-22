@@ -103,7 +103,7 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 		result.InterxInfo.CatchingUp = sentryStatus.SyncInfo.CatchingUp
 	}
 
-	result.InterxInfo.Node = config.Config.Node
+	result.InterxInfo.NodeType = config.Config.NodeType
 
 	result.InterxInfo.KiraAddr = config.Config.Address
 	result.InterxInfo.KiraPubKey = config.Config.PubKey.String()
@@ -113,6 +113,21 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 
 	result.InterxInfo.InterxVersion = config.Config.InterxVersion
 	result.InterxInfo.SekaiVersion = config.Config.SekaiVersion
+
+	result.AppInfo.Name = config.Config.AppSetting.AppName
+	result.AppInfo.Mock = config.Config.AppSetting.AppMock
+	switch config.Config.AppSetting.AppMode {
+	case config.Executor:
+		result.AppInfo.Mode = "executor"
+	case config.Verifier:
+		result.AppInfo.Mode = "verifier"
+	}
+	// TODO: get abr(application index in Applicaiton Bridge Registrar)
+	abr, err := common.GetABR(rpcAddr, config.Config.AppSetting.AppName)
+	if err != nil {
+		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
+	}
+	result.AppInfo.Abr = abr
 
 	return result, nil, http.StatusOK
 }

@@ -28,11 +28,11 @@ type ValidatorsTestSuite struct {
 	dumpConsensusQuery tmJsonRPCTypes.RPCResponse
 }
 
-type slashingServer struct {
+type SlashingServer struct {
 	slashingTypes.UnimplementedQueryServer
 }
 
-type multiStakingServer struct {
+type MultiStakingServer struct {
 	multiStakingTypes.UnimplementedQueryServer
 	multiStakingTypes.UnimplementedMsgServer
 }
@@ -44,7 +44,7 @@ type ValidatorsStatus struct {
 	} `json:"pagination,omitempty"`
 }
 
-func (s *slashingServer) SigningInfos(ctx context.Context, req *slashingTypes.QuerySigningInfosRequest) (*slashingTypes.QuerySigningInfosResponse, error) {
+func (s *SlashingServer) SigningInfos(ctx context.Context, req *slashingTypes.QuerySigningInfosRequest) (*slashingTypes.QuerySigningInfosResponse, error) {
 	return &slashingTypes.QuerySigningInfosResponse{Validators: []stakingTypes.QueryValidator{
 		{
 			Address: "test_address",
@@ -52,7 +52,7 @@ func (s *slashingServer) SigningInfos(ctx context.Context, req *slashingTypes.Qu
 	}}, nil
 }
 
-func (s *multiStakingServer) StakingPools(ctx context.Context, req *multiStakingTypes.QueryStakingPoolsRequest) (*multiStakingTypes.QueryStakingPoolsResponse, error) {
+func (s *MultiStakingServer) StakingPools(ctx context.Context, req *multiStakingTypes.QueryStakingPoolsRequest) (*multiStakingTypes.QueryStakingPoolsResponse, error) {
 	return &multiStakingTypes.QueryStakingPoolsResponse{Pools: []multiStakingTypes.StakingPool{
 		{
 			Id:      1,
@@ -150,7 +150,7 @@ func TestValidatorsTestSuite(t *testing.T) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	slashingTypes.RegisterQueryServer(s, &slashingServer{})
+	slashingTypes.RegisterQueryServer(s, &SlashingServer{})
 	log.Printf("server listening at %v", lis.Addr())
 
 	go func() {

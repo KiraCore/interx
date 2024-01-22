@@ -1009,7 +1009,12 @@ func RegisterInterxFunctions() {
 					"type":        "bool",
 					"description": "This is an option to query only connected ips.",
 					"optional": true
-				}
+				},
+				"app": {
+					"type":        "string",
+					"description": "This is an option to query only nodes by app_name or app_id.",
+					"optional": true
+				},
 			},
 			"response": {
 				"last_update": {

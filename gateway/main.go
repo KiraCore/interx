@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
@@ -168,6 +169,23 @@ func Run(configFilePath string, log grpclog.LoggerV2) error {
 	}
 
 	config.LoadAddressAndDenom(configFilePath, gwCosmosmux, rpcAddr, gatewayAddr)
+
+	for {
+		syncState := NodeSyncState(rpcAddr)
+		if syncState {
+			break
+		}
+
+		log.Info("Waiting node to be synced")
+
+		time.Sleep(time.Second)
+	}
+
+	err = CheckApplicationState(gwCosmosmux, gatewayAddr)
+	if err != nil {
+		return err
+	}
+
 	tasks.RunTasks(gwCosmosmux, rpcAddr, gatewayAddr)
 
 	if serveHTTPS {

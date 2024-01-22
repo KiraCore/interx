@@ -1,9 +1,13 @@
 package config
 
 import (
-	"github.com/KiraCore/interx/types"
 	"github.com/cometbft/cometbft/p2p"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
+)
+
+const (
+	Executor int = iota
+	Verifier
 )
 
 // FaucetConfig is a struct to be used for Faucet configuration
@@ -87,6 +91,13 @@ type BitcoinConfig struct {
 	BTC_FAUCET          string   `json:"btc_faucet"`
 }
 
+type AppSettingConfig struct {
+	AppMode     int    `json:"app_mode"`
+	AppMock     bool   `json:"app_mock"`
+	AppName     string `json:"app_name"`
+	AppMnemonic string `json:"app_mnemonic"`
+}
+
 // InterxConfig is a struct to be used for interx configuration
 type InterxConfig struct {
 	InterxVersion    string                   `json:"interx_version"`
@@ -95,7 +106,7 @@ type InterxConfig struct {
 	GRPC             string                   `json:"grpc"`
 	RPC              string                   `json:"rpc"`
 	PORT             string                   `json:"port"`
-	Node             types.NodeConfig         `json:"node"`
+	NodeType         string                   `json:"node_type"`
 	Mnemonic         string                   `json:"mnemonic"`
 	AddrBooks        []string                 `json:"addrbooks"`
 	NodeKey          *p2p.NodeKey             `json:"node_key"`
@@ -111,6 +122,7 @@ type InterxConfig struct {
 	Evm              map[string]EVMConfig     `json:"evm"`
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
+	AppSetting       AppSettingConfig         `json:"app_setting"`
 }
 
 // InterxConfigFromFile is a struct to be used for interx configuration file
@@ -119,8 +131,8 @@ type InterxConfigFromFile struct {
 	GRPC          string              `json:"grpc"`
 	RPC           string              `json:"rpc"`
 	PORT          string              `json:"port"`
-	Node          types.NodeConfig    `json:"node"`
-	MnemonicFile  string              `json:"mnemonic"`
+	NodeType      string              `json:"node_type"` // sentry, proxy, seed, validator
+	Mnemonic      string              `json:"mnemonic"`
 	AddrBooks     string              `json:"addrbooks"`
 	NodeKey       string              `json:"node_key"`
 	TxModes       string              `json:"tx_modes"`
@@ -133,7 +145,7 @@ type InterxConfigFromFile struct {
 		DownloadFileSizeLimitation string `json:"download_file_size_limitation"`
 	} `json:"cache"`
 	Faucet struct {
-		MnemonicFile         string            `json:"mnemonic"`
+		Mnemonic             string            `json:"mnemonic"`
 		FaucetAmounts        map[string]string `json:"faucet_amounts"`
 		FaucetMinimumAmounts map[string]string `json:"faucet_minimum_amounts"`
 		FeeAmounts           map[string]string `json:"fee_amounts"`
@@ -142,4 +154,5 @@ type InterxConfigFromFile struct {
 	Evm              map[string]EVMConfig     `json:"evm"`
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
+	AppSetting       AppSettingConfig         `json:"app_setting"`
 }

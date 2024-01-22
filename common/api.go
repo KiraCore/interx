@@ -393,6 +393,31 @@ func GetKiraStatus(rpcAddr string) *types.KiraStatus {
 	return nil
 }
 
+// TODO: get abr with appname param
+func GetABR(rpcAddr string, appName string) (uint64, error) {
+	success, _, _ := MakeTendermintRPCRequest(rpcAddr, "/layer2/abr/"+appName, "")
+
+	if success != nil {
+		result := types.AppBridgeRegistrar{}
+
+		byteData, err := json.Marshal(success)
+		if err != nil {
+			GetLogger().Error("[kira-abr] Invalid response format", err)
+			return 0, err
+		}
+
+		err = json.Unmarshal(byteData, &result)
+		if err != nil {
+			GetLogger().Error("[kira-abr] Invalid response format", err)
+			return 0, err
+		}
+
+		return result.Abr, nil
+	}
+
+	return 0, errors.New("[kira-abr] not found abr")
+}
+
 func GetInterxStatus(interxAddr string) *types.InterxStatus {
 	success, _, _ := MakeGetRequest(interxAddr, "/api/status", "")
 

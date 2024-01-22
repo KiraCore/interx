@@ -1,14 +1,19 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/gateway"
 	_ "github.com/KiraCore/interx/statik"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/grpclog"
 )
@@ -46,10 +51,6 @@ func main() {
 	initRPCPtr := initCommand.String("rpc", "http://0.0.0.0:26657", "The rpc endpoint of the sekaid.")
 
 	initNodeType := initCommand.String("node_type", "seed", "The node type.")
-	initSentryNodeId := initCommand.String("sentry_node_id", "", "The sentry node id.")
-	initSnapshotNodeId := initCommand.String("snapshot_node_id", "", "The snapshot node id.")
-	initValidatorNodeId := initCommand.String("validator_node_id", "", "The validator node id.")
-	initSeedNodeId := initCommand.String("seed_node_id", "", "The seed node id.")
 
 	initPortPtr := initCommand.String("port", "11000", "The interx port.")
 
@@ -81,6 +82,10 @@ func main() {
 	initNodeDiscoveryTendermintPort := initCommand.String("node_discovery_tendermint_port", "26657", "The default tendermint port to be used in node discovery")
 	initNodeDiscoveryTimeout := initCommand.String("node_discovery_timeout", "3s", "The connection timeout to be used in node discovery")
 	initSnapShotInterval := initCommand.Uint64("snapshot_interval", 100, "The snapshot time interval amount to be used to sleep snapshot function")
+	initAppMode := initCommand.Int("app_mode", 0, "The application mode to be used to decide interx to assist which type of operator")
+	initAppMock := initCommand.Bool("app_mock", false, "The application mock state for the purpose of test")
+	initAppName := initCommand.String("app_name", "kira-executor", "The application name for interx to assist")
+	initAppMnemonic := initCommand.String("app_mnemonic", "", "The application name for interx to assist")
 
 	startHomePtr := startCommand.String("home", homeDir+"/.interxd", "The interx configuration path. (Required)")
 
@@ -132,10 +137,6 @@ func main() {
 					*initGrpcPtr,
 					*initRPCPtr,
 					*initNodeType,
-					*initSentryNodeId,
-					*initSnapshotNodeId,
-					*initValidatorNodeId,
-					*initSeedNodeId,
 					*initPortPtr,
 					*initSigningMnemonicPtr,
 					*initSyncStatus,
@@ -157,6 +158,10 @@ func main() {
 					*initNodeDiscoveryTimeout,
 					nodeKey,
 					*initSnapShotInterval,
+					*initAppMode,
+					*initAppMock,
+					*initAppName,
+					*initAppMnemonic,
 				)
 
 				fmt.Printf("Created interx configuration file: %s\n", *initHomePtr+"/config.json")
@@ -193,6 +198,65 @@ func main() {
 				fmt.Println(config.InterxVersion)
 				return
 			}
+		case "list-keys":
+			configFilePath := *startHomePtr + "/config.json"
+			configFromFile := config.LoadConfigFromFile(configFilePath)
+			type PubKeys struct {
+				Signing   string `json:"signing"`
+				Faucet    string `json:"faucet"`
+				App       string `json:"application"`
+				FaucetEth string `json:"faucet-eth"`
+				FaucetBTC string `json:"faucet-btc"`
+			}
+
+			signingMnemonic := config.LoadMnemonic(configFromFile.Mnemonic)
+			if !bip39.IsMnemonicValid(signingMnemonic) {
+				fmt.Println("Invalid Interx Mnemonic: ", signingMnemonic)
+				panic("Invalid Interx Mnemonic")
+			}
+
+			signingPriv := config.ConvMnemonic2PrivKey(signingMnemonic)
+
+			faucetMnemonic := config.LoadMnemonic(configFromFile.Faucet.Mnemonic)
+			if !bip39.IsMnemonicValid(faucetMnemonic) {
+				fmt.Println("Invalid Interx Mnemonic: ", faucetMnemonic)
+				panic("Invalid Interx Mnemonic")
+			}
+
+			faucetPriv := config.ConvMnemonic2PrivKey(faucetMnemonic)
+
+			appMnemonic := config.LoadMnemonic(configFromFile.AppSetting.AppMnemonic)
+			if !bip39.IsMnemonicValid(appMnemonic) {
+				fmt.Println("Invalid Interx Mnemonic: ", appMnemonic)
+				panic("Invalid Interx Mnemonic")
+			}
+
+			appPriv := config.ConvMnemonic2PrivKey(appMnemonic)
+
+			ethPrivKey, err := crypto.HexToECDSA(configFromFile.Evm["goerli"].Faucet.PrivateKey)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			ethPubKey := ethPrivKey.Public()
+			ethPubKeyECDSA, ok := ethPubKey.(*ecdsa.PublicKey)
+			if !ok {
+				log.Fatal("error casting public key to ECDSA")
+			}
+
+			ethPubKeyBytes := crypto.FromECDSAPub(ethPubKeyECDSA)
+
+			pubKeys := PubKeys{
+				Signing:   signingPriv.PubKey().String(),
+				Faucet:    faucetPriv.PubKey().String(),
+				App:       appPriv.PubKey().String(),
+				FaucetEth: hex.EncodeToString(ethPubKeyBytes),
+				FaucetBTC: configFromFile.Bitcoin["testnet"].BTC_FAUCET,
+			}
+			data, _ := json.Marshal(pubKeys)
+
+			fmt.Println(string(data))
+			return
 		default:
 			fmt.Println("init or start command is available.")
 			os.Exit(1)

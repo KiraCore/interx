@@ -114,14 +114,10 @@ func defaultConfig() InterxConfigFromFile {
 	configFromFile.RPC = "http://0.0.0.0:26657"
 	configFromFile.PORT = "11000"
 
-	configFromFile.Node.NodeType = "seed"
-	configFromFile.Node.SentryNodeID = ""
-	configFromFile.Node.SnapshotNodeID = ""
-	configFromFile.Node.ValidatorNodeID = ""
-	configFromFile.Node.SeedNodeID = ""
+	configFromFile.NodeType = "validator"
 
 	entropy, _ := bip39.NewEntropy(256)
-	configFromFile.MnemonicFile, _ = bip39.NewMnemonic(entropy)
+	configFromFile.Mnemonic, _ = bip39.NewMnemonic(entropy)
 
 	configFromFile.AddrBooks = "addrbook.json"
 	configFromFile.NodeKey = "node_key.json"
@@ -140,7 +136,7 @@ func defaultConfig() InterxConfigFromFile {
 	configFromFile.Cache.CachingDuration = 5
 	configFromFile.Cache.DownloadFileSizeLimitation = "10MB"
 
-	configFromFile.Faucet.MnemonicFile = configFromFile.MnemonicFile
+	configFromFile.Faucet.Mnemonic = configFromFile.Mnemonic
 
 	configFromFile.Faucet.FaucetAmounts = make(map[string]string)
 	configFromFile.Faucet.FaucetAmounts["stake"] = "100000"
@@ -155,6 +151,13 @@ func defaultConfig() InterxConfigFromFile {
 	configFromFile.Faucet.FeeAmounts["validatortoken"] = "1000ukex"
 	configFromFile.Faucet.FeeAmounts["ukex"] = "1000ukex"
 	configFromFile.Faucet.TimeLimit = 20
+
+	configFromFile.AppSetting.AppMock = false
+	configFromFile.AppSetting.AppMode = 0
+	configFromFile.AppSetting.AppName = "app_name"
+	entropy, _ = bip39.NewEntropy(256)
+	mnemonicFile, _ := bip39.NewMnemonic(entropy)
+	configFromFile.AppSetting.AppMnemonic = mnemonicFile
 
 	configFromFile.Evm = make(map[string]EVMConfig)
 	for _, item := range SupportedEVMChains {
@@ -207,10 +210,6 @@ func InitConfig(
 	grpc string,
 	rpc string,
 	nodeType string,
-	sentryNodeId string,
-	snapshotNodeId string,
-	validatorNodeId string,
-	seedNodeId string,
 	port string,
 	signingMnemonic string,
 	syncStatus int64,
@@ -232,6 +231,10 @@ func InitConfig(
 	nodeDiscoveryTimeout string,
 	nodeKey string,
 	snapshotInterval uint64,
+	appMode int,
+	appMock bool,
+	appName string,
+	appMnemonic string,
 ) {
 	configFromFile := defaultConfig()
 
@@ -240,13 +243,9 @@ func InitConfig(
 	configFromFile.RPC = rpc
 	configFromFile.PORT = port
 
-	configFromFile.Node.NodeType = nodeType
-	configFromFile.Node.SentryNodeID = sentryNodeId
-	configFromFile.Node.SnapshotNodeID = snapshotNodeId
-	configFromFile.Node.ValidatorNodeID = validatorNodeId
-	configFromFile.Node.SeedNodeID = seedNodeId
+	configFromFile.NodeType = nodeType
 
-	configFromFile.MnemonicFile = signingMnemonic
+	configFromFile.Mnemonic = signingMnemonic
 
 	configFromFile.AddrBooks = addrBooks
 	configFromFile.NodeKey = nodeKey
@@ -265,8 +264,13 @@ func InitConfig(
 	configFromFile.Cache.CachingDuration = cachingDuration
 	configFromFile.Cache.DownloadFileSizeLimitation = maxDownloadSize
 
-	configFromFile.Faucet.MnemonicFile = faucetMnemonic
+	configFromFile.Faucet.Mnemonic = faucetMnemonic
 	configFromFile.Faucet.TimeLimit = faucetTimeLimit
+
+	configFromFile.AppSetting.AppMock = appMock
+	configFromFile.AppSetting.AppMode = appMode
+	configFromFile.AppSetting.AppName = appName
+	configFromFile.AppSetting.AppMnemonic = appMnemonic
 
 	configFromFile.Faucet.FaucetAmounts = make(map[string]string)
 	for _, amount := range strings.Split(faucetAmounts, ",") {
