@@ -200,6 +200,8 @@ func defaultConfig() InterxConfigFromFile {
 		configFromFile.Bitcoin[item] = bitcoinConfig
 	}
 
+	configFromFile.CachingBin = false
+
 	return configFromFile
 }
 

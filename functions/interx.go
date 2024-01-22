@@ -623,6 +623,20 @@ func RegisterInterxFunctions() {
 	)
 
 	AddInterxFunction(
+		"AppDownload",
+		config.AppDownload,
+		`{
+			"description": "AppDownload is a function to download a application related bin files",
+			"parameters": {
+				"app_name": {
+					"type":        "string",
+					"description": "This represents the app name."
+				}
+			}
+		}`,
+	)
+
+	AddInterxFunction(
 		"QueryValidators",
 		config.QueryValidators,
 		`{

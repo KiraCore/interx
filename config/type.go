@@ -123,6 +123,7 @@ type InterxConfig struct {
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
 	AppSetting       AppSettingConfig         `json:"app_setting"`
+	CachingBin       bool                     `json:"caching_bin"`
 }
 
 // InterxConfigFromFile is a struct to be used for interx configuration file
@@ -155,4 +156,5 @@ type InterxConfigFromFile struct {
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
 	AppSetting       AppSettingConfig         `json:"app_setting"`
+	CachingBin       bool                     `json:"caching_bin"`
 }

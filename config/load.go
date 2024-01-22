@@ -335,6 +335,7 @@ func LoadConfig(configFilePath string) {
 	Config.Bitcoin = configFromFile.Bitcoin
 
 	Config.SnapshotInterval = configFromFile.SnapshotInterval
+	Config.CachingBin = configFromFile.CachingBin
 }
 
 // GenPrivKey is a function to generate a privKey
@@ -345,6 +346,11 @@ func GenPrivKey() crypto.PrivKey {
 // GetReferenceCacheDir is a function to get reference directory
 func GetReferenceCacheDir() string {
 	return Config.Cache.CacheDir + "/reference"
+}
+
+// GetReferenceCacheDir is a function to get reference directory
+func GetBinCacheDir() string {
+	return Config.Cache.CacheDir + "/bin"
 }
 
 // GetResponseCacheDir is a function to get reference directory

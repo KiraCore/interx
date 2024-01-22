@@ -77,6 +77,7 @@ const (
 	QueryNetInfo             = "/api/net_info"
 
 	Download              = "/download"
+	AppDownload           = "/app/download"
 	DataReferenceRegistry = "DRR"
 	DefaultInterxPort     = "11000"
 
