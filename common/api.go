@@ -346,6 +346,31 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.To
 	return result.Data, result.DefaultDenom, result.Bech32Prefix
 }
 
+// GetAllBalances is a function to get all balances with full limitation
+func GetAllBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32Addr string) []types.Coin {
+	r.URL.Path = fmt.Sprintf("/cosmos/bank/v1beta1/balances/%s", bech32Addr)
+	r.URL.RawQuery = "pagination.limit=100000"
+	r.Method = "GET"
+
+	// GetLogger().Info("[grpc-call] Entering grpc call: ", r.URL.Path)
+
+	recorder := httptest.NewRecorder()
+	gwCosmosmux.ServeHTTP(recorder, r)
+	resp := recorder.Result()
+
+	type AllBalancesResponse struct {
+		Balances []types.Coin `json:"balances"`
+	}
+
+	result := AllBalancesResponse{}
+	err := json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+	}
+
+	return result.Balances
+}
+
 // GetTokenSupply is a function to get token supply
 func GetTokenSupply(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.TokenSupply {
 	r.URL.Path = strings.Replace(config.QueryTotalSupply, "/api/kira", "/cosmos/bank/v1beta1", -1)

@@ -3,8 +3,10 @@ package kira
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/types"
@@ -31,44 +33,97 @@ func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMu
 		Icon     string   `json:"icon"`
 		Amount   sdk.Int  `json:"amount"`
 	}
+	type Pagination struct {
+		NextKey int `json:"next_key"`
+		Total   int `json:"total"`
+	}
 	type TokenAliasesResult struct {
 		Data         []TokenAliasesData `json:"token_aliases_data"`
 		DefaultDenom string             `json:"default_denom"`
 		Bech32Prefix string             `json:"bech32_prefix"`
+		Pagination   *Pagination        `json:"pagination,omitempty"`
 	}
 
-	tokens, defaultDenom, bech32Prefix := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
+	tokenAliases, defaultDenom, bech32Prefix := common.GetTokenAliases(gwCosmosmux, r.Clone(r.Context()))
 	tokensSupply := common.GetTokenSupply(gwCosmosmux, r.Clone(r.Context()))
 
-	data := make([]TokenAliasesData, 0)
-	for _, token := range tokens {
-		flag := false
-		for _, denom := range token.Denoms {
-			for _, supply := range tokensSupply {
-				if denom == supply.Denom {
-					data = append(data, TokenAliasesData{
-						Decimals: token.Decimals,
-						Denoms:   token.Denoms,
-						Name:     token.Name,
-						Symbol:   token.Symbol,
-						Icon:     token.Icon,
-						Amount:   supply.Amount,
-					})
+	supplyMap := make(map[string]math.Int)
+	for _, supply := range tokensSupply {
+		supplyMap[supply.Denom] = supply.Amount
+	}
 
-					flag = true
-					break
-				}
-			}
-			if flag {
+	allData := make([]TokenAliasesData, 0)
+	for _, tokenAlias := range tokenAliases {
+		supplyAmount := math.ZeroInt()
+		for _, denom := range tokenAlias.Denoms {
+			if supply, ok := supplyMap[denom]; ok {
+				supplyAmount = supply
 				break
 			}
 		}
+		allData = append(allData, TokenAliasesData{
+			Decimals: tokenAlias.Decimals,
+			Denoms:   tokenAlias.Denoms,
+			Name:     tokenAlias.Name,
+			Symbol:   tokenAlias.Symbol,
+			Icon:     tokenAlias.Icon,
+			Amount:   supplyAmount,
+		})
 	}
+
+	data := make([]TokenAliasesData, 0)
+	// request could have tokens list if so, returns those
+	tokensParam := r.URL.Query().Get("tokens")
+	if tokensParam != "" {
+		tokensList := strings.Split(tokensParam, ",")
+		tokensMap := make(map[string]bool)
+		for _, token := range tokensList {
+			tokensMap[token] = true
+		}
+
+		for _, aliasData := range allData {
+			for _, denom := range aliasData.Denoms {
+				if tokensMap[denom] {
+					data = append(data, aliasData)
+					break
+				}
+			}
+		}
+		result := TokenAliasesResult{
+			Data:         data,
+			DefaultDenom: defaultDenom,
+			Bech32Prefix: bech32Prefix,
+		}
+
+		return result, nil, http.StatusOK
+	}
+
+	// if request does not have tokens list, return with pagination
+	offsetParam := r.URL.Query().Get("offset")
+	offset, err := strconv.Atoi(offsetParam)
+	if err != nil {
+		offset = 0
+	}
+	limitParam := r.URL.Query().Get("limit")
+	limit, err := strconv.Atoi(limitParam)
+	if err != nil {
+		limit = 100
+	}
+
+	lastIndex := offset + limit
+	if lastIndex > len(allData) {
+		lastIndex = len(allData)
+	}
+	data = allData[offset:lastIndex]
 
 	result := TokenAliasesResult{
 		Data:         data,
 		DefaultDenom: defaultDenom,
 		Bech32Prefix: bech32Prefix,
+		Pagination: &Pagination{
+			NextKey: lastIndex,
+			Total:   len(allData),
+		},
 	}
 
 	return result, nil, http.StatusOK
