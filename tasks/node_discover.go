@@ -447,6 +447,11 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 			}
 
 			nodeInfo.Safe = kiraStatus.NodeInfo.Network == common.NodeStatus.Chainid
+			// TODO: set values
+			// nodeInfo.PeersNumber       int64    `json:"peers_number"` // e.g. 160
+			// nodeInfo.CountryCode       string   `json:"country_code"` // e.g. "DE"
+			// nodeInfo.DataCenter        string   `json:"data_center"`  // e.g. "Contabo GmbH"
+			// nodeInfo.Address           string   `json:"address"`      // e.g. "kira1epxqxf2l4x4yj35j54vkyh0l32a5mq3rss735h"
 
 			if nodeInfo.Safe {
 				commonBlock := common.NodeStatus.Block
