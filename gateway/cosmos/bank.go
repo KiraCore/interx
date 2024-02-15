@@ -91,8 +91,8 @@ func queryBalancesHandle(r *http.Request, gwCosmosmux *runtime.ServeMux) (interf
 	}
 
 	type Pagination struct {
-		NextKey int `json:"next_key"`
-		Total   int `json:"total"`
+		NextKey string `json:"next_key"`
+		Total   string `json:"total"`
 	}
 
 	type BalancesResult struct {
@@ -167,8 +167,8 @@ func queryBalancesHandle(r *http.Request, gwCosmosmux *runtime.ServeMux) (interf
 	result := BalancesResult{
 		Balances: data,
 		Pagination: &Pagination{
-			NextKey: lastIndex,
-			Total:   len(filteredData),
+			NextKey: fmt.Sprintf("%d", lastIndex),
+			Total:   fmt.Sprintf("%d", len(filteredData)),
 		},
 	}
 

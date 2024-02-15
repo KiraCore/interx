@@ -2,6 +2,7 @@ package kira
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,8 +35,8 @@ func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMu
 		Amount   sdk.Int  `json:"amount"`
 	}
 	type Pagination struct {
-		NextKey int `json:"next_key"`
-		Total   int `json:"total"`
+		NextKey string `json:"next_key"`
+		Total   string `json:"total"`
 	}
 	type TokenAliasesResult struct {
 		Data         []TokenAliasesData `json:"token_aliases_data"`
@@ -121,8 +122,8 @@ func queryKiraTokensAliasesHandler(r *http.Request, gwCosmosmux *runtime.ServeMu
 		DefaultDenom: defaultDenom,
 		Bech32Prefix: bech32Prefix,
 		Pagination: &Pagination{
-			NextKey: lastIndex,
-			Total:   len(allData),
+			NextKey: fmt.Sprintf("%d", lastIndex),
+			Total:   fmt.Sprintf("%d", len(allData)),
 		},
 	}
 
