@@ -39,6 +39,10 @@ type P2PNode struct {
 	Safe              bool     `json:"safe"`
 	BlockHeightAtSync int64    `json:"block_height_at_sync"`
 	BlockDiff         int64    `json:"block_diff"`
+	PeersNumber       int64    `json:"peers_number"` // e.g. 160
+	CountryCode       string   `json:"country_code"` // e.g. "DE"
+	DataCenter        string   `json:"data_center"`  // e.g. "Contabo GmbH"
+	Address           string   `json:"address"`      // e.g. "kira1epxqxf2l4x4yj35j54vkyh0l32a5mq3rss735h"
 }
 
 type InterxNode struct {
