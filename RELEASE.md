@@ -1,4 +1,4 @@
-
 Features:
 
-* made sleep interval for snapshot checksum
+* Add webhook for sekin repo
+* Bump sekai and interx version
