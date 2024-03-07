@@ -11,7 +11,9 @@ build:
 	./scripts/build.sh
 
 build-static:
+	./scripts/proto-gen.sh
 	./scripts/sbuild.sh
+
 start:
 	go run main.go
 

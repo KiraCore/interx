@@ -528,6 +528,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 			peers := peersFromIP[ipAddr]
 			for _, peer := range peers {
 				nodeInfo.Peers = append(nodeInfo.Peers, string(peer.NodeInfo.ID()))
+				nodeInfo.PeersNumber = int64(len(nodeInfo.Peers))
 
 				ip, _ := getHostname(peer.NodeInfo.ListenAddr)
 				if isPrivateIP(ip) {
@@ -537,6 +538,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 					privNodeInfo.Port, _ = getPort(peer.NodeInfo.ListenAddr)
 					privNodeInfo.Peers = []string{}
 					privNodeInfo.Peers = append(privNodeInfo.Peers, nodeInfo.ID)
+					privNodeInfo.PeersNumber = int64(len(privNodeInfo.Peers))
 					privNodeInfo.Alive = true
 					privNodeInfo.Synced = nodeInfo.Synced
 					privNodeInfo.BlockHeightAtSync = nodeInfo.BlockHeightAtSync
