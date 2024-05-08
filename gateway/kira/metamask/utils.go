@@ -212,3 +212,11 @@ func getSignature(r, s, v []byte) []byte {
 	sig[64] = sig[64] - 27
 	return sig
 }
+
+func getSignatureV2(r, s, v []byte) []byte {
+	sig := make([]byte, 65)
+	copy(sig[:32], r)
+	copy(sig[32:64], s)
+	copy(sig[64:], v)
+	return sig
+}

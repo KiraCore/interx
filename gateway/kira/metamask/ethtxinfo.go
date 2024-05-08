@@ -19,6 +19,7 @@ type EthTxData struct {
 	To       string  `json:"to"`
 	Value    big.Int `json:"value"`
 	Data     []byte  `json:"data"`
+	Hash     string  `json:"hash"`
 	V        big.Int `json:"signature_v"`
 	R        big.Int `json:"signature_r"`
 	S        big.Int `json:"signature_s"`
@@ -81,6 +82,7 @@ func GetEthTxInfo(data hexutil.Bytes) (EthTxData, error) {
 		To:       msg.To().String(),
 		Value:    *tx.Value(),
 		Data:     tx.Data(),
+		Hash:     tx.Hash().Hex(),
 		V:        *v,
 		R:        *r,
 		S:        *s,

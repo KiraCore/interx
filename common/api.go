@@ -145,10 +145,10 @@ func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, be
 
 	type QueryAccountResponse struct {
 		Account struct {
-			Address       string `json:"addresss"`
-			PubKey        string `json:"pubKey"`
-			AccountNumber string `json:"accountNumber"`
-			Sequence      string `json:"sequence"`
+			Address       string      `json:"addresss"`
+			PubKey        interface{} `json:"pubKey"`
+			AccountNumber string      `json:"accountNumber"`
+			Sequence      string      `json:"sequence"`
 		} `json:"account"`
 	}
 	result := QueryAccountResponse{}
