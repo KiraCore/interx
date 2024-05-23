@@ -1,8 +1,8 @@
 package config
 
 const (
-	InterxVersion = "v0.4.42"
-	SekaiVersion  = "v0.3.40"
+	InterxVersion = "v0.4.48"
+	SekaiVersion  = "v0.3.42"
 	CosmosVersion = "v0.47.6"
 
 	DefaultChainID           = 8789

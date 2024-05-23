@@ -1,4 +1,4 @@
-.PHONY: proto-gen build publish install start test test-local network-start network-stop
+.PHONY: proto-gen build build-static publish install start test test-local network-start network-stop
 
 proto-gen:
 	./scripts/proto-gen.sh
@@ -9,6 +9,10 @@ install:
 
 build:
 	./scripts/build.sh
+
+build-static:
+	./scripts/proto-gen.sh
+	./scripts/sbuild.sh
 
 start:
 	go run main.go

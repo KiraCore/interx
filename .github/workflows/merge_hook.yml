@@ -1,0 +1,44 @@
+---
+name: Release Merged Hook
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  trigger-dispatch:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Version from Branch Name
+        id: version-extract
+        run: |
+          VERSION=$(echo "${{ github.event.pull_request.head.ref }}" | sed 's|release/v||')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Trigger Repository Dispatch Event
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          curl -X POST -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.REPO_ACCESS }}" \
+          "https://api.github.com/repos/KiraCore/sekin/dispatches" \
+          -d @- <<EOF
+          {
+            "event_type": "release_merged",
+            "client_payload": {
+              "version": "${VERSION}",
+              "name": "interx",
+              "authors": "KIRA",
+              "url": "https://kira.network",
+              "documentation": "https://docs.kira.network",
+              "source": "https://github.com/KiraCore/interx",
+              "vendor": "KiraCore",
+              "licenses": "CC BY-NC-SA 4.0",
+              "title": "interx",
+              "description": "INTERX is KIRA’s Content Availability Layer. It ensures rapid, scalable queries and access to on-chain (SEKAI) and off-chain (L2) RollApp data without reliance on third-party RPC service providers such as Infura (Ethereum) and DA networks such as Celestia (Cosmos). INTERX streamlines the creation and maintenance of front-end and RollApp, eliminating the complexities associated with light clients and providing out-of-the-box support for sequencing, storage, fraud-proof generation, replication, proxy, and middleware layer load-balancing. "
+            }
+          }
+          EOF

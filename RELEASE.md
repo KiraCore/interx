@@ -1,4 +1,3 @@
-
 Features:
 
 * Implement KIP-87 : broadcast metamask coin send transaction to sekai

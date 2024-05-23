@@ -71,6 +71,7 @@ func calcChecksum(isLog bool) {
 func CalcSnapshotChecksum(isLog bool) {
 	available := 0
 	for {
+		time.Sleep(time.Duration(config.Config.SnapshotInterval) * time.Millisecond)
 		file, err := os.Stat(config.SnapshotPath())
 
 		if err != nil {
