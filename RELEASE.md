@@ -1,7 +1,4 @@
 Features:
 
-* Add webhook for sekin repo
-* Bump sekai and interx version
-* Fix pub_p2p_list endpoint
-* Del bin
-
+* Implement KIP-87 : broadcast metamask coin send transaction to sekai
+* Implement KIP-87 : broadcast eip-712 signed transaction to sekai
