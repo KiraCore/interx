@@ -219,12 +219,7 @@ func GetCachedProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAd
 		}
 
 		if result["properties"] != nil {
-			quorum, err := strconv.Atoi(result["properties"]["voteQuorum"].(string))
-			if err != nil {
-				return nil, err
-			}
-
-			quorumStr = fmt.Sprintf("%.2f", float64(quorum)/100)
+			quorumStr = result["properties"]["voteQuorum"].(string)
 		}
 	}
 
