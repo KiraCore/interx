@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
@@ -219,7 +220,12 @@ func GetCachedProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAd
 		}
 
 		if result["properties"] != nil {
-			quorumStr = result["properties"]["voteQuorum"].(string)
+			str := result["properties"]["voteQuorum"].(string)
+			quorumInt, ok := math.NewIntFromString(str)
+			if !ok {
+				return nil, fmt.Errorf("Not able to parse: %s", str)
+			}
+			quorumStr = math.LegacyNewDecFromIntWithPrec(quorumInt, 18).String()
 		}
 	}
 
