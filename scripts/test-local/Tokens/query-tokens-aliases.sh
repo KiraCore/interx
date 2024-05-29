@@ -8,8 +8,8 @@ TEST_NAME="TOKENS-RATES-QUERY" && timerStart $TEST_NAME
 echoInfo "INFO: $TEST_NAME - Integration Test - START"
 
 INTERX_GATEWAY="127.0.0.1:11000"
-TOKENS_NUMS_INTERX=$(curl --fail "$INTERX_GATEWAY/api/kira/tokens/aliases" | jq '. | length' || exit 1)
-TOKENS_NUMS_CLI=$(showTokenAliases | jq '. | length')
+TOKENS_NUMS_INTERX=$(curl --fail "$INTERX_GATEWAY/api/kira/tokens/aliases" | jq '.token_aliases_data | length' || exit 1)
+TOKENS_NUMS_CLI=$(showTokenAliases | jq '.data | length')
 
 [[ $TOKENS_NUMS_INTERX != $TOKENS_NUMS_CLI ]] && echoErr "ERROR: Expected number of tokens to be '$TOKENS_NUMS_CLI', but got '$TOKENS_NUMS_INTERX'" && exit 1
 

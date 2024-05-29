@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -407,6 +408,48 @@ func getBlockFromInterx(rpcAddr string, height string) (*struct {
 	return response, nil
 }
 
+type GeoData struct {
+	Query       string `json:"query"`
+	Status      string `json:"status"`
+	Country     string `json:"country"`
+	CountryCode string `json:"countryCode"`
+	Region      string `json:"region"`
+	RegionName  string `json:"regionName"`
+	City        string `json:"city"`
+	Zip         string `json:"zip"`
+	Lat         string `json:"lat"`
+	Lon         string `json:"lon"`
+	TimeZone    string `json:"timezone"`
+	Isp         string `json:"isp"`
+	Org         string `json:"org"`
+	As          string `json:"as"`
+}
+
+func getGeoData(ipAddr string) GeoData {
+	geodata := GeoData{}
+	// http://ip-api.com/json/24.48.0.1
+	geoApiEndpoint := "http://ip-api.com/json/" + ipAddr
+	res, err := http.Get(geoApiEndpoint)
+	if err != nil {
+		common.GetLogger().Error("failed to query geo info", err)
+		return geodata
+	}
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		common.GetLogger().Error("failed to read response body", err)
+		return geodata
+	}
+
+	err = json.Unmarshal(resBody, &geodata)
+	if err != nil {
+		common.GetLogger().Error("failed to unmarshal geodata", err)
+		return geodata
+	}
+	return geodata
+}
+
 func NodeDiscover(rpcAddr string, isLog bool) {
 	initPrivateIps()
 
@@ -493,6 +536,12 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 			}
 
 			nodeInfo.Safe = kiraStatus.NodeInfo.Network == common.NodeStatus.Chainid
+			nodeInfo.PeersNumber = int64(len(nodeInfo.Peers))            // e.g. 160
+			nodeInfo.Address = kiraStatus.ValidatorInfo.Address.String() // e.g. "kira1epxqxf2l4x4yj35j54vkyh0l32a5mq3rss735h"
+
+			geodata := getGeoData(ipAddr)
+			nodeInfo.CountryCode = geodata.CountryCode // e.g. "DE"
+			nodeInfo.DataCenter = geodata.Isp          // e.g. "Contabo GmbH"
 
 			if nodeInfo.Safe {
 				commonBlock := common.NodeStatus.Block
@@ -525,6 +574,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 			peers := peersFromIP[ipAddr]
 			for _, peer := range peers {
 				nodeInfo.Peers = append(nodeInfo.Peers, string(peer.NodeInfo.ID()))
+				nodeInfo.PeersNumber = int64(len(nodeInfo.Peers))
 
 				ip, _ := getHostname(peer.NodeInfo.ListenAddr)
 				if isPrivateIP(ip) {
@@ -534,6 +584,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 					privNodeInfo.Port, _ = getPort(peer.NodeInfo.ListenAddr)
 					privNodeInfo.Peers = []string{}
 					privNodeInfo.Peers = append(privNodeInfo.Peers, nodeInfo.ID)
+					privNodeInfo.PeersNumber = int64(len(privNodeInfo.Peers))
 					privNodeInfo.Alive = true
 					privNodeInfo.Synced = nodeInfo.Synced
 					privNodeInfo.BlockHeightAtSync = nodeInfo.BlockHeightAtSync
@@ -563,16 +614,6 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 				}
 			}
 
-			global.Mutex.Lock()
-			if pid, isIn := idOfPubList[nodeInfo.ID]; isIn {
-				PubP2PNodeListResponse.NodeList[pid] = nodeInfo
-			} else {
-				PubP2PNodeListResponse.NodeList = append(PubP2PNodeListResponse.NodeList, nodeInfo)
-				idOfPubList[nodeInfo.ID] = len(PubP2PNodeListResponse.NodeList) - 1
-			}
-			global.Mutex.Unlock()
-			isPubNodeId[nodeInfo.ID] = true
-
 			interxStartTime := makeTimestamp()
 			interxAddress := getInterxAddress(ipAddr)
 			interxStatus := common.GetInterxStatus(interxAddress)
@@ -601,6 +642,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 				}
 
 				interxInfo.Safe = interxStatus.InterxInfo.ChainID == common.NodeStatus.Chainid
+				nodeInfo.Address = interxStatus.InterxInfo.KiraAddr
 
 				if nodeInfo.Safe {
 					commonBlock := common.NodeStatus.Block
@@ -646,6 +688,16 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 					isSnapshotIP[snapNode.IP] = true
 				}
 			}
+
+			global.Mutex.Lock()
+			if pid, isIn := idOfPubList[nodeInfo.ID]; isIn {
+				PubP2PNodeListResponse.NodeList[pid] = nodeInfo
+			} else {
+				PubP2PNodeListResponse.NodeList = append(PubP2PNodeListResponse.NodeList, nodeInfo)
+				idOfPubList[nodeInfo.ID] = len(PubP2PNodeListResponse.NodeList) - 1
+			}
+			global.Mutex.Unlock()
+			isPubNodeId[nodeInfo.ID] = true
 		}
 
 		lastUpdate := time.Now().Unix()
