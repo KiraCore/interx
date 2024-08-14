@@ -51,3 +51,8 @@ type KiraStatus struct {
 	SyncInfo      SyncInfo      `json:"sync_info,omitempty"`
 	ValidatorInfo ValidatorInfo `json:"validator_info,omitempty"`
 }
+
+// Used to parse response from tendermint api ("/status")
+type AppBridgeRegistrar struct {
+	Abr uint64 `json:"abr,omitempty"`
+}

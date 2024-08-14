@@ -39,6 +39,8 @@ type P2PNode struct {
 	Safe              bool     `json:"safe"`
 	BlockHeightAtSync int64    `json:"block_height_at_sync"`
 	BlockDiff         int64    `json:"block_diff"`
+	AppName           string   `json:"app_name"`
+	AppId             uint64   `json:"app_id"`
 	PeersNumber       int64    `json:"peers_number"` // e.g. 160
 	CountryCode       string   `json:"country_code"` // e.g. "DE"
 	DataCenter        string   `json:"data_center"`  // e.g. "Contabo GmbH"

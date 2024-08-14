@@ -195,6 +195,52 @@ func QueryKiraStatus(rpcAddr string) (tmTypes.ResultStatus, error) {
 	return result, nil
 }
 
+func queryInterxStatus(rpcAddr string) (types.InterxStatus, error) {
+	result := types.InterxStatus{}
+
+	resp, err := http.Get(rpcAddr)
+	if err != nil {
+		return types.InterxStatus{}, err
+	}
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return types.InterxStatus{}, err
+	}
+
+	return result, nil
+}
+
+func QueryInterxStatus(ipAddr string) (types.InterxStatus, error) {
+	interxState, err := queryInterxStatus("http://" + ipAddr + ":11000")
+	if err == nil {
+		return interxState, err
+	}
+
+	interxState, err = queryInterxStatus("http://" + ipAddr + ":21000")
+	if err == nil {
+		return interxState, err
+	}
+
+	interxState, err = queryInterxStatus("http://" + ipAddr + ":31000")
+	if err == nil {
+		return interxState, err
+	}
+
+	interxState, err = queryInterxStatus("http://" + ipAddr + ":41000")
+	if err == nil {
+		return interxState, err
+	}
+
+	interxState, err = queryInterxStatus("http://" + ipAddr + ":51000")
+	if err == nil {
+		return interxState, err
+	}
+
+	return interxState, err
+}
+
 func QueryStatus(ipAddr string) (tmTypes.ResultStatus, error) {
 	result, err := QueryKiraStatus("http://" + ipAddr + ":16657")
 	if err == nil {
@@ -573,6 +619,9 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 			interxStatus := common.GetInterxStatus(interxAddress)
 
 			if interxStatus != nil {
+				nodeInfo.AppId = interxStatus.AppInfo.Abr
+				nodeInfo.AppName = interxStatus.AppInfo.Name
+
 				interxEndTime := makeTimestamp()
 
 				interxInfo := types.InterxNode{}
@@ -581,7 +630,7 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 				interxInfo.Ping = interxEndTime - interxStartTime
 				interxInfo.Moniker = interxStatus.InterxInfo.Moniker
 				interxInfo.Faucet = interxStatus.InterxInfo.FaucetAddr
-				interxInfo.Type = interxStatus.InterxInfo.Node.NodeType
+				interxInfo.Type = interxStatus.InterxInfo.NodeType
 				interxInfo.InterxVersion = interxStatus.InterxInfo.InterxVersion
 				interxInfo.SekaiVersion = interxStatus.InterxInfo.SekaiVersion
 				interxInfo.Alive = true

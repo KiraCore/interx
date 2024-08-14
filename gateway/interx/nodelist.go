@@ -38,6 +38,7 @@ func queryPubP2PNodeList(r *http.Request, rpcAddr string) (interface{}, interfac
 	peers_only := r.FormValue("peers_only") == "true"
 	is_random := r.FormValue("order") == "random"
 	is_format_simple := r.FormValue("format") == "simple"
+	appInfo := r.FormValue("app")
 
 	if is_random {
 		dest := make([]types.P2PNode, len(response.NodeList))
@@ -74,6 +75,9 @@ func queryPubP2PNodeList(r *http.Request, rpcAddr string) (interface{}, interfac
 			behind, _ := strconv.Atoi(r.FormValue("behind"))
 			if behind == 0 || (node.BlockDiff <= int64(behind) && node.BlockDiff >= -int64(behind)) {
 				if r.FormValue("unsafe") == "true" || node.Safe {
+					if appInfo != "" && strconv.FormatUint(node.AppId, 10) != appInfo && node.AppName != appInfo {
+						continue
+					}
 					dest = append(dest, node)
 				}
 			}

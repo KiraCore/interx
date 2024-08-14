@@ -16,4 +16,5 @@ func RunTasks(gwCosmosmux *runtime.ServeMux, rpcAddr string, gatewayAddr string)
 	go SyncProposals(gwCosmosmux, gatewayAddr, rpcAddr, false)
 	go CalcSnapshotChecksum(false)
 	go SyncBitcoinWallets()
+	go StoreL2Status(gwCosmosmux, false)
 }

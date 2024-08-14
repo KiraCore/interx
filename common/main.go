@@ -78,3 +78,5 @@ func IsCacheExpired(result types.InterxResponse) bool {
 
 	return isBlockExpire || isTimestampExpire
 }
+
+var Layer2Status map[string]string

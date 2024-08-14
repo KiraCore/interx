@@ -80,6 +80,20 @@ func serveGRPC(r *http.Request, gwCosmosmux *runtime.ServeMux) (interface{}, int
 	return nil, nil, resp.StatusCode
 }
 
+func ConvMnemonic2PrivKey(mnemonic string) secp256k1.PrivKey {
+	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	if err != nil {
+		panic(err)
+	}
+	master, ch := hd.ComputeMastersFromSeed(seed)
+	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
+	if err != nil {
+		panic(err)
+	}
+
+	return secp256k1.PrivKey{Key: priv}
+}
+
 // LoadAddressAndDenom is a function to load addresses and migrate config using custom bech32 and denom prefixes
 func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, rpcAddr string, gatewayAddr string) {
 	request, _ := http.NewRequest("GET", "http://"+gatewayAddr+"/kira/gov/custom_prefixes", nil)
@@ -125,23 +139,15 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 	}
 
 	//=============== interx address ===============
-	Config.Mnemonic = LoadMnemonic(configFromFile.MnemonicFile)
+	Config.Mnemonic = LoadMnemonic(configFromFile.Mnemonic)
 	if !bip39.IsMnemonicValid(Config.Mnemonic) {
 		fmt.Println("Invalid Interx Mnemonic: ", Config.Mnemonic)
 		panic("Invalid Interx Mnemonic")
 	}
 
-	seed, err := bip39.NewSeedWithErrorChecking(Config.Mnemonic, "")
-	if err != nil {
-		panic(err)
-	}
-	master, ch := hd.ComputeMastersFromSeed(seed)
-	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
-	if err != nil {
-		panic(err)
-	}
+	privKey1 := ConvMnemonic2PrivKey(Config.Mnemonic)
 
-	Config.PrivKey = &secp256k1.PrivKey{Key: priv}
+	Config.PrivKey = &privKey1
 	Config.PubKey = Config.PrivKey.PubKey()
 	Config.Address = sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), Config.PubKey.Address())
 
@@ -175,7 +181,7 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 
 	// Faucet Configuration
 	Config.Faucet = FaucetConfig{
-		Mnemonic:             LoadMnemonic(configFromFile.Faucet.MnemonicFile),
+		Mnemonic:             LoadMnemonic(configFromFile.Faucet.Mnemonic),
 		FaucetAmounts:        configFromFile.Faucet.FaucetAmounts,
 		FaucetMinimumAmounts: configFromFile.Faucet.FaucetMinimumAmounts,
 		FeeAmounts:           configFromFile.Faucet.FeeAmounts,
@@ -187,17 +193,9 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 		panic("Invalid Faucet Mnemonic")
 	}
 
-	seed, err = bip39.NewSeedWithErrorChecking(Config.Faucet.Mnemonic, "")
-	if err != nil {
-		panic(err)
-	}
-	master, ch = hd.ComputeMastersFromSeed(seed)
-	priv, err = hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
-	if err != nil {
-		panic(err)
-	}
+	privKey2 := ConvMnemonic2PrivKey(Config.Faucet.Mnemonic)
 
-	Config.Faucet.PrivKey = &secp256k1.PrivKey{Key: priv}
+	Config.Faucet.PrivKey = &privKey2
 	Config.Faucet.PubKey = Config.Faucet.PrivKey.PubKey()
 	Config.Faucet.Address = sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), Config.Faucet.PubKey.Address())
 
@@ -223,10 +221,7 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 	}
 }
 
-// LoadConfig is a function to load interx configurations from a given file
-func LoadConfig(configFilePath string) {
-	Config = InterxConfig{}
-
+func LoadConfigFromFile(configFilePath string) InterxConfigFromFile {
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		fmt.Println("Invalid configuration: {}", err)
@@ -241,6 +236,15 @@ func LoadConfig(configFilePath string) {
 		panic(err)
 	}
 
+	return configFromFile
+}
+
+// LoadConfig is a function to load interx configurations from a given file
+func LoadConfig(configFilePath string) {
+	Config = InterxConfig{}
+
+	configFromFile := LoadConfigFromFile(configFilePath)
+
 	// Interx Main Configuration
 	Config.InterxVersion = InterxVersion
 	Config.ServeHTTPS = configFromFile.ServeHTTPS
@@ -248,13 +252,14 @@ func LoadConfig(configFilePath string) {
 	Config.RPC = configFromFile.RPC
 	Config.PORT = configFromFile.PORT
 
-	Config.Node = configFromFile.Node
+	Config.NodeType = configFromFile.NodeType
 
 	fmt.Println("Interx Version: ", Config.InterxVersion)
 	fmt.Println("Interx GRPC: ", Config.GRPC)
 	fmt.Println("Interx RPC : ", Config.RPC)
 	fmt.Println("Interx PORT: ", Config.PORT)
 
+	var err error
 	Config.AddrBooks = strings.Split(configFromFile.AddrBooks, ",")
 	Config.NodeKey, err = p2p.LoadOrGenNodeKey(configFromFile.NodeKey)
 	if err != nil {
@@ -328,8 +333,10 @@ func LoadConfig(configFilePath string) {
 
 	Config.Evm = configFromFile.Evm
 	Config.Bitcoin = configFromFile.Bitcoin
+	Config.Layer2 = configFromFile.Layer2
 
 	Config.SnapshotInterval = configFromFile.SnapshotInterval
+	Config.CachingBin = configFromFile.CachingBin
 }
 
 // GenPrivKey is a function to generate a privKey
@@ -340,6 +347,11 @@ func GenPrivKey() crypto.PrivKey {
 // GetReferenceCacheDir is a function to get reference directory
 func GetReferenceCacheDir() string {
 	return Config.Cache.CacheDir + "/reference"
+}
+
+// GetReferenceCacheDir is a function to get reference directory
+func GetBinCacheDir() string {
+	return Config.Cache.CacheDir + "/bin"
 }
 
 // GetResponseCacheDir is a function to get reference directory

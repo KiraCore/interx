@@ -6,6 +6,7 @@ import (
 	"github.com/KiraCore/interx/gateway/evm"
 	"github.com/KiraCore/interx/gateway/interx"
 	"github.com/KiraCore/interx/gateway/kira"
+	"github.com/KiraCore/interx/gateway/layer2"
 	"github.com/KiraCore/interx/gateway/rosetta"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -19,4 +20,5 @@ func RegisterRequest(router *mux.Router, gwCosmosmux *runtime.ServeMux, rpcAddr 
 	rosetta.RegisterRequest(router, gwCosmosmux, rpcAddr)
 	bitcoin.RegisterRequest(router, rpcAddr)
 	evm.RegisterRequest(router, rpcAddr)
+	layer2.RegisterRequest(router, gwCosmosmux, rpcAddr)
 }
