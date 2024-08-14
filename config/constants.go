@@ -2,7 +2,7 @@ package config
 
 const (
 	InterxVersion = "v0.4.48"
-	SekaiVersion  = "v0.3.42"
+	SekaiVersion  = "v0.4.0"
 	CosmosVersion = "v0.47.6"
 
 	QueryDashboard = "/api/dashboard"
@@ -75,6 +75,8 @@ const (
 	QuerySnapList            = "/api/snap_list"
 	QueryAddrBook            = "/api/addrbook"
 	QueryNetInfo             = "/api/net_info"
+
+	QueryLayer2Status = "/api/layer2/{appName}/status"
 
 	Download              = "/download"
 	AppDownload           = "/app/download"
@@ -183,3 +185,4 @@ var MsgTypes = map[string]string{
 }
 var SupportedEVMChains = [1]string{"goerli"}
 var SupportedBitcoinChains = [1]string{"testnet"}
+var SupportedLayer2Apps = [1]string{"l2chess"}

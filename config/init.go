@@ -202,6 +202,15 @@ func defaultConfig() InterxConfigFromFile {
 
 	configFromFile.CachingBin = false
 
+	configFromFile.Layer2 = make(map[string]Layer2Config)
+	for _, item := range SupportedLayer2Apps {
+		layer2Config := Layer2Config{
+			RPC: "http://127.0.0.1:9000",
+			Fee: "300ukex",
+		}
+		configFromFile.Layer2[item] = layer2Config
+	}
+
 	return configFromFile
 }
 

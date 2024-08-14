@@ -19,6 +19,7 @@ import (
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -125,6 +126,62 @@ func GetAccountBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32ad
 	return result.Balances
 }
 
+type DappSession struct {
+	Leader          string            `protobuf:"bytes,1,opt,name=leader,proto3" json:"leader,omitempty"`
+	Start           string            `protobuf:"varint,2,opt,name=start,proto3" json:"start,omitempty"`
+	StatusHash      string            `protobuf:"bytes,3,opt,name=status_hash,json=statusHash,proto3" json:"statusHash,omitempty"`
+	Status          string            `protobuf:"varint,4,opt,name=status,proto3,enum=kira.layer2.SessionStatus" json:"status,omitempty"`
+	Gateway         string            `protobuf:"bytes,5,opt,name=gateway,proto3" json:"gateway,omitempty"`
+	OnchainMessages []*codectypes.Any `protobuf:"bytes,6,rep,name=onchain_messages,json=onchainMessages,proto3" json:"onchainMessages,omitempty"`
+}
+
+type ExecutionRegistrar struct {
+	DappName    string       `protobuf:"bytes,1,opt,name=dapp_name,json=dappName,proto3" json:"dappName,omitempty"`
+	PrevSession *DappSession `protobuf:"bytes,2,opt,name=prev_session,json=prevSession,proto3" json:"prevSession,omitempty"`
+	CurrSession *DappSession `protobuf:"bytes,3,opt,name=curr_session,json=currSession,proto3" json:"currSession,omitempty"`
+	NextSession *DappSession `protobuf:"bytes,4,opt,name=next_session,json=nextSession,proto3" json:"nextSession,omitempty"`
+}
+
+type DappOperator struct {
+	DappName         string `protobuf:"bytes,1,opt,name=dapp_name,json=dappName,proto3" json:"dappName,omitempty"`
+	Operator         string `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
+	Executor         bool   `protobuf:"varint,3,opt,name=executor,proto3" json:"executor,omitempty"`
+	Verifier         bool   `protobuf:"varint,4,opt,name=verifier,proto3" json:"verifier,omitempty"`
+	Interx           string `protobuf:"bytes,5,opt,name=interx,proto3" json:"interx,omitempty"`
+	Status           string `protobuf:"varint,6,opt,name=status,proto3,enum=kira.layer2.OperatorStatus" json:"status,omitempty"`
+	Rank             string `protobuf:"varint,7,opt,name=rank,proto3" json:"rank,omitempty"`
+	Streak           string `protobuf:"varint,8,opt,name=streak,proto3" json:"streak,omitempty"`
+	Mischance        string `protobuf:"varint,9,opt,name=mischance,proto3" json:"mischance,omitempty"`
+	VerifiedSessions string `protobuf:"varint,10,opt,name=verified_sessions,json=verifiedSessions,proto3" json:"verifiedSessions,omitempty"`
+	MissedSessions   string `protobuf:"varint,11,opt,name=missed_sessions,json=missedSessions,proto3" json:"missedSessions,omitempty"`
+	BondedLpAmount   string `protobuf:"bytes,12,opt,name=bonded_lp_amount,json=bondedLpAmount,proto3" json:"bondedLpAmount"`
+}
+
+type QueryExecutionRegistrarResponse struct {
+	Dapp               interface{}         `protobuf:"bytes,1,opt,name=dapp,proto3" json:"dapp,omitempty"`
+	ExecutionRegistrar *ExecutionRegistrar `json:"executionRegistrar,omitempty"`
+	Operators          []DappOperator      `protobuf:"bytes,3,rep,name=operators,proto3" json:"operators"`
+}
+
+func GetExecutionRegistrar(gwCosmosmux *runtime.ServeMux, r *http.Request, appName string) QueryExecutionRegistrarResponse {
+	r.URL.Path = fmt.Sprintf("/kira/layer2/execution_registrar/%s", appName)
+	r.URL.RawQuery = ""
+	r.Method = "GET"
+
+	recorder := httptest.NewRecorder()
+	gwCosmosmux.ServeHTTP(recorder, r)
+	resp := recorder.Result()
+
+	result := QueryExecutionRegistrarResponse{}
+
+	err := json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+	}
+
+	return result
+}
+
 // GetAccountNumberSequence is a function to get AccountNumber and Sequence
 func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32addr string) (uint64, uint64) {
 	_, err := sdk.AccAddressFromBech32(bech32addr)
@@ -161,6 +218,44 @@ func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, be
 	sequence, _ := strconv.ParseInt(result.Account.Sequence, 10, 64)
 
 	return uint64(accountNumber), uint64(sequence)
+}
+
+func BroadcastTransactionSync(rpcAddr string, txBytes []byte) (string, error) {
+	endpoint := fmt.Sprintf("%s/broadcast_tx_sync?tx=0x%X", rpcAddr, txBytes)
+	GetLogger().Info("[rpc-call] Entering rpc call: ", endpoint)
+
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	type RPCTempResponse struct {
+		Jsonrpc string `json:"jsonrpc"`
+		ID      int    `json:"id"`
+		Result  struct {
+			Height string `json:"height"`
+			Hash   string `json:"hash"`
+		} `json:"result,omitempty"`
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error,omitempty"`
+	}
+
+	result := new(RPCTempResponse)
+	err = json.NewDecoder(resp.Body).Decode(result)
+	if err != nil {
+		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		GetLogger().Error("[rpc-call] Unable to broadcast transaction: ", result.Error.Message)
+		return "", errors.New(result.Error.Message)
+	}
+
+	return result.Result.Hash, nil
 }
 
 // BroadcastTransaction is a function to post transaction, returns txHash

@@ -145,9 +145,9 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 		panic("Invalid Interx Mnemonic")
 	}
 
-	privKey := ConvMnemonic2PrivKey(Config.Mnemonic)
+	privKey1 := ConvMnemonic2PrivKey(Config.Mnemonic)
 
-	Config.PrivKey = &privKey
+	Config.PrivKey = &privKey1
 	Config.PubKey = Config.PrivKey.PubKey()
 	Config.Address = sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), Config.PubKey.Address())
 
@@ -193,9 +193,9 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 		panic("Invalid Faucet Mnemonic")
 	}
 
-	privKey = ConvMnemonic2PrivKey(Config.Faucet.Mnemonic)
+	privKey2 := ConvMnemonic2PrivKey(Config.Faucet.Mnemonic)
 
-	Config.Faucet.PrivKey = &privKey
+	Config.Faucet.PrivKey = &privKey2
 	Config.Faucet.PubKey = Config.Faucet.PrivKey.PubKey()
 	Config.Faucet.Address = sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), Config.Faucet.PubKey.Address())
 
@@ -333,6 +333,7 @@ func LoadConfig(configFilePath string) {
 
 	Config.Evm = configFromFile.Evm
 	Config.Bitcoin = configFromFile.Bitcoin
+	Config.Layer2 = configFromFile.Layer2
 
 	Config.SnapshotInterval = configFromFile.SnapshotInterval
 	Config.CachingBin = configFromFile.CachingBin

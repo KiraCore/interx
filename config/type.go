@@ -91,6 +91,11 @@ type BitcoinConfig struct {
 	BTC_FAUCET          string   `json:"btc_faucet"`
 }
 
+type Layer2Config struct {
+	RPC string `json:"rpc"`
+	Fee string `json:"fee"`
+}
+
 type AppSettingConfig struct {
 	AppMode     int    `json:"app_mode"`
 	AppMock     bool   `json:"app_mock"`
@@ -121,6 +126,7 @@ type InterxConfig struct {
 	RPCMethods       RPCConfig                `json:"rpc_methods"`
 	Evm              map[string]EVMConfig     `json:"evm"`
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
+	Layer2           map[string]Layer2Config  `json:"layer2"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
 	AppSetting       AppSettingConfig         `json:"app_setting"`
 	CachingBin       bool                     `json:"caching_bin"`
@@ -154,6 +160,7 @@ type InterxConfigFromFile struct {
 	} `json:"faucet"`
 	Evm              map[string]EVMConfig     `json:"evm"`
 	Bitcoin          map[string]BitcoinConfig `json:"bitcoin"`
+	Layer2           map[string]Layer2Config  `json:"layer2"`
 	SnapshotInterval uint64                   `json:"snapshot_interval"`
 	AppSetting       AppSettingConfig         `json:"app_setting"`
 	CachingBin       bool                     `json:"caching_bin"`

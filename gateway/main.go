@@ -15,6 +15,7 @@ import (
 	cosmosAuth "github.com/KiraCore/interx/proto-gen/cosmos/auth/v1beta1"
 	cosmosBank "github.com/KiraCore/interx/proto-gen/cosmos/bank/v1beta1"
 	kiraGov "github.com/KiraCore/interx/proto-gen/kira/gov"
+	kiraLayer2 "github.com/KiraCore/interx/proto-gen/kira/layer2"
 	kiraMultiStaking "github.com/KiraCore/interx/proto-gen/kira/multistaking"
 	kiraSlashing "github.com/KiraCore/interx/proto-gen/kira/slashing/v1beta1"
 	kiraSpending "github.com/KiraCore/interx/proto-gen/kira/spending"
@@ -123,6 +124,10 @@ func GetGrpcServeMux(grpcAddr string) (*runtime.ServeMux, error) {
 		return nil, fmt.Errorf("failed to register gateway: %w", err)
 	}
 
+	err = kiraLayer2.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register gateway: %w", err)
+	}
 	return gwCosmosmux, nil
 }
 
@@ -136,6 +141,7 @@ func Run(configFilePath string, log grpclog.LoggerV2) error {
 	database.LoadBlockNanoDbDriver()
 	database.LoadFaucetDbDriver()
 	database.LoadReferenceDbDriver()
+	database.LoadLayer2DbDriver()
 
 	serveHTTPS := config.Config.ServeHTTPS
 	grpcAddr := config.Config.GRPC
@@ -179,11 +185,6 @@ func Run(configFilePath string, log grpclog.LoggerV2) error {
 		log.Info("Waiting node to be synced")
 
 		time.Sleep(time.Second)
-	}
-
-	err = CheckApplicationState(gwCosmosmux, gatewayAddr)
-	if err != nil {
-		return err
 	}
 
 	tasks.RunTasks(gwCosmosmux, rpcAddr, gatewayAddr)
