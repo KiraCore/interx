@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	common "github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	database "github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 // RefMeta is a struct to be used for reference metadata
@@ -21,20 +21,39 @@ type RefMeta struct {
 }
 
 func getMeta(url string) (*RefMeta, error) {
+
+	log.CustomLogger().Info("[getMeta] Starting function.")
+
 	resp, err := http.Head(url)
 	if err != nil {
+		log.CustomLogger().Error("[getMeta] Failed to make a request with a specified context.",
+			"error", err,
+		)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	contentLength, err := strconv.Atoi(resp.Header["Content-Length"][0])
 	if err != nil {
+		log.CustomLogger().Error("[getMeta] Failed to setup headers to the response.",
+			"error", err,
+		)
 		return nil, err
 	}
+
 	lastModified, err := time.Parse(time.RFC1123, resp.Header["Last-Modified"][0])
 	if err != nil {
+		log.CustomLogger().Error("[getMeta] Failed to response modification.",
+			"error", err,
+		)
 		return nil, err
 	}
+
+	log.CustomLogger().Info("[getMeta] Successfully completed the response generation process.",
+		"function", "getMeta",
+		"status", "success",
+	)
+
 	return &RefMeta{
 		ContentLength: int64(contentLength),
 		LastModified:  lastModified,
@@ -78,6 +97,9 @@ func saveReference(url string, path string) error {
 
 // DataReferenceCheck is a function to check cache data for data references.
 func DataReferenceCheck(isLog bool) {
+
+	log.CustomLogger().Info("`DataReferenceCheck` Starting function to check cache data for data references.")
+
 	for {
 		references, err := database.GetAllReferences()
 		if err == nil {
@@ -99,18 +121,23 @@ func DataReferenceCheck(isLog bool) {
 
 				err = saveReference(v.URL, v.FilePath)
 				if err != nil {
+					log.CustomLogger().Error("[DataReferenceCheck] Failed to save reference.",
+						"error", err,
+					)
 					continue
 				}
 
 				if isLog {
-					common.GetLogger().Info("[cache] Data reference updated")
-					common.GetLogger().Info("[cache] Key = ", v.Key)
-					common.GetLogger().Info("[cache] Ref = ", v.URL)
+					log.CustomLogger().Info("`DataReferenceCheck` `cache` Data reference updated.")
+					log.CustomLogger().Info("`DataReferenceCheck` `cache`", "key", v.Key)
+					log.CustomLogger().Info("`DataReferenceCheck` `cache`", "ref", v.URL)
 				}
 
 				database.AddReference(v.Key, v.URL, ref.ContentLength, ref.LastModified, v.FilePath)
 			}
 		}
+
+		log.CustomLogger().Info("`DataReferenceCheck` Finished to check cache data for data references.")
 
 		time.Sleep(2 * time.Second)
 	}

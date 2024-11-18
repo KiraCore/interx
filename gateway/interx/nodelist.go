@@ -29,7 +29,7 @@ func RegisterNodeListQueryRoutes(r *mux.Router, gwCosmosmux *runtime.ServeMux, r
 	common.AddRPCMethod("GET", config.QuerySnapList, "This is an API to query snap node list.", true)
 }
 
-func queryPubP2PNodeList(r *http.Request, rpcAddr string) (interface{}, interface{}, int) {
+func queryPubP2PNodeList(r *http.Request, _ string) (interface{}, interface{}, int) {
 	global.Mutex.Lock()
 	response := tasks.PubP2PNodeListResponse
 
@@ -155,7 +155,7 @@ func QueryPubP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 	}
 }
 
-func queryPrivP2PNodeList(r *http.Request, rpcAddr string) (interface{}, interface{}, int) {
+func queryPrivP2PNodeList(r *http.Request, _ string) (interface{}, interface{}, int) {
 	global.Mutex.Lock()
 	response := tasks.PrivP2PNodeListResponse
 
@@ -281,7 +281,7 @@ func QueryPrivP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 	}
 }
 
-func queryInterxList(r *http.Request, rpcAddr string) (interface{}, interface{}, int) {
+func queryInterxList(r *http.Request, _ string) (interface{}, interface{}, int) {
 	global.Mutex.Lock()
 	response := tasks.InterxP2PNodeListResponse
 
@@ -359,7 +359,7 @@ func QueryInterxList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 	}
 }
 
-func querySnapList(r *http.Request, rpcAddr string) (interface{}, interface{}, int) {
+func querySnapList(r *http.Request, _ string) (interface{}, interface{}, int) {
 	global.Mutex.Lock()
 	response := tasks.SnapNodeListResponse
 

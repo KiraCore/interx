@@ -5,6 +5,7 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 )
 
 type BlockHeightTime struct {
@@ -43,9 +44,13 @@ func LoadAllBlocks() {
 }
 
 func AddNewBlock(height int64, timestamp int64) {
+
 	if len(LatestNBlockTimes) > 0 && LatestNBlockTimes[len(LatestNBlockTimes)-1].Height >= height {
 		// not a new block
 		GetLogger().Errorf("[AddNewBlock] not a new block: %d", height)
+		log.CustomLogger().Error("[AddNewBlock] Failed to fetch new block.",
+			"height", height,
+		)
 		return
 	}
 
@@ -54,7 +59,9 @@ func AddNewBlock(height int64, timestamp int64) {
 
 		prevBlockTimestamp, err := GetBlockNanoTime(config.Config.RPC, height-1)
 		if err != nil {
-			GetLogger().Errorf("[AddNewBlock] Can't get block: %d", height-1)
+			log.CustomLogger().Error("[AddNewBlock][GetBlockNanoTime] Failed to fetch a block.",
+				"height", height-1,
+			)
 			return
 		}
 
@@ -62,7 +69,12 @@ func AddNewBlock(height int64, timestamp int64) {
 
 		if len(LatestNBlockTimes) > 0 && timespan >= GetAverageBlockTime()*float64(config.Config.Block.HaltedAvgBlockTimes) {
 			// a block just after a halt
-			GetLogger().Errorf("[AddNewBlock] block just after a halt: %d, timestamp: %f, average: %f", height, timespan, GetAverageBlockTime())
+			log.CustomLogger().Error("`AddNewBlock` Block added just after a halt.",
+				"height", height,
+				"timestamp", timespan,
+				"average_block_time", GetAverageBlockTime(),
+				"halted_threshold", GetAverageBlockTime()*float64(config.Config.Block.HaltedAvgBlockTimes),
+			)
 			return
 		}
 	}
@@ -76,6 +88,8 @@ func AddNewBlock(height int64, timestamp int64) {
 	if len(LatestNBlockTimes) > N {
 		LatestNBlockTimes = LatestNBlockTimes[len(LatestNBlockTimes)-N:]
 	}
+
+	log.CustomLogger().Info("Finished 'AddNewBlock' request.")
 }
 
 func UpdateN(_N int) {
@@ -94,13 +108,17 @@ func UpdateN(_N int) {
 
 		currentBlockTimestamp, err := GetBlockNanoTime(config.Config.RPC, current)
 		if err != nil {
-			GetLogger().Errorf("[UpdateN] Can't get block: %d", current)
+			log.CustomLogger().Error("[UpdateN][GetBlockNanoTime] Failed to fetch a block.",
+				"height", current,
+			)
 			return
 		}
 
 		prevBlockTimestamp, err := GetBlockNanoTime(config.Config.RPC, current-1)
 		if err != nil {
-			GetLogger().Errorf("[UpdateN] Can't get block: %d", current-1)
+			log.CustomLogger().Error("[UpdateN][GetBlockNanoTime] Failed to fetch a block.",
+				"height", current-1,
+			)
 			return
 		}
 
@@ -125,7 +143,9 @@ func IsConsensusStopped(validatorCount int) bool {
 	blockTime, _ := time.Parse(time.RFC3339, NodeStatus.Blocktime)
 
 	if blockHeight <= 1 {
-		GetLogger().Errorf("[UpdateN] block <= 1: %d", blockHeight)
+		log.CustomLogger().Error("[IsConsensusStopped] Failed to UpdateN block <= 1.",
+			"height", blockHeight,
+		)
 		return false
 	}
 

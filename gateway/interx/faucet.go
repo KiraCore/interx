@@ -44,7 +44,7 @@ func serveFaucetInfo(r *http.Request, gwCosmosmux *runtime.ServeMux) (interface{
  * 104: Can't send tokens, less than minimum amount
  * 105: Not enough tokens
  */
-func serveFaucet(r *http.Request, gwCosmosmux *runtime.ServeMux, request types.InterxRequest, rpcAddr string, bech32addr string, token string) (interface{}, interface{}, int) {
+func serveFaucet(r *http.Request, gwCosmosmux *runtime.ServeMux, _ types.InterxRequest, rpcAddr string, bech32addr string, token string) (interface{}, interface{}, int) {
 	// check address
 	faucetAccAddr, err := sdk.AccAddressFromBech32(config.Config.Faucet.Address)
 	if err != nil {

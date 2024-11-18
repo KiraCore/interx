@@ -9,6 +9,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	kiratypes "github.com/KiraCore/sekai/types"
 	multistaking "github.com/KiraCore/sekai/x/multistaking/types"
@@ -61,12 +62,19 @@ func queryBlocksHandle(rpcAddr string, r *http.Request) (interface{}, interface{
 func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var statusCode int
+
+		log.CustomLogger().Info("Starting 'QueryBlocksRequest' request...")
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-blocks] Entering Blocks query")
-
 		if !common.RPCMethods["GET"][config.QueryBlocks].Enabled {
+
+			log.CustomLogger().Error(" `QueryBlocksRequest` is disabled.",
+				"method", request.Method,
+				"endpoint", request.Endpoint,
+			)
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryBlocks].CachingEnabled {
@@ -75,7 +83,13 @@ func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-blocks] Returning from the cache")
+					log.CustomLogger().Info("Cache hit for 'QueryBlocksRequest' request.",
+						"method", request.Method,
+						"endpoint", request.Endpoint,
+						"params", request.Params,
+						"error", response.Error,
+					)
+
 					return
 				}
 			}
@@ -83,7 +97,16 @@ func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 			response.Response, response.Error, statusCode = queryBlocksHandle(rpcAddr, r)
 		}
 
+		log.CustomLogger().Info("Processed 'QueryBlocksRequest' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlocks].CachingEnabled)
+
+		log.CustomLogger().Info("Finished 'QueryBlocksRequest' request.")
 	}
 }
 
@@ -91,6 +114,11 @@ func queryBlockByHeightOrHashHandle(rpcAddr string, height string) (interface{},
 	success, err, statusCode := common.MakeTendermintRPCRequest(rpcAddr, "/block", fmt.Sprintf("height=%s", height))
 
 	if err != nil {
+		log.CustomLogger().Error(" `queryBlockByHeightOrHashHandle` failed to execute.",
+			"height", height,
+			"method", "/block",
+			"err", err,
+		)
 		success, err, statusCode = common.MakeTendermintRPCRequest(rpcAddr, "/block_by_hash", fmt.Sprintf("hash=%s", height))
 	}
 
@@ -106,9 +134,17 @@ func QueryBlockByHeightOrHashRequest(gwCosmosmux *runtime.ServeMux, rpcAddr stri
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-blocks-by-height] Entering Block query by height: ", height)
+		log.CustomLogger().Info("Starting `QueryBlockByHeightOrHashRequest` request...")
 
 		if !common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].Enabled {
+
+			log.CustomLogger().Error("Query `QueryBlockByHeightOrHashRequest` is disabled.",
+				"method", request.Method,
+				"endpoint", request.Endpoint,
+				"params", request.Params,
+				"error", response.Error,
+			)
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CachingEnabled {
@@ -117,7 +153,13 @@ func QueryBlockByHeightOrHashRequest(gwCosmosmux *runtime.ServeMux, rpcAddr stri
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-blocks-by-height] Returning from the cache: ", height)
+					log.CustomLogger().Info("Cache hit for `QueryBlockByHeightOrHashRequest` request.",
+						"method", request.Method,
+						"endpoint", request.Endpoint,
+						"params", request.Params,
+						"error", response.Error,
+					)
+
 					return
 				}
 			}
@@ -125,12 +167,24 @@ func QueryBlockByHeightOrHashRequest(gwCosmosmux *runtime.ServeMux, rpcAddr stri
 			response.Response, response.Error, statusCode = queryBlockByHeightOrHashHandle(rpcAddr, height)
 		}
 
+		log.CustomLogger().Info("Processed `QueryBlockByHeightOrHashRequest` request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CachingEnabled)
+
+		log.CustomLogger().Info("Finished `QueryBlockByHeightOrHashRequest` request.")
+
 	}
 }
 
 func getTransactionsFromLog(attributes []abciTypes.EventAttribute) []sdk.Coin {
 	feeTxs := []sdk.Coin{}
+
+	log.CustomLogger().Info("Starting `getTransactionsFromLog` request...")
 
 	var evMap = make(map[string]string)
 	for _, attribute := range attributes {
@@ -164,15 +218,26 @@ func getTransactionsFromLog(attributes []abciTypes.EventAttribute) []sdk.Coin {
 		}
 	}
 
+	log.CustomLogger().Info("Finished `getTransactionsFromLog` request.")
+
 	return feeTxs
 }
 
 func parseTransaction(rpcAddr string, transaction tmTypes.ResultTx) (types.TransactionResult, error) {
 	txResult := types.TransactionResult{}
 
+	log.CustomLogger().Info("Starting `parseTransaction` request...")
+
 	tx, err := config.EncodingCg.TxConfig.TxDecoder()(transaction.Tx)
 	if err != nil {
-		common.GetLogger().Error("[query-transactions] Failed to decode transaction: ", err)
+
+		log.CustomLogger().Error("Failed to decode transaction.",
+			"method", "TxDecoder",
+			"transaction", tx,
+			"error", err,
+			"result", txResult,
+		)
+
 		return txResult, err
 	}
 
@@ -185,8 +250,14 @@ func parseTransaction(rpcAddr string, transaction tmTypes.ResultTx) (types.Trans
 	txResult.BlockHeight = transaction.Height
 	txResult.BlockTimestamp, err = common.GetBlockTime(rpcAddr, transaction.Height)
 	if err != nil {
-		common.GetLogger().Error("[query-transactions] Block not found: ", transaction.Height)
-		return txResult, fmt.Errorf("block not found: %d", transaction.Height)
+
+		log.CustomLogger().Error("Failed to find block.",
+			"method", "GetBlockTime",
+			"RPC", rpcAddr,
+			"height", transaction.Height,
+			"error", err,
+		)
+
 	}
 	txResult.Confirmation = common.NodeStatus.Block - transaction.Height + 1
 	txResult.GasWanted = transaction.TxResult.GetGasWanted()
@@ -204,6 +275,11 @@ func parseTransaction(rpcAddr string, transaction tmTypes.ResultTx) (types.Trans
 			Data: msg,
 		})
 	}
+
+	log.CustomLogger().Info("Signing tx successfully done.",
+		"method", "signing.Tx",
+		"signed tx", txSigning,
+	)
 
 	txResult.Transactions = []types.Transaction{}
 	txResult.Fees = []sdk.Coin{}
@@ -413,7 +489,10 @@ func parseTransaction(rpcAddr string, transaction tmTypes.ResultTx) (types.Trans
 		}
 
 		txResult.Transactions = append(txResult.Transactions, transfers...)
+
 	}
+
+	log.CustomLogger().Info("Finished `parseTransaction` request.")
 
 	return txResult, nil
 }
@@ -423,6 +502,11 @@ func QueryBlockTransactionsHandle(rpcAddr string, height string) (interface{}, i
 	blockHeight, _ := strconv.Atoi(height)
 	response, err := SearchTxHashHandle(rpcAddr, "", "", "", 0, 0, int64(blockHeight), int64(blockHeight), "")
 	if err != nil {
+		log.CustomLogger().Error("`QueryBlockTransactionsHandle` failed to execute.",
+			"block_height", height,
+			"error", err,
+			"response_data", response,
+		)
 		return common.ServeError(0, "transaction query failed", "", http.StatusBadRequest)
 	}
 
@@ -449,12 +533,27 @@ func QueryBlockTransactionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		var statusCode int
 		queries := mux.Vars(r)
 		height := queries["height"]
+
+		log.CustomLogger().Info("Starting `QueryBlockTransactionsRequest`.",
+			"block_height", height,
+		)
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-block-transactions-by-height] Entering Block query by height: ", height)
+		log.CustomLogger().Info("Attempting to fetch transactions from block.",
+			"block_height", height,
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryBlockTransactions].Enabled {
+
+			log.CustomLogger().Error("`QueryBlockTransactionsRequest` is disabled.",
+				"block_height", height,
+			)
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryBlockTransactions].CachingEnabled {
@@ -463,7 +562,10 @@ func QueryBlockTransactionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-block-transactions-by-height] Returning from the cache: %s", height)
+					log.CustomLogger().Info("Cache hit for `QueryBlockTransactionsRequest`.",
+						"block_height", height,
+					)
+
 					return
 				}
 			}
@@ -471,7 +573,17 @@ func QueryBlockTransactionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = QueryBlockTransactionsHandle(rpcAddr, height)
 		}
 
+		log.CustomLogger().Info("Fetched transaction from block (no cache used).",
+			"block_height", height,
+			"transaction_response", response.Response,
+			"error_details", response.Error,
+		)
 		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockTransactions].CachingEnabled)
+
+		log.CustomLogger().Info("Completed `QueryBlockTransactionsRequest`.",
+			"block_height", height,
+			"status_code", statusCode,
+		)
 	}
 }
 
@@ -481,6 +593,11 @@ func QueryTransactionResultHandle(rpcAddr string, txHash string) (interface{}, i
 
 	response, err := SearchTxHashHandle(rpcAddr, "", "", "", 0, 0, 0, 0, txHash)
 	if err != nil {
+		log.CustomLogger().Error("`QueryTransactionResultHandle` failed to execute.",
+			"tx_Hash", txHash,
+			"error", err,
+			"response_data", response,
+		)
 		return common.ServeError(0, "transaction query failed", "", http.StatusBadRequest)
 	}
 
@@ -489,6 +606,11 @@ func QueryTransactionResultHandle(rpcAddr string, txHash string) (interface{}, i
 	for _, transaction := range response.Txs {
 		txResult, err = parseTransaction(rpcAddr, *transaction)
 		if err != nil {
+			log.CustomLogger().Error("`parseTransaction` failed to execute.",
+				"tx_Result", txResult,
+				"error", err,
+				"response_data", response.Txs,
+			)
 			return common.ServeError(0, "", err.Error(), http.StatusBadRequest)
 		}
 	}
@@ -502,12 +624,24 @@ func QueryTransactionResultRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		var statusCode int
 		queries := mux.Vars(r)
 		txHash := queries["txHash"]
+
+		log.CustomLogger().Info("Starting `QueryTransactionResultRequest` request...")
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-transaction-by-hash] Entering transaction query by hash: %s", txHash)
+		log.CustomLogger().Info("Attempting to fetch transactions by hash.",
+			"tx_Hash", txHash,
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryTransactionResult].Enabled {
+
+			log.CustomLogger().Error("`QueryTransactionResultRequest` is disabled.",
+				"tx_Hash", txHash,
+			)
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryTransactionResult].CachingEnabled {
@@ -516,14 +650,26 @@ func QueryTransactionResultRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-transaction-by-hash] Returning from the cache: %s", txHash)
+					log.CustomLogger().Info("Cache hit for `QueryTransactionResultRequest`.",
+						"tx_Hash", txHash,
+					)
 					return
 				}
 			}
 
 			response.Response, response.Error, statusCode = QueryTransactionResultHandle(rpcAddr, txHash)
+			log.CustomLogger().Info("Fetched transaction by hash (no cache used).",
+				"tx_Hash", txHash,
+				"transaction_response", response.Response,
+				"error_details", response.Error,
+			)
 		}
 
 		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionResult].CachingEnabled)
+
+		log.CustomLogger().Info("Completed `QueryBlockTransactionsRequest`.",
+			"tx_Hash", txHash,
+			"status_code", statusCode,
+		)
 	}
 }

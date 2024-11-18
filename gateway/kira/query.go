@@ -19,7 +19,7 @@ func RegisterKiraQueryRoutes(r *mux.Router, gwCosmosmux *runtime.ServeMux, rpcAd
 	common.AddRPCMethod("GET", config.QueryKiraStatus, "This is an API to query kira status.", true)
 }
 
-func queryKiraFunctionsHandle(rpcAddr string) (interface{}, interface{}, int) {
+func queryKiraFunctionsHandle(_ string) (interface{}, interface{}, int) {
 	functions := functions.GetKiraFunctions()
 
 	return functions, nil, http.StatusOK

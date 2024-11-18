@@ -13,6 +13,7 @@ import (
 
 // GetProposals is a function to get user proposals from cache
 func GetProposals() ([]govTypes.CachedProposal, error) {
+
 	filePath := fmt.Sprintf("%s/proposals/proposals", config.GetDbCacheDir())
 	data := []govTypes.CachedProposal{}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -26,11 +27,17 @@ import (
 // MakeTendermintRPCRequest is a function to make GET request
 func MakeTendermintRPCRequest(rpcAddr string, url string, query string) (interface{}, interface{}, int) {
 	endpoint := fmt.Sprintf("%s%s?%s", rpcAddr, url, query)
-	// GetLogger().Info("[rpc-call] Entering tendermint rpc call: ", endpoint)
+
+	log.CustomLogger().Info("Starting 'MakeTendermintRPCRequest' request...",
+		"endpoint", endpoint,
+	)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[MakeTendermintRPCRequest] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 	defer resp.Body.Close()
@@ -38,9 +45,14 @@ func MakeTendermintRPCRequest(rpcAddr string, url string, query string) (interfa
 	response := new(types.RPCResponse)
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: : ", err)
+		log.CustomLogger().Error("[MakeTendermintRPCRequest] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return nil, err.Error(), resp.StatusCode
 	}
+
+	log.CustomLogger().Info("Finished 'MakeTendermintRPCRequest' request.")
 
 	return response.Result, response.Error, resp.StatusCode
 }
@@ -48,11 +60,17 @@ func MakeTendermintRPCRequest(rpcAddr string, url string, query string) (interfa
 // MakeGetRequest is a function to make GET request
 func MakeGetRequest(rpcAddr string, url string, query string) (Result interface{}, Error interface{}, StatusCode int) {
 	endpoint := fmt.Sprintf("%s%s?%s", rpcAddr, url, query)
-	// GetLogger().Info("[rpc-call] Entering rpc call: ", endpoint)
+
+	log.CustomLogger().Info("Starting 'MakeGetRequest' request...",
+		"endpoint", endpoint,
+	)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[MakeGetRequest] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 	defer resp.Body.Close()
@@ -61,9 +79,14 @@ func MakeGetRequest(rpcAddr string, url string, query string) (Result interface{
 
 	err = json.NewDecoder(resp.Body).Decode(&Result)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: : ", err)
+		log.CustomLogger().Error("[MakeGetRequest] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		Error = err.Error()
 	}
+
+	log.CustomLogger().Info("Finished 'MakeGetRequest' request.")
 
 	return Result, Error, StatusCode
 }
@@ -71,11 +94,17 @@ func MakeGetRequest(rpcAddr string, url string, query string) (Result interface{
 // DownloadResponseToFile is a function to save GET response as a file
 func DownloadResponseToFile(rpcAddr string, url string, query string, filepath string) error {
 	endpoint := fmt.Sprintf("%s%s?%s", rpcAddr, url, query)
-	// GetLogger().Info("[rpc-call] Entering rpc call: ", endpoint)
+
+	log.CustomLogger().Info("Starting 'DownloadResponseToFile' request...",
+		"endpoint", endpoint,
+	)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[DownloadResponseToFile] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return err
 	}
 	defer resp.Body.Close()
@@ -86,27 +115,36 @@ func DownloadResponseToFile(rpcAddr string, url string, query string, filepath s
 	global.Mutex.Lock()
 	_, err = io.Copy(fileout, resp.Body)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to save response")
+		log.CustomLogger().Error("[DownloadResponseToFile] Failed to save the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
 
 	global.Mutex.Unlock()
+
+	log.CustomLogger().Info("Finished 'DownloadResponseToFile' request.")
 
 	return err
 }
 
 // GetAccountBalances is a function to get balances of an address
 func GetAccountBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32addr string) []types.Coin {
+
+	log.CustomLogger().Info("Starting 'GetAccountBalances' request...")
+
 	_, err := sdk.AccAddressFromBech32(bech32addr)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Invalid bech32addr: ", bech32addr)
+		log.CustomLogger().Error("[GetAccountBalances] Invalid bech32addr.",
+			"bech32addr", bech32addr,
+			"error", err,
+		)
 		return nil
 	}
 
 	r.URL.Path = fmt.Sprintf("/cosmos/bank/v1beta1/balances/%s", bech32addr)
 	r.URL.RawQuery = ""
 	r.Method = "GET"
-
-	// GetLogger().Info("[grpc-call] Entering grpc call: ", r.URL.Path)
 
 	recorder := httptest.NewRecorder()
 	gwCosmosmux.ServeHTTP(recorder, r)
@@ -119,17 +157,28 @@ func GetAccountBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32ad
 	result := BalancesResponse{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetAccountBalances] Failed to decode the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetAccountBalances' request.")
 
 	return result.Balances
 }
 
 // GetAccountNumberSequence is a function to get AccountNumber and Sequence
 func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32addr string) (uint64, uint64) {
+
+	log.CustomLogger().Info("Starting 'GetAccountNumberSequence' request...")
+
 	_, err := sdk.AccAddressFromBech32(bech32addr)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Invalid bech32addr: ", bech32addr)
+		log.CustomLogger().Error("[GetAccountNumberSequence] Invalid bech32addr.",
+			"bech32addr", bech32addr,
+			"error", err,
+		)
 		return 0, 0
 	}
 
@@ -154,11 +203,16 @@ func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, be
 	result := QueryAccountResponse{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetAccountNumberSequence] Failed to decode the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
 
 	accountNumber, _ := strconv.ParseInt(result.Account.AccountNumber, 10, 64)
 	sequence, _ := strconv.ParseInt(result.Account.Sequence, 10, 64)
+
+	log.CustomLogger().Info("Finished 'GetAccountNumberSequence' request.")
 
 	return uint64(accountNumber), uint64(sequence)
 }
@@ -166,11 +220,15 @@ func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, be
 // BroadcastTransaction is a function to post transaction, returns txHash
 func BroadcastTransaction(rpcAddr string, txBytes []byte) (string, error) {
 	endpoint := fmt.Sprintf("%s/broadcast_tx_async?tx=0x%X", rpcAddr, txBytes)
-	GetLogger().Info("[rpc-call] Entering rpc call: ", endpoint)
+
+	log.CustomLogger().Info("Starting 'BroadcastTransaction' request...")
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[BroadcastTransaction] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -190,14 +248,22 @@ func BroadcastTransaction(rpcAddr string, txBytes []byte) (string, error) {
 	result := new(RPCTempResponse)
 	err = json.NewDecoder(resp.Body).Decode(result)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[BroadcastTransaction] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return "", err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		GetLogger().Error("[rpc-call] Unable to broadcast transaction: ", result.Error.Message)
+		log.CustomLogger().Error("[BroadcastTransaction] Failed to successful response.",
+			"resp_StatusCode", resp.StatusCode,
+			"http_StatusOK", http.StatusOK,
+		)
 		return "", errors.New(result.Error.Message)
 	}
+
+	log.CustomLogger().Info("Finished 'BroadcastTransaction' request.")
 
 	return result.Result.Hash, nil
 }
@@ -211,7 +277,9 @@ func GetPermittedTxTypes(rpcAddr string, account string) (map[string]string, err
 
 // GetBlockTime is a function to get block time
 func GetBlockTime(rpcAddr string, height int64) (int64, error) {
-	// blockTime, err := database.GetBlockTime(height)
+
+	log.CustomLogger().Info("Starting 'GetBlockTime' request...")
+
 	blockTime, found := BlockTimes[height]
 	if found {
 		return blockTime, nil
@@ -222,7 +290,10 @@ func GetBlockTime(rpcAddr string, height int64) (int64, error) {
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[GetBlockTime] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return 0, fmt.Errorf("block not found: %d", height)
 	}
 	defer resp.Body.Close()
@@ -232,18 +303,27 @@ func GetBlockTime(rpcAddr string, height int64) (int64, error) {
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockTime] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return 0, err
 	}
 
 	if response.Error != nil {
-		GetLogger().Error("[rpc-call] Block not found: ", height)
+		log.CustomLogger().Error("[GetBlockTime] Failed to find a valid block.",
+			"height", height,
+			"error", response.Error,
+		)
 		return 0, fmt.Errorf("block not found: %d", height)
 	}
 
 	result := new(tmTypes.ResultBlock)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockTime] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return 0, err
 	}
 
@@ -253,14 +333,29 @@ func GetBlockTime(rpcAddr string, height int64) (int64, error) {
 	BlockTimes[NodeStatus.Block] = blockTime
 	database.AddBlockTime(height, blockTime)
 
+	log.CustomLogger().Info("Block time successfully saved in data base.",
+		"Block_Time", blockTime,
+		"height", height,
+	)
+
 	// save block nano time
 	database.AddBlockNanoTime(height, result.Block.Header.Time.UnixNano())
+
+	log.CustomLogger().Info("Block nano time successfully saved in data base.",
+		"Block_Nano_Time", result.Block.Header.Time.UnixNano(),
+		"height", height,
+	)
+
+	log.CustomLogger().Info("Finished 'GetBlockTime' request.")
 
 	return blockTime, nil
 }
 
 // GetBlockNanoTime is a function to get block nano time
 func GetBlockNanoTime(rpcAddr string, height int64) (int64, error) {
+
+	log.CustomLogger().Info("Starting 'GetBlockNanoTime' request...")
+
 	blockTime, err := database.GetBlockNanoTime(height)
 	if err == nil {
 		return blockTime, nil
@@ -271,7 +366,10 @@ func GetBlockNanoTime(rpcAddr string, height int64) (int64, error) {
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[GetBlockNanoTime] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return 0, fmt.Errorf("block not found: %d", height)
 	}
 	defer resp.Body.Close()
@@ -281,18 +379,27 @@ func GetBlockNanoTime(rpcAddr string, height int64) (int64, error) {
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockNanoTime] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return 0, err
 	}
 
 	if response.Error != nil {
-		GetLogger().Error("[rpc-call] Block not found: ", height)
+		log.CustomLogger().Error("[GetBlockNanoTime] Failed to find a valid block.",
+			"height", height,
+			"error", response.Error,
+		)
 		return 0, fmt.Errorf("block not found: %d", height)
 	}
 
 	result := new(tmTypes.ResultBlock)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockNanoTime] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 		return 0, err
 	}
 
@@ -302,8 +409,20 @@ func GetBlockNanoTime(rpcAddr string, height int64) (int64, error) {
 	BlockTimes[height] = result.Block.Header.Time.Unix()
 	database.AddBlockTime(height, result.Block.Header.Time.Unix())
 
+	log.CustomLogger().Info("Block time successfully saved in data base.",
+		"Block_Time", blockTime,
+		"height", height,
+	)
+
 	// save block nano time
 	database.AddBlockNanoTime(height, blockTime)
+
+	log.CustomLogger().Info("Block nano time successfully saved in data base.",
+		"Block_Nano_Time", result.Block.Header.Time.UnixNano(),
+		"height", height,
+	)
+
+	log.CustomLogger().Info("Finished 'GetBlockNanoTime' request.")
 
 	return blockTime, nil
 }
@@ -314,6 +433,8 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.To
 	// if err == nil {
 	// 	return tokens
 	// }
+
+	log.CustomLogger().Info("Starting 'GetTokenAliases' request...")
 
 	r.URL.Path = strings.Replace(config.QueryKiraTokensAliases, "/api", "", 1)
 	r.URL.RawQuery = ""
@@ -334,25 +455,38 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.To
 
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetTokenAliases] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
 
 	// save block time
 	err = database.AddTokenAliases(result.Data)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to save response")
+		log.CustomLogger().Error("[GetTokenAliases] Failed to save block time.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetTokenAliases' request.")
 
 	return result.Data, result.DefaultDenom, result.Bech32Prefix
 }
 
 // GetAllBalances is a function to get all balances with full limitation
 func GetAllBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32Addr string) []types.Coin {
+
+	log.CustomLogger().Info("Starting 'GetAllBalances' request...")
+
 	r.URL.Path = fmt.Sprintf("/cosmos/bank/v1beta1/balances/%s", bech32Addr)
 	r.URL.RawQuery = "pagination.limit=100000"
 	r.Method = "GET"
 
-	// GetLogger().Info("[grpc-call] Entering grpc call: ", r.URL.Path)
+	log.CustomLogger().Info("Proccessing `GetAllBalances` request...",
+		"url", r.URL.Path,
+	)
 
 	recorder := httptest.NewRecorder()
 	gwCosmosmux.ServeHTTP(recorder, r)
@@ -365,19 +499,29 @@ func GetAllBalances(gwCosmosmux *runtime.ServeMux, r *http.Request, bech32Addr s
 	result := AllBalancesResponse{}
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetAllBalances] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetAllBalances' request.")
 
 	return result.Balances
 }
 
 // GetTokenSupply is a function to get token supply
 func GetTokenSupply(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.TokenSupply {
+
+	log.CustomLogger().Info("Starting 'GetTokenSupply' request...")
+
 	r.URL.Path = strings.Replace(config.QueryTotalSupply, "/api/kira", "/cosmos/bank/v1beta1", -1)
 	r.URL.RawQuery = ""
 	r.Method = "GET"
 
-	// GetLogger().Info("[grpc-call] Entering grpc call: ", r.URL.Path)
+	log.CustomLogger().Info("Proccessing `GetTokenSupply` `GetTokenSupply` request...",
+		"url", r.URL.Path,
+	)
 
 	recorder := httptest.NewRecorder()
 	gwCosmosmux.ServeHTTP(recorder, r)
@@ -390,73 +534,121 @@ func GetTokenSupply(gwCosmosmux *runtime.ServeMux, r *http.Request) []types.Toke
 	result := TokenAliasesResponse{}
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		GetLogger().Error("[grpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetTokenSupply] Failed to unmarshal the response.",
+			"response", resp.StatusCode,
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetTokenSupply' request.")
 
 	return result.Supply
 }
 
 func GetKiraStatus(rpcAddr string) *types.KiraStatus {
+
+	log.CustomLogger().Info("Starting 'GetKiraStatus' request...")
+
 	success, _, _ := MakeTendermintRPCRequest(rpcAddr, "/status", "")
+
+	log.CustomLogger().Info("Proccessed `GetKiraStatus` `MakeTendermintRPCRequest` request...",
+		"rpc", rpcAddr,
+		"query", "/status",
+		"success", true,
+	)
 
 	if success != nil {
 		result := types.KiraStatus{}
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			GetLogger().Error("[kira-status] Invalid response format", err)
+			log.CustomLogger().Error("[GetKiraStatus] Failed to marshal the response.",
+				"error", err,
+			)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			GetLogger().Error("[kira-status] Invalid response format", err)
+			log.CustomLogger().Error("[GetKiraStatus] Failed to unmarshal the response.",
+				"error", err,
+			)
 		}
 
 		return &result
 	}
 
+	log.CustomLogger().Info("Finished 'GetKiraStatus' request.")
+
 	return nil
 }
 
 func GetInterxStatus(interxAddr string) *types.InterxStatus {
+
+	log.CustomLogger().Info("Starting 'GetInterxStatus' request...")
+
 	success, _, _ := MakeGetRequest(interxAddr, "/api/status", "")
+
+	log.CustomLogger().Info("Proccessed `GetInterxStatus` `MakeGetRequest` request...",
+		"rpc", interxAddr,
+		"query", "/api/status",
+		"success", true,
+	)
 
 	if success != nil {
 		result := types.InterxStatus{}
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			GetLogger().Error("[interx-status] Invalid response format", err)
+			log.CustomLogger().Error("[GetInterxStatus] Failed to marshal the response.",
+				"error", err,
+			)
 			return nil
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			GetLogger().Error("[interx-status] Invalid response format", err)
+			log.CustomLogger().Error("[GetInterxStatus] Failed to unmarshal the response.",
+				"error", err,
+			)
 			return nil
 		}
 
 		return &result
 	}
 
+	log.CustomLogger().Info("Finished 'GetInterxStatus' request.")
+
 	return nil
 }
 
 func GetSnapshotInfo(interxAddr string) *types.SnapShotChecksumResponse {
+
+	log.CustomLogger().Info("Starting 'GetSnapshotInfo' request...")
+
 	success, _, _ := MakeGetRequest(interxAddr, "/api/snapshot_info", "")
+
+	log.CustomLogger().Info("Proccessed `GetSnapshotInfo` `MakeGetRequest` request...",
+		"rpc", interxAddr,
+		"query", "/api/snapshot_info",
+		"success", true,
+	)
 
 	if success != nil {
 		result := types.SnapShotChecksumResponse{}
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			GetLogger().Error("[interx-snapshot_info] Invalid response format", err)
+			log.CustomLogger().Error("[GetSnapshotInfo] Failed to marshal the response.",
+				"error", err,
+			)
 			return nil
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			GetLogger().Error("[interx-snapshot_info] Invalid response format", err)
+			log.CustomLogger().Error("[GetSnapshotInfo] Failed to unmarshal the response.",
+				"error", err,
+			)
 			return nil
 		}
 
@@ -467,15 +659,23 @@ func GetSnapshotInfo(interxAddr string) *types.SnapShotChecksumResponse {
 		return &result
 	}
 
+	log.CustomLogger().Info("Finished 'GetSnapshotInfo' request.")
+
 	return nil
 }
 
 // GetBlockchain is a function to get block nano time
 func GetBlockchain(rpcAddr string) (*tmTypes.ResultBlockchainInfo, error) {
+
+	log.CustomLogger().Info("Starting 'GetBlockchain' request...")
+
 	endpoint := fmt.Sprintf("%s/blockchain", rpcAddr)
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		GetLogger().Error("[rpc-call] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[GetBlockchain] Failed to connect to endpoint.",
+			"endpoint", endpoint,
+			"error", err,
+		)
 		return nil, fmt.Errorf("blockchain query error")
 	}
 	defer resp.Body.Close()
@@ -485,20 +685,28 @@ func GetBlockchain(rpcAddr string) (*tmTypes.ResultBlockchainInfo, error) {
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockchain] Failed to unmarshal the response.",
+			"error", err,
+		)
 		return nil, err
 	}
 
 	if response.Error != nil {
-		GetLogger().Error("[rpc-call] Blockchain query fail ")
+		log.CustomLogger().Error("[GetBlockchain] Failed to query the blockchain.",
+			"error", err,
+		)
 		return nil, fmt.Errorf("blockchain query error")
 	}
 
 	result := new(tmTypes.ResultBlockchainInfo)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		GetLogger().Error("[rpc-call] Unable to decode response: ", err)
+		log.CustomLogger().Error("[GetBlockchain] Failed to unmarshal the response.",
+			"error", err,
+		)
 		return nil, err
 	}
+
+	log.CustomLogger().Info("Finished 'GetBlockchain' request.")
 
 	return result, nil
 }

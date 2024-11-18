@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/KiraCore/interx/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -295,11 +296,18 @@ func InitConfig(
 
 	bytes, err := json.MarshalIndent(&configFromFile, "", "  ")
 	if err != nil {
+		log.CustomLogger().Error("[InitConfig] Failed to marshal config.",
+			"error", err,
+		)
 		panic(err)
 	}
 
 	err = ioutil.WriteFile(configFilePath, bytes, 0644)
 	if err != nil {
+		log.CustomLogger().Error("[InitConfig] Failed to write to file.",
+			"config_File_Path", configFilePath,
+			"error", err,
+		)
 		panic(err)
 	}
 }

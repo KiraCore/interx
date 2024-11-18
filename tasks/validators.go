@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KiraCore/interx/common"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -49,7 +50,9 @@ func ToString(data interface{}) string {
 }
 
 func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
-	// Query validators
+
+	log.CustomLogger().Info("Starting 'QueryValidators' request...")
+
 	type ValidatorsResponse = struct {
 		Validators []types.QueryValidator `json:"validators,omitempty"`
 		Actors     []string               `json:"actors,omitempty"`
@@ -66,21 +69,37 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 		validatorsQueryResponse, failure, _ := common.ServeGRPC(validatorsQueryRequest, gwCosmosmux)
 
 		if validatorsQueryResponse == nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to fetch validators.",
+				"gatewayAddr", gatewayAddr,
+				"offset", offset,
+				"limit", limit,
+				"failure", ToString(failure),
+			)
 			return errors.New(ToString(failure))
 		}
 
 		byteData, err := json.Marshal(validatorsQueryResponse)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to marshal validators response.",
+				"error", err,
+			)
 			return err
 		}
 
 		subResult := ValidatorsResponse{}
 		err = json.Unmarshal(byteData, &subResult)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to unmarshal validators response.",
+				"error", err,
+			)
 			return err
 		}
 
 		if len(subResult.Validators) == 0 {
+			log.CustomLogger().Info("[QueryValidators] No more validators to fetch.",
+				"offset", offset,
+				"limit", limit,
+			)
 			break
 		}
 
@@ -98,13 +117,22 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 	tokenRatesQueryRequest, _ := http.NewRequest("GET", "http://"+gatewayAddr+"/kira/tokens/rates", nil)
 	tokenRatesQueryResponse, _, _ := common.ServeGRPC(tokenRatesQueryRequest, gwCosmosmux)
 	if tokenRatesQueryResponse != nil {
+
+		log.CustomLogger().Info("[QueryValidators] Received response from token rates query.")
+
 		byteData, err := json.Marshal(tokenRatesQueryResponse)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to marshal token rates query response.",
+				"error", err,
+			)
 			return err
 		}
 
 		err = json.Unmarshal(byteData, &tokenRatesResponse)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to unmarshal token rates response.",
+				"error", err,
+			)
 			return err
 		}
 
@@ -127,21 +155,37 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 		validatorInfosQueryResponse, failure, _ := common.ServeGRPC(validatorInfosQueryRequest, gwCosmosmux)
 
 		if validatorInfosQueryResponse == nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to fetch validator signing infos.",
+				"gatewayAddr", gatewayAddr,
+				"offset", offset,
+				"limit", limit,
+				"failure", ToString(failure),
+			)
 			return errors.New(ToString(failure))
 		}
 
 		byteData, err := json.Marshal(validatorInfosQueryResponse)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to marshal validator signing infos response.",
+				"error", err,
+			)
 			return err
 		}
 
 		subResult := ValidatorInfoResponse{}
 		err = json.Unmarshal(byteData, &subResult)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to unmarshal validator signing infos response.",
+				"error", err,
+			)
 			return err
 		}
 
 		if len(subResult.ValValidatorInfos) == 0 {
+			log.CustomLogger().Info("[QueryValidators] No more validator signing infos to fetch.",
+				"offset", offset,
+				"limit", limit,
+			)
 			break
 		}
 
@@ -161,12 +205,18 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 	if stakingPoolsQueryResponse != nil {
 		byteData, err := json.Marshal(stakingPoolsQueryResponse)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to marshal staking pools query response.",
+				"error", err,
+			)
 			return err
 		}
 
 		pools := ValidatorPoolsResponse{}
 		err = json.Unmarshal(byteData, &pools)
 		if err != nil {
+			log.CustomLogger().Error("[QueryValidators] Failed to unmarshal staking pools query response.",
+				"error", err,
+			)
 			return err
 		}
 
@@ -278,19 +328,24 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 
 	AllValidators = allValidators
 
-	// common.GetLogger().Info(AllValidators)
+	log.CustomLogger().Info("Finished 'QueryValidators' request.")
 
 	return nil
 }
 
 func SyncValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string, isLog bool) {
+
+	log.CustomLogger().Info("Starting 'SyncValidators' request...")
+
 	lastBlock := int64(0)
 	for {
 		if common.NodeStatus.Block != lastBlock {
 			err := QueryValidators(gwCosmosmux, gatewayAddr)
 
 			if err != nil && isLog {
-				common.GetLogger().Error("[sync-validators] Failed to query validators: ", err)
+				log.CustomLogger().Error("[SyncValidators] Failed to query validators.",
+					"error", err,
+				)
 			}
 
 			lastBlock = common.NodeStatus.Block

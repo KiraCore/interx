@@ -39,7 +39,7 @@ func QuerySnapShot(rpcAddr string) http.HandlerFunc {
 	}
 }
 
-func querySnapShotInfoHandler(rpcAddr string) (interface{}, interface{}, int) {
+func querySnapShotInfoHandler(_ string) (interface{}, interface{}, int) {
 	info, err := getSnapShotInfo()
 	if err != nil {
 		return common.ServeError(0, "", "interx error", http.StatusInternalServerError)

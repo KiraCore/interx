@@ -51,6 +51,7 @@ func timeout() time.Duration {
 func getInterxAddress(ipAddr string) string {
 	return "http://" + ipAddr + ":" + config.Config.NodeDiscovery.DefaultInterxPort
 }
+
 func QueryNetInfo(rpcAddr string) (*tmTypes.ResultNetInfo, error) {
 	result := new(tmTypes.ResultNetInfo)
 

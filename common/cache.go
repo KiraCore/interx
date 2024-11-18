@@ -7,15 +7,22 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 )
 
 // PutCache is a function to save value to cache
 func PutCache(chainIDHash string, endpointHash string, requestHash string, value types.InterxResponse) error {
-	// GetLogger().Info("[cache] Saving interx response")
+
+	log.CustomLogger().Info("Starting 'PutCache' request...",
+		"endpoint", endpointHash,
+	)
 
 	data, err := json.Marshal(value)
 	if err != nil {
+		log.CustomLogger().Error("[PutCache] Failed to marshal the response.",
+			"error", err,
+		)
 		return err
 	}
 
@@ -25,9 +32,14 @@ func PutCache(chainIDHash string, endpointHash string, requestHash string, value
 	global.Mutex.Lock()
 	err = os.MkdirAll(folderPath, os.ModePerm)
 	if err != nil {
+
+		log.CustomLogger().Error("[PutCache] Failed to create a folder.",
+			"error", err,
+			"folder_Path", folderPath,
+		)
+
 		global.Mutex.Unlock()
 
-		GetLogger().Error("[cache] Unable to create a folder: ", folderPath)
 		return err
 	}
 
@@ -35,14 +47,24 @@ func PutCache(chainIDHash string, endpointHash string, requestHash string, value
 	global.Mutex.Unlock()
 
 	if err != nil {
-		GetLogger().Error("[cache] Unable to save response: ", filePath)
+		log.CustomLogger().Error("[PutCache] Failed to write data to the named file.",
+			"error", err,
+			"file_Path", filePath,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'PutCache' request.")
 
 	return err
 }
 
 // GetCache is a function to get value from cache
 func GetCache(chainIDHash string, endpointHash string, requestHash string) (types.InterxResponse, error) {
+
+	log.CustomLogger().Info("Starting 'GetCache' request...",
+		"endpoint", endpointHash,
+	)
+
 	filePath := fmt.Sprintf("%s/%s/%s/%s", config.GetResponseCacheDir(), chainIDHash, endpointHash, requestHash)
 
 	response := types.InterxResponse{}
@@ -50,6 +72,10 @@ func GetCache(chainIDHash string, endpointHash string, requestHash string) (type
 	data, err := os.ReadFile(filePath)
 
 	if err != nil {
+		log.CustomLogger().Error("[GetCache] Failed to read data from the named file.",
+			"error", err,
+			"file_Path", filePath,
+		)
 		return response, err
 	}
 

@@ -45,7 +45,7 @@ const (
 	Jailed string = "JAILED"
 )
 
-func queryValidatorsHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
+func queryValidatorsHandle(r *http.Request, _ *runtime.ServeMux, _ string) (interface{}, interface{}, int) {
 	queries := r.URL.Query()
 	address := queries["address"]
 	valkey := queries["valkey"]
@@ -215,7 +215,7 @@ func GetValidator(consAddrHex string) string {
 	return sdk.AccAddress(bytes).String()
 }
 
-func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
+func queryConsensusHandle(_ *http.Request, _ *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
 	// Query All Validators
 	AllValidators := tasks.AllValidators.Validators
 
@@ -358,7 +358,7 @@ func QueryConsensus(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerF
 	}
 }
 
-func queryDumpConsensusStateHandler(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
+func queryDumpConsensusStateHandler(_ *http.Request, _ *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
 	return common.MakeTendermintRPCRequest(rpcAddr, "/dump_consensus_state", "")
 }
 

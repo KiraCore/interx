@@ -269,7 +269,7 @@ func QueryProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.H
 	}
 }
 
-func queryProposalHandler(r *http.Request, gwCosmosmux *runtime.ServeMux, proposalID string, rpcAddr string) (interface{}, interface{}, int) {
+func queryProposalHandler(r *http.Request, gwCosmosmux *runtime.ServeMux, proposalID string, _ string) (interface{}, interface{}, int) {
 	r.URL.Path = strings.Replace(r.URL.Path, "/api/kira/gov", "/kira/gov", -1)
 	success, failure, status := common.ServeGRPC(r, gwCosmosmux)
 

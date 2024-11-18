@@ -13,6 +13,7 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/rosetta"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -161,11 +162,19 @@ func (c conventionalMarshaller) MarshalAndConvert(endpoint string) ([]byte, erro
 
 // GetInterxRequest is a function to get Interx Request
 func GetInterxRequest(r *http.Request) types.InterxRequest {
+
+	log.CustomLogger().Info("Starting 'GetInterxRequest' request...",
+		"method", r.Method,
+		"endpoint", r.URL.String(),
+	)
+
 	request := types.InterxRequest{}
 
 	request.Method = r.Method
 	request.Endpoint = r.URL.String()
 	request.Params, _ = ioutil.ReadAll(r.Body)
+
+	log.CustomLogger().Info("Finished 'GetInterxRequest' request.")
 
 	return request
 }
@@ -184,6 +193,9 @@ func GetResponseFormat(request types.InterxRequest, rpcAddr string) *types.Proxy
 
 // GetResponseSignature is a function to get response signature
 func GetResponseSignature(response types.ProxyResponse) (string, string) {
+
+	log.CustomLogger().Info("Starting 'GetResponseSignature' request...")
+
 	// Get Response Hash
 	responseHash := GetBlake2bHash(response.Response)
 
@@ -196,14 +208,22 @@ func GetResponseSignature(response types.ProxyResponse) (string, string) {
 	sign.Response = responseHash
 	signBytes, err := json.Marshal(sign)
 	if err != nil {
+		log.CustomLogger().Error("[GetResponseSignature] Failed to create signature.",
+			"error", err,
+		)
 		return "", responseHash
 	}
 
 	// Get Signature
 	signature, err := config.Config.PrivKey.Sign(signBytes)
 	if err != nil {
+		log.CustomLogger().Error("[GetResponseSignature] Failed to fetch signature.",
+			"error", err,
+		)
 		return "", responseHash
 	}
+
+	log.CustomLogger().Info("Finished 'GetResponseSignature' request.")
 
 	return base64.StdEncoding.EncodeToString([]byte(signature)), responseHash
 }
@@ -249,9 +269,10 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 				CachingBlockDuration: conf.CachingBlockDuration,
 			})
 			if err != nil {
-				GetLogger().Error("[gateway] Failed to save in the cache: ", err.Error())
+				log.CustomLogger().Error("[WrapResponse] Failed to save in the cache.",
+					"error", err,
+				)
 			}
-			// GetLogger().Info("[gateway] Save finished")
 		}
 	}
 
@@ -279,7 +300,9 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		case string:
 			_, err := w.Write([]byte(v))
 			if err != nil {
-				GetLogger().Error("[gateway] Failed to make a response", err.Error())
+				log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+					"error", err,
+				)
 			}
 			return
 		}
@@ -287,7 +310,9 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		encoded, _ := conventionalMarshaller{response.Response}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			GetLogger().Error("[gateway] Failed to make a response", err.Error())
+			log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+				"error", err,
+			)
 		}
 	} else {
 		w.WriteHeader(statusCode)
@@ -299,7 +324,9 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		encoded, _ := conventionalMarshaller{response.Error}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			GetLogger().Error("[gateway] Failed to make a response", err.Error())
+			log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+				"error", err,
+			)
 		}
 	}
 }

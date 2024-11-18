@@ -14,7 +14,6 @@ import (
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/test"
 	"github.com/KiraCore/interx/types"
-	multiStakingTypes "github.com/KiraCore/sekai/x/multistaking/types"
 	slashingTypes "github.com/KiraCore/sekai/x/slashing/types"
 	stakingTypes "github.com/KiraCore/sekai/x/staking/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
@@ -32,10 +31,10 @@ type slashingServer struct {
 	slashingTypes.UnimplementedQueryServer
 }
 
-type multiStakingServer struct {
-	multiStakingTypes.UnimplementedQueryServer
-	multiStakingTypes.UnimplementedMsgServer
-}
+// type multiStakingServer struct {
+// 	multiStakingTypes.UnimplementedQueryServer
+// 	multiStakingTypes.UnimplementedMsgServer
+// }
 
 type ValidatorsStatus struct {
 	Validators []types.QueryValidator `json:"validators,omitempty"`
@@ -52,14 +51,14 @@ func (s *slashingServer) SigningInfos(ctx context.Context, req *slashingTypes.Qu
 	}}, nil
 }
 
-func (s *multiStakingServer) StakingPools(ctx context.Context, req *multiStakingTypes.QueryStakingPoolsRequest) (*multiStakingTypes.QueryStakingPoolsResponse, error) {
-	return &multiStakingTypes.QueryStakingPoolsResponse{Pools: []multiStakingTypes.StakingPool{
-		{
-			Id:      1,
-			Enabled: true,
-		},
-	}}, nil
-}
+// func (s *multiStakingServer) StakingPools(ctx context.Context, req *multiStakingTypes.QueryStakingPoolsRequest) (*multiStakingTypes.QueryStakingPoolsResponse, error) {
+// 	return &multiStakingTypes.QueryStakingPoolsResponse{Pools: []multiStakingTypes.StakingPool{
+// 		{
+// 			Id:      1,
+// 			Enabled: true,
+// 		},
+// 	}}, nil
+// }
 
 func (suite *ValidatorsTestSuite) SetupTest() {
 	tasks.AllValidators = types.AllValidators{

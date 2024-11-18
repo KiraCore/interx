@@ -3,7 +3,6 @@ package tasks
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,11 +10,15 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 )
 
 // CacheDataCheck is a function to check cache data if it's expired.
 func CacheDataCheck(rpcAddr string, isLog bool) {
+
+	log.CustomLogger().Info("`CacheDataCheck` Starting functionto to check cache data if it's expired.")
+
 	for {
 		err := filepath.Walk(config.GetResponseCacheDir(),
 			func(path string, info os.FileInfo, err error) error {
@@ -51,7 +54,9 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 
 				if path != config.GetResponseCacheDir() && delete {
 					if isLog {
-						common.GetLogger().Info("[cache] Deleting file: ", path)
+						log.CustomLogger().Info("`CacheDataCheck` `cache` Deleting file.",
+							"path", path,
+						)
 					}
 
 					global.Mutex.Lock()
@@ -65,7 +70,9 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 
 					if err != nil {
 						if isLog {
-							common.GetLogger().Error("[cache] Error deleting file: ", err)
+							log.CustomLogger().Info("`CacheDataCheck` `cache` Error deleting file.",
+								"error", err,
+							)
 						}
 						return err
 					}
@@ -77,7 +84,9 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 			})
 
 		if err != nil {
-			log.Println(err)
+			log.CustomLogger().Error("[CacheDataCheck][cache] Failed to walk for each file or directory in the tree.",
+				"error", err,
+			)
 		}
 
 		time.Sleep(2 * time.Second)

@@ -15,6 +15,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	kiratypes "github.com/KiraCore/sekai/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -47,17 +48,33 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 	var limit = 100
 	var limitPages = 100
 
+	log.CustomLogger().Info("Starting 'GetTransactionsWithSync' request...",
+		"rpc_address", rpcAddr,
+		"address", address,
+		"is_outbound", isOutbound,
+	)
+
 	if address == "" {
+		log.CustomLogger().Info("Address is empty, returning empty ResultTxSearch.")
 		return &tmTypes.ResultTxSearch{}, nil
 	}
 
 	lastBlock := database.GetLastBlockFetched(address, isOutbound)
+	log.CustomLogger().Info("Fetched last block request `GetLastBlockFetched`",
+		"last_block", lastBlock,
+		"address", address,
+	)
+
 	totalResult := tmTypes.ResultTxSearch{
 		Txs:        []*tmTypes.ResultTx{},
 		TotalCount: 0,
 	}
 
 	for page < limitPages {
+		log.CustomLogger().Info("Processing page of transactions...",
+			"page", page,
+			"limit", limit,
+		)
 		var events = make([]string, 0, 5)
 		if isOutbound {
 			events = append(events, fmt.Sprintf("message.sender='%s'", address))
@@ -68,11 +85,16 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 
 		// search transactions
 		endpoint := fmt.Sprintf("%s/tx_search?query=\"%s\"&page=%d&per_page=%d&order_by=\"desc\"", rpcAddr, strings.Join(events, "%20AND%20"), page, limit)
-		common.GetLogger().Info("[query-transaction] Entering transaction search: ", endpoint)
+		log.CustomLogger().Info("Constructed endpoint for transaction query.",
+			"endpoint", endpoint,
+		)
 
 		resp, err := http.Get(endpoint)
 		if err != nil {
-			common.GetLogger().Error("[query-transaction] Unable to connect to ", endpoint)
+			log.CustomLogger().Error("[GetTransactionsWithSync][http.Get] Failed to connect to endpoint.",
+				"endpoint", endpoint,
+				"error", err,
+			)
 			return nil, err
 		}
 		defer resp.Body.Close()
@@ -82,23 +104,39 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 		response := new(tmJsonRPCTypes.RPCResponse)
 
 		if err := json.Unmarshal(respBody, response); err != nil {
-			common.GetLogger().Error("[query-transaction] Unable to decode response: ", err)
+			log.CustomLogger().Error("[GetTransactionsWithSync] Failed to unmarshal RPC response.",
+				"error", err,
+				"response_body", string(respBody),
+			)
 			break
 		}
 
 		if response.Error != nil {
+			log.CustomLogger().Error("[GetTransactionsWithSync] RPC response contains an error.",
+				"rpc_error", response.Error,
+			)
 			break
 		}
 
 		result := new(tmTypes.ResultTxSearch)
 		if err := tmjson.Unmarshal(response.Result, result); err != nil {
-			common.GetLogger().Error("[query-transaction] Failed to unmarshal result:", err)
+			log.CustomLogger().Error("[GetTransactionsWithSync][Unmarshal] Failed to unmarshal transaction search result.",
+				"error", err,
+			)
 			break
 		}
 
 		if result.TotalCount == 0 {
+			log.CustomLogger().Info("No more transactions found, exiting loop.",
+				"page", page,
+			)
 			break
 		}
+
+		log.CustomLogger().Info("Transactions retrieved for current page.",
+			"transaction_count", len(result.Txs),
+			"page", page,
+		)
 
 		totalResult.Txs = append(totalResult.Txs, result.Txs...)
 
@@ -108,10 +146,18 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 		page++
 	}
 	totalResult.TotalCount = len(totalResult.Txs)
+	log.CustomLogger().Info("Total transactions fetched.",
+		"total_count", totalResult.TotalCount,
+	)
+
 	err := database.SaveTransactions(address, totalResult, isOutbound)
 	if err != nil {
-		common.GetLogger().Error("[query-transaction] Failed to save cache result:", err)
+		log.CustomLogger().Error("[GetTransactionsWithSync][SaveTransactions] Failed to save transactions to database.",
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetTransactionsWithSync' request.")
 
 	return database.GetTransactions(address, isOutbound)
 }
@@ -611,7 +657,7 @@ func queryUnconfirmedTransactionsHandler(rpcAddr string, r *http.Request) (inter
 		txResult, ok := decodedTx.(signing.Tx)
 		if !ok {
 			common.GetLogger().Error("[post-unconfirmed-txs] Failed to decode transaction")
-			return common.ServeError(0, "failed to decode signed TX", err.Error(), http.StatusBadRequest)
+			return common.ServeError(0, "failed to decode signed TX", "", http.StatusBadRequest)
 		}
 
 		signature, _ := txResult.GetSignaturesV2()

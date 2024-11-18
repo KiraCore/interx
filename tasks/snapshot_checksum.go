@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 )
 
 var (
@@ -22,12 +22,19 @@ func calcChecksum(isLog bool) {
 	SnapshotChecksumAvailable = false
 	SnapshotLength = 0
 
-	common.GetLogger().Info("[cache] calculating snapshot checksum: ")
+	log.CustomLogger().Info("Starting 'calcChecksum' request...")
 
 	f, err := os.Open(config.SnapshotPath())
+	log.CustomLogger().Info("[calcChecksum] Opening snapshot file.",
+		"Snapshot_Path", config.SnapshotPath(),
+	)
+
 	if err != nil {
 		if isLog {
-			common.GetLogger().Error("[cache] can't read snapshot file: ", err)
+			log.CustomLogger().Error("[calcChecksum] Failed to open snapshot file.",
+				"Snapshot_Path", config.SnapshotPath(),
+				"error", err,
+			)
 		}
 
 		return
@@ -46,7 +53,9 @@ func calcChecksum(isLog bool) {
 		if err != nil {
 			if err != io.EOF {
 				if isLog {
-					common.GetLogger().Error("[cache] failed to read snapshot: ", err)
+					log.CustomLogger().Error("[calcChecksum] Failed to read snapshot file.",
+						"error", err,
+					)
 				}
 				return
 			}
@@ -59,16 +68,27 @@ func calcChecksum(isLog bool) {
 
 		h.Write(buf[:bytesRead])
 		totalRead += int64(bytesRead)
+
+		log.CustomLogger().Debug("[calcChecksum] Read chunk from snapshot file.",
+			"bytesRead", bytesRead,
+			"totalRead", totalRead,
+		)
 	}
 
 	SnapshotChecksumAvailable = true
 	SnapshotChecksum = hex.EncodeToString(h.Sum(nil))
 	SnapshotLength = totalRead
-	common.GetLogger().Info("[cache] snapshot checksum: ", SnapshotChecksum)
+
+	log.CustomLogger().Info("Finished 'calcChecksum' request.")
 }
 
 // CalcSnapshotChecksum is a function for syncing sekaid status.
 func CalcSnapshotChecksum(isLog bool) {
+
+	log.CustomLogger().Info("`CalcSnapshotChecksum` Starting snapshot checksum monitoring.",
+		"snapshotInterval", config.Config.SnapshotInterval,
+	)
+
 	available := 0
 	for {
 		time.Sleep(time.Duration(config.Config.SnapshotInterval) * time.Millisecond)
@@ -76,7 +96,10 @@ func CalcSnapshotChecksum(isLog bool) {
 
 		if err != nil {
 			if available != 1 && isLog {
-				common.GetLogger().Error("[cache] can't read snapshot file: ", err)
+				log.CustomLogger().Error("[CalcSnapshotChecksum] Failed to access snapshot file.",
+					"Snapshot_Path", config.SnapshotPath(),
+					"error", err,
+				)
 				available = 1
 			}
 
@@ -86,11 +109,20 @@ func CalcSnapshotChecksum(isLog bool) {
 		available = 0
 
 		if file.ModTime().Equal(SnapshotModTime) {
+			log.CustomLogger().Debug("`CalcSnapshotChecksum` No changes detected in snapshot file.",
+				"lastModifiedTime", file.ModTime(),
+			)
 			continue
 		}
+
+		log.CustomLogger().Info("`CalcSnapshotChecksum` Detected changes in snapshot file.",
+			"lastModifiedTime", file.ModTime(),
+		)
 
 		SnapshotModTime = file.ModTime()
 
 		calcChecksum(isLog)
+
+		log.CustomLogger().Info("Finished 'CalcSnapshotChecksum' request.")
 	}
 }

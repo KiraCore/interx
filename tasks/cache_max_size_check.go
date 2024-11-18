@@ -6,13 +6,16 @@ import (
 	"path/filepath"
 	"time"
 
-	common "github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 // CacheMaxSizeCheck is a function to check if cache reached the maximum size.
 func CacheMaxSizeCheck(isLog bool) {
+
+	log.CustomLogger().Info("`CacheMaxSizeCheck` Starting functionto check if cache reached the maximum size.")
+
 	for {
 		var cacheSize int64 = 0
 		_ = filepath.Walk(config.GetResponseCacheDir(), func(_ string, info os.FileInfo, err error) error {
@@ -27,7 +30,7 @@ func CacheMaxSizeCheck(isLog bool) {
 
 		if cacheSize >= config.Config.Cache.MaxCacheSize {
 			if isLog {
-				common.GetLogger().Info("[cache] Reached the maximum size")
+				log.CustomLogger().Info("`CacheMaxSizeCheck` `cache` Reached the maximum size.")
 			}
 
 			for {
@@ -43,7 +46,9 @@ func CacheMaxSizeCheck(isLog bool) {
 						cacheSize -= info.Size()
 
 						if isLog {
-							common.GetLogger().Info("[cache] Deleting file: ", path)
+							log.CustomLogger().Info("`CacheMaxSizeCheck` `cache` Deleting file.",
+								"path", path,
+							)
 						}
 
 						global.Mutex.Lock()
@@ -57,7 +62,9 @@ func CacheMaxSizeCheck(isLog bool) {
 
 						if err != nil {
 							if isLog {
-								common.GetLogger().Error("[cache] Error deleting file: ", err)
+								log.CustomLogger().Error("[CacheMaxSizeCheck] Failed to delete file.",
+									"error", err,
+								)
 							}
 							return err
 						}
@@ -72,6 +79,8 @@ func CacheMaxSizeCheck(isLog bool) {
 				}
 			}
 		}
+
+		log.CustomLogger().Info("`CacheMaxSizeCheck` Finished functionto check if cache reached the maximum size.")
 
 		time.Sleep(2 * time.Second)
 	}
