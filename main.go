@@ -16,7 +16,8 @@ import (
 	"google.golang.org/grpc/grpclog"
 )
 
-const LOGS = "true"
+// Enable or disable logging by setting the environment variable
+const ENABLE_LOGS = "true"
 
 func printUsage() {
 	fmt.Println("Interx Daemon (server)")
@@ -32,7 +33,9 @@ func printUsage() {
 }
 
 func main() {
-	os.Setenv("PrintLogs", "true")
+
+	// Set the "PrintLogs" environment variable based on the logging configuration
+	os.Setenv("PrintLogs", ENABLE_LOGS)
 
 	log.CustomLogger().Info("Starting INTERX server.")
 
