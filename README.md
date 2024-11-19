@@ -1,6 +1,6 @@
 # INTERX
 
-For test
+For test unit tests
 INTERX is an interchain engine, proxy, load balancer & security gateway service for communication between backend and frontend.
 It will connect to the node using the GRPC endpoint as well as the RPC endpoint ([`Tendermint RPC`](https://docs.tendermint.com/master/rpc/)).
 
