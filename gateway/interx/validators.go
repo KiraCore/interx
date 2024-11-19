@@ -10,6 +10,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/kira"
@@ -134,7 +135,7 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-validators] Returning from the cache")
+					log.CustomLogger().Info("[query-validators] Returning from the cache")
 					return
 				}
 			}
@@ -194,7 +195,7 @@ func QueryValidatorInfos(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-validator-info] Returning from the cache")
+					log.CustomLogger().Info("[query-validator-info] Returning from the cache")
 					return
 				}
 			}
@@ -231,13 +232,13 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -253,13 +254,13 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &consensus)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -267,7 +268,7 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		err = json.Unmarshal(consensus.RoundState, &roundState)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid round state: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid round state: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -346,7 +347,7 @@ func QueryConsensus(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerF
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-consensus] Returning from the cache")
+					log.CustomLogger().Info("[query-consensus] Returning from the cache")
 					return
 				}
 			}
@@ -378,7 +379,7 @@ func QueryDumpConsensusState(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-dump-consensus-state] Returning from the cache")
+					log.CustomLogger().Info("[query-dump-consensus-state] Returning from the cache")
 					return
 				}
 			}

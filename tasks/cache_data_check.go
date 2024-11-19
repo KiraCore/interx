@@ -3,7 +3,6 @@ package tasks
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 )
 
@@ -51,7 +51,7 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 
 				if path != config.GetResponseCacheDir() && delete {
 					if isLog {
-						common.GetLogger().Info("[cache] Deleting file: ", path)
+						log.CustomLogger().Info("[cache] Deleting file: ", path)
 					}
 
 					global.Mutex.Lock()
@@ -65,7 +65,7 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 
 					if err != nil {
 						if isLog {
-							common.GetLogger().Error("[cache] Error deleting file: ", err)
+							log.CustomLogger().Error("[cache] Error deleting file: ", err)
 						}
 						return err
 					}
@@ -77,7 +77,9 @@ func CacheDataCheck(rpcAddr string, isLog bool) {
 			})
 
 		if err != nil {
-			log.Println(err)
+			log.CustomLogger().Error("[CacheDataCheck] Failed to check cache data ",
+				"error", err,
+			)
 		}
 
 		time.Sleep(2 * time.Second)

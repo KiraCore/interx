@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 
+	"github.com/KiraCore/interx/log"
 	govTypes "github.com/KiraCore/interx/types/kira/gov"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -79,13 +80,17 @@ func QueryVotersFromGrpcResult(success interface{}) ([]govTypes.Voter, error) {
 
 	byteData, err := json.Marshal(success)
 	if err != nil {
-		GetLogger().Error("[query-voters] Invalid response format: ", err)
+		log.CustomLogger().Error("[QueryVotersFromGrpcResult] Failed to marshal response.",
+			"error", err,
+		)
 		return nil, err
 	}
 
 	err = json.Unmarshal(byteData, &result)
 	if err != nil {
-		GetLogger().Error("[query-voters] Invalid response format: ", err)
+		log.CustomLogger().Error("[QueryVotersFromGrpcResult] Failed to unmarshal response.",
+			"error", err,
+		)
 		return nil, err
 	}
 
@@ -126,13 +131,17 @@ func QueryVotesFromGrpcResult(success interface{}) ([]govTypes.Vote, error) {
 
 	byteData, err := json.Marshal(success)
 	if err != nil {
-		GetLogger().Error("[query-votes] Invalid response format: ", err)
+		log.CustomLogger().Error("[QueryVotesFromGrpcResult] Failed to marshal response.",
+			"error", err,
+		)
 		return nil, err
 	}
 
 	err = json.Unmarshal(byteData, &result)
 	if err != nil {
-		GetLogger().Error("[query-votes] Invalid response format: ", err)
+		log.CustomLogger().Error("[QueryVotesFromGrpcResult] Failed to unmarshal response.",
+			"error", err,
+		)
 		return nil, err
 	}
 
@@ -155,12 +164,16 @@ func QueryNetworkPropertiesFromGrpcResult(success interface{}) (NetworkPropertie
 	result := NetworkPropertiesResponse{}
 	byteData, err := json.Marshal(success)
 	if err != nil {
-		GetLogger().Error("[query-network-properties] Invalid response format", err)
+		log.CustomLogger().Error("[QueryNetworkPropertiesFromGrpcResult] Failed to marshal response.",
+			"error", err,
+		)
 		return NetworkPropertiesResponse{}, err
 	}
 	err = json.Unmarshal(byteData, &result)
 	if err != nil {
-		GetLogger().Error("[query-network-properties] Invalid response format", err)
+		log.CustomLogger().Error("[QueryNetworkPropertiesFromGrpcResult] Failed to unmarshal response.",
+			"error", err,
+		)
 		return NetworkPropertiesResponse{}, err
 	}
 

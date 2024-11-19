@@ -12,6 +12,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
@@ -374,7 +375,7 @@ func RegisterEVMFaucetRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-faucet] Entering transactions execute: ", chain)
+		log.CustomLogger().Info("[query-evm-faucet] Entering transactions execute: ", chain)
 
 		if !common.RPCMethods["GET"][config.QueryEVMFaucet].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -385,7 +386,7 @@ func RegisterEVMFaucetRequest(rpcAddr string) http.HandlerFunc {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-faucet] Returning from the cache: ", chain)
+					log.CustomLogger().Info("[query-evm-faucet] Returning from the cache: ", chain)
 					return
 				}
 			}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	// "github.com/powerman/rpc-codec/jsonrpc2"
 )
@@ -29,7 +30,6 @@ func queryAbiHandle(r *http.Request, chain string, contract string) (interface{}
 	}
 
 	abi := new(interface{})
-	common.GetLogger().Info(result.(map[string]interface{})["result"])
 	err = json.Unmarshal([]byte(result.(map[string]interface{})["result"].(string)), abi)
 	if err != nil {
 		return common.ServeError(0, "", "failed to decode result", http.StatusInternalServerError)
@@ -53,7 +53,9 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-abi] Entering abi query: ", chain)
+		log.CustomLogger().Info("`QueryAbiRequests` Starting Abi request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryABI].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -64,7 +66,10 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-abi] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`QueryAbiRequests` Returning from the cache",
+						"chain", chain,
+					)
+
 					return
 				}
 			}

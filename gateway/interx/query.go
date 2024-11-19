@@ -9,6 +9,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	functions "github.com/KiraCore/interx/functions"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/kira"
@@ -34,17 +35,30 @@ func RegisterInterxQueryRoutes(r *mux.Router, gwCosmosmux *runtime.ServeMux, rpc
 // QueryRPCMethods is a function to query RPC methods.
 func QueryRPCMethods(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting 'QueryRPCMethods' request...")
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 		statusCode := http.StatusOK
 
+		log.CustomLogger().Info("Processed 'QueryRPCMethods' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"statusCode", statusCode,
+			"error", response.Error,
+		)
+
 		response.Response = common.RPCMethods
 
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryRPCMethods' request.")
 	}
 }
 
-func queryInterxFunctionsHandle(rpcAddr string) (interface{}, interface{}, int) {
+func queryInterxFunctionsHandle(_ string) (interface{}, interface{}, int) {
 	metadata := functions.GetInterxMetadata()
 
 	return metadata, nil, http.StatusOK
@@ -53,13 +67,26 @@ func queryInterxFunctionsHandle(rpcAddr string) (interface{}, interface{}, int) 
 // QueryInterxFunctions is a function to list functions and metadata.
 func QueryInterxFunctions(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting 'QueryInterxFunctions' request...")
+
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
 		response.Response, response.Error, statusCode = queryInterxFunctionsHandle(rpcAddr)
 
+		log.CustomLogger().Info("Processed 'QueryInterxFunctions' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"statusCode", statusCode,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryInterxFunctions' request.")
 	}
 }
 
@@ -70,13 +97,13 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 	pubkeyBytes, err := config.EncodingCg.Amino.MarshalJSON(&config.Config.PubKey)
 
 	if err != nil {
-		common.GetLogger().Error("[query-status] Failed to marshal interx pubkey", err)
+		log.CustomLogger().Error("[query-status] Failed to marshal interx pubkey", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
 	err = json.Unmarshal(pubkeyBytes, &result.InterxInfo.PubKey)
 	if err != nil {
-		common.GetLogger().Error("[query-status] Failed to add interx pubkey to status response", err)
+		log.CustomLogger().Error("[query-status] Failed to add interx pubkey to status response", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
@@ -85,7 +112,7 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 	// Handle Genesis
 	genesis, checksum, err := GetGenesisResults(rpcAddr)
 	if err != nil {
-		common.GetLogger().Error("[query-status] Failed to query genesis ", err)
+		log.CustomLogger().Error("[query-status] Failed to query genesis ", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
@@ -120,13 +147,22 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 // QueryStatusRequest is a function to query status.
 func QueryStatusRequest(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting `QueryStatus` request...")
+
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-status] Entering status query")
-
 		if !common.RPCMethods["GET"][config.QueryStatus].Enabled {
+
+			log.CustomLogger().Error("Query `QueryStatus` is disabled.",
+				"method", request.Method,
+				"endpoint", request.Endpoint,
+				"params", request.Params,
+				"error", response.Error,
+			)
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryStatus].CachingEnabled {
@@ -135,7 +171,13 @@ func QueryStatusRequest(rpcAddr string) http.HandlerFunc {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-status] Returning from the cache")
+					log.CustomLogger().Info("Cache hit for `QueryStatus` request.",
+						"method", request.Method,
+						"endpoint", request.Endpoint,
+						"params", request.Params,
+						"error", response.Error,
+					)
+
 					return
 				}
 			}
@@ -143,24 +185,45 @@ func QueryStatusRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryStatusHandle(rpcAddr)
 		}
 
+		log.CustomLogger().Info("Processed `QueryStatus` request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+
+		log.CustomLogger().Info("Finished `QueryStatus` request.")
 	}
 }
 
-func queryAddrBookHandler(rpcAddr string) (interface{}, interface{}, int) {
+func queryAddrBookHandler(_ string) (interface{}, interface{}, int) {
 	return config.LoadAddressBooks(), nil, http.StatusOK
 }
 
 // QueryAddrBook is a function to query address book.
 func QueryAddrBook(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting 'QueryAddrBook' request...")
+
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
 		response.Response, response.Error, statusCode = queryAddrBookHandler(rpcAddr)
 
+		log.CustomLogger().Info("Processed 'QueryAddrBook' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryAddrBook' request.")
 	}
 }
 
@@ -176,13 +239,25 @@ func queryNetInfoHandler(rpcAddr string) (interface{}, interface{}, int) {
 // QueryNetInfo is a function to query net info.
 func QueryNetInfo(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting 'QueryNetInfo' request...")
+
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
 		response.Response, response.Error, statusCode = queryNetInfoHandler(rpcAddr)
 
+		log.CustomLogger().Info("Processed 'QueryNetInfo' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryNetInfo' request.")
 	}
 }
 
@@ -290,12 +365,24 @@ func queryDashboardHandler(rpcAddr string, r *http.Request, gwCosmosmux *runtime
 // QueryDashboard is a function to query dashboard info.
 func QueryDashboard(rpcAddr string, gwCosmosmux *runtime.ServeMux) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		log.CustomLogger().Info("Starting 'QueryDashboard' request...")
+
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
 		response.Response, response.Error, statusCode = queryDashboardHandler(rpcAddr, r, gwCosmosmux)
 
+		log.CustomLogger().Info("Processed 'QueryDashboard' request.",
+			"method", request.Method,
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+			"error", response.Error,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryDashboard' request.")
 	}
 }

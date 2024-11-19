@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -31,7 +32,9 @@ func QueryAccountsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-account] Entering account query: ", bech32addr)
+		log.CustomLogger().Info(" Starting QueryAccountsRequest request...",
+			"bech32addr", bech32addr,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryAccounts].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -42,7 +45,10 @@ func QueryAccountsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-account] Returning from the cache: ", bech32addr)
+					log.CustomLogger().Info(" Returning Account from the cache.",
+						"bech32addr", bech32addr,
+					)
+
 					return
 				}
 			}

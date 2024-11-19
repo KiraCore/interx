@@ -7,6 +7,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -25,7 +26,7 @@ func queryPermissionsByAddressHandler(r *http.Request, gwCosmosmux *runtime.Serv
 
 	_, err := sdk.AccAddressFromBech32(bech32addr)
 	if err != nil {
-		common.GetLogger().Error("[query-account] Invalid bech32addr: ", bech32addr)
+		log.CustomLogger().Error("[query-account] Invalid bech32addr: ", bech32addr)
 		return common.ServeError(0, "", err.Error(), http.StatusBadRequest)
 	}
 
@@ -42,7 +43,7 @@ func QueryPermissionsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-permissions-by-address] Entering permissions by address query")
+		log.CustomLogger().Info("[query-permissions-by-address] Entering permissions by address query")
 
 		if !common.RPCMethods["GET"][config.QueryPermissionsByAddress].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -53,7 +54,7 @@ func QueryPermissionsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-permissions-by-address] Returning from the cache")
+					log.CustomLogger().Info("[query-permissions-by-address] Returning from the cache")
 					return
 				}
 			}

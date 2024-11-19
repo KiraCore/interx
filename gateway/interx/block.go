@@ -501,7 +501,6 @@ func parseTransaction(rpcAddr string, transaction tmTypes.ResultTx) (types.Trans
 func QueryBlockTransactionsHandle(rpcAddr string, height string) (interface{}, interface{}, int) {
 	blockHeight, _ := strconv.Atoi(height)
 	response, err := SearchTxHashHandle(rpcAddr, "", "", "", 0, 0, int64(blockHeight), int64(blockHeight), "")
-
 	if err != nil {
 		log.CustomLogger().Error("`QueryBlockTransactionsHandle` failed to execute.",
 			"block_height", height,
@@ -643,6 +642,7 @@ func QueryTransactionResultRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			log.CustomLogger().Error("`QueryTransactionResultRequest` is disabled.",
 				"tx_Hash", txHash,
 			)
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
 			if common.RPCMethods["GET"][config.QueryTransactionResult].CachingEnabled {

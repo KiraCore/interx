@@ -13,6 +13,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types/kira/gov"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -261,7 +262,7 @@ func GetCachedProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAd
 
 		txTime, err := common.GetBlockTime(rpcAddr, propTx.Height)
 		if err != nil {
-			common.GetLogger().Error("[query-transactions] Block not found: ", propTx.Height)
+			log.CustomLogger().Error("[query-transactions] Block not found: ", propTx.Height)
 			continue
 		}
 
@@ -270,7 +271,7 @@ func GetCachedProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAd
 		// grab metadata from the transaction
 		tx, err := config.EncodingCg.TxConfig.TxDecoder()(propTx.Tx)
 		if err != nil {
-			common.GetLogger().Error("[query-transactions] Failed to decode transaction: ", err)
+			log.CustomLogger().Error("[query-transactions] Failed to decode transaction: ", err)
 			continue
 		}
 
@@ -328,7 +329,7 @@ func SyncProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAddr st
 			err := QueryProposals(gwCosmosmux, gatewayAddr, rpcAddr)
 
 			if err != nil && isLog {
-				common.GetLogger().Error("[sync-proposals] Failed to query proposals: ", err)
+				log.CustomLogger().Error("[sync-proposals] Failed to query proposals: ", err)
 			}
 
 			lastBlock = common.NodeStatus.Block
