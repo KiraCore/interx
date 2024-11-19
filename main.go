@@ -4,14 +4,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/gateway"
+	"github.com/KiraCore/interx/log"
 	_ "github.com/KiraCore/interx/statik"
 	"github.com/tyler-smith/go-bip39"
 	"google.golang.org/grpc/grpclog"
 )
+
+// Enable or disable logging by setting the environment variable
+const ENABLE_LOGS = "true"
 
 func printUsage() {
 	fmt.Println("Interx Daemon (server)")
@@ -35,6 +40,16 @@ func printUsage() {
 }
 
 func main() {
+	// Set the "PrintLogs" environment variable based on the logging configuration
+	os.Setenv("PrintLogs", ENABLE_LOGS)
+
+	log.CustomLogger().Info("Starting INTERX server.")
+
+	defer log.RecoverFromPanic() // Ensure we recover from any panic
+
+	// Monitor system resources
+	go log.Monitor(25 * time.Second)
+
 	initCommand := flag.NewFlagSet("init", flag.ExitOnError)
 	startCommand := flag.NewFlagSet("start", flag.ExitOnError)
 	versionCommand := flag.NewFlagSet("version", flag.ExitOnError)
@@ -98,8 +113,12 @@ func main() {
 		// os.Args[2:] will be all arguments starting after the subcommand at os.Args[1]
 		switch os.Args[1] {
 		case "init":
+
+			log.CustomLogger().Info("Initializing server with 'interxd init' command.")
+
 			err := initCommand.Parse(os.Args[2:])
 			if err != nil {
+				log.CustomLogger().Error("Failed to initialize server with 'interxd init' command.")
 				panic(err)
 			}
 
@@ -159,12 +178,16 @@ func main() {
 					*initSnapShotInterval,
 				)
 
-				fmt.Printf("Created interx configuration file: %s\n", *initHomePtr+"/config.json")
+				log.CustomLogger().Info("Created interx configuration file.", "Config File Path", *initHomePtr+"/config.json")
 				return
 			}
 		case "start":
+
+			log.CustomLogger().Info("Starting server with 'interxd start' command.")
+
 			err := startCommand.Parse(os.Args[2:])
 			if err != nil {
+				log.CustomLogger().Error("Failed to start INTERX server.")
 				panic(err)
 			}
 
@@ -172,7 +195,7 @@ func main() {
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
 				configFilePath := *startHomePtr + "/config.json"
-				fmt.Println("configFilePath", configFilePath)
+				log.CustomLogger().Info("Config Path", configFilePath)
 
 				// Adds gRPC internal logs. This is quite verbose, so adjust as desired!
 				log := common.GetLogger()
@@ -184,17 +207,21 @@ func main() {
 				return
 			}
 		case "version":
+
+			log.CustomLogger().Info("Fetching version with 'interxd version' command.")
+
 			err := versionCommand.Parse(os.Args[2:])
 			if err != nil {
+				log.CustomLogger().Error("Error executing 'interxd version' command: Failed to fetch version information.")
 				panic(err)
 			}
 
 			if versionCommand.Parsed() {
-				fmt.Println(config.InterxVersion)
+				log.CustomLogger().Info("Interx Version", config.InterxVersion)
 				return
 			}
 		default:
-			fmt.Println("init or start command is available.")
+			log.CustomLogger().Error("Server did not initialized and started.")
 			os.Exit(1)
 		}
 	}
