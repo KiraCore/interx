@@ -208,16 +208,16 @@ func main() {
 			}
 		case "version":
 
-			log.CustomLogger().Info("Fetching version with 'interxd version' command.")
+			log.CustomLogger().Info("Starting server with 'interxd version' command.")
 
 			err := versionCommand.Parse(os.Args[2:])
 			if err != nil {
-				log.CustomLogger().Error("Error executing 'interxd version' command: Failed to fetch version information.")
+				log.CustomLogger().Error("Failed to find INTERX version.")
 				panic(err)
 			}
 
 			if versionCommand.Parsed() {
-				log.CustomLogger().Info("Interx Version", config.InterxVersion)
+				fmt.Println(config.InterxVersion)
 				return
 			}
 		default:
