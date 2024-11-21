@@ -13,9 +13,18 @@ import (
 
 // GetTransactions is a function to get user transactions from cache
 func GetTransactions(address string, isWithdraw bool) (*tmTypes.ResultTxSearch, error) {
-	filePath := fmt.Sprintf("%s/transactions/%s", config.GetDbCacheDir(), address)
-	if !isWithdraw {
-		filePath = filePath + "-inbound"
+	var filePath string
+
+	basePath := fmt.Sprintf("%s/transactions", config.GetDbCacheDir())
+	suffix := "-inbound"
+	if isWithdraw {
+		suffix = ""
+	}
+
+	if address == "" {
+		filePath = fmt.Sprintf("%s/all-transactions%s", basePath, suffix)
+	} else {
+		filePath = fmt.Sprintf("%s/%s%s", basePath, address, suffix)
 	}
 
 	data := tmTypes.ResultTxSearch{}
@@ -55,10 +64,12 @@ func GetLastBlockFetched(address string, isWithdraw bool) int64 {
 func SaveTransactions(address string, txsData tmTypes.ResultTxSearch, isWithdraw bool) error {
 	cachedData, _ := GetTransactions(address, isWithdraw)
 
-	// Append new txs to the cached txs array
-	if cachedData.TotalCount > 0 {
-		txsData.Txs = append(txsData.Txs, cachedData.Txs...)
-		txsData.TotalCount = txsData.TotalCount + cachedData.TotalCount
+	if address != "" {
+		// Append new txs to the cached txs array
+		if cachedData.TotalCount > 0 {
+			txsData.Txs = append(txsData.Txs, cachedData.Txs...)
+			txsData.TotalCount = txsData.TotalCount + cachedData.TotalCount
+		}
 	}
 
 	data, err := json.Marshal(txsData)
@@ -67,10 +78,8 @@ func SaveTransactions(address string, txsData tmTypes.ResultTxSearch, isWithdraw
 	}
 
 	folderPath := fmt.Sprintf("%s/transactions", config.GetDbCacheDir())
-	filePath := fmt.Sprintf("%s/%s", folderPath, address)
-	if !isWithdraw {
-		filePath = filePath + "-inbound"
-	}
+	fileName := resolveFileName(address, isWithdraw)
+	filePath := fmt.Sprintf("%s/%s", folderPath, fileName)
 
 	global.Mutex.Lock()
 	err = os.MkdirAll(folderPath, os.ModePerm)
@@ -85,8 +94,21 @@ func SaveTransactions(address string, txsData tmTypes.ResultTxSearch, isWithdraw
 	global.Mutex.Unlock()
 
 	if err != nil {
-		fmt.Println("[cache] Unable to save response: ", filePath)
+		fmt.Println("[SaveTransactions][cache] Unable to save response: ", filePath)
 	}
 
 	return err
+}
+
+// Helper function to determine the file name
+func resolveFileName(address string, isWithdraw bool) string {
+	if address == "" {
+		address = "all-transactions"
+	}
+
+	if !isWithdraw {
+		return fmt.Sprintf("%s-inbound", address)
+	}
+
+	return address
 }
