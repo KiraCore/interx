@@ -33,7 +33,7 @@ func GetBlockTime(height int64) (int64, error) {
 	log.CustomLogger().Info("Starting 'GetBlockTime' request...")
 
 	if blockDb == nil {
-		log.CustomLogger().Error(" `GetBlockTime` block db is null.",
+		log.CustomLogger().Error("[GetBlockTime] block db is null.",
 			"height", height,
 		)
 		panic("cache dir not set")
@@ -60,7 +60,7 @@ func GetAllBlocks() []interface{} {
 	log.CustomLogger().Info("Starting 'GetAllBlocks' request...")
 
 	if blockDb == nil {
-		log.CustomLogger().Error(" `GetBlockTime` block db is null.")
+		log.CustomLogger().Error("[GetBlockTime] block db is null.")
 		panic("cache dir not set")
 	}
 
@@ -79,7 +79,7 @@ func AddBlockTime(height int64, timestamp int64) {
 	log.CustomLogger().Info("Starting 'AddBlockTime' request...")
 
 	if blockDb == nil {
-		log.CustomLogger().Error(" `AddBlockTime` block db is null.")
+		log.CustomLogger().Error("[AddBlockTime] block db is null.")
 		panic("cache dir not set")
 	}
 

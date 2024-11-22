@@ -79,7 +79,7 @@ func GetClaimTimeLeft(address string) int64 {
 	log.CustomLogger().Info("Starting 'GetClaimTimeLeft' request...")
 
 	if faucetDb == nil {
-		log.CustomLogger().Error(" `GetClaimTimeLeft` faucet Db is null.")
+		log.CustomLogger().Error("[GetClaimTimeLeft] faucet Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -104,7 +104,7 @@ func AddNewClaim(address string, claim time.Time) {
 	log.CustomLogger().Info("Starting 'AddNewClaim' request...")
 
 	if faucetDb == nil {
-		log.CustomLogger().Error(" `GetClaimTimeLeft` faucet Db is null.")
+		log.CustomLogger().Error("[AddNewClaim] faucet Db is null.")
 		panic("cache dir not set")
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	govTypes "github.com/KiraCore/interx/types/kira/gov"
 )
 
@@ -68,7 +69,11 @@ func SaveProposals(propsData []govTypes.CachedProposal) error {
 	if err != nil {
 		global.Mutex.Unlock()
 
-		fmt.Println("[cache] Unable to create a folder: ", folderPath)
+		log.CustomLogger().Error("[SaveProposals] Unable to create a folder",
+			"folder path", folderPath,
+			"error", err,
+		)
+
 		return err
 	}
 
@@ -76,7 +81,9 @@ func SaveProposals(propsData []govTypes.CachedProposal) error {
 	global.Mutex.Unlock()
 
 	if err != nil {
-		fmt.Println("[cache] Unable to save response: ", filePath)
+		fmt.Println("[SaveProposals] Unable to save response", "file path", filePath,
+			"error", err,
+		)
 	}
 
 	return err
