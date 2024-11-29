@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KiraCore/interx/common"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -278,8 +279,6 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 
 	AllValidators = allValidators
 
-	// common.GetLogger().Info(AllValidators)
-
 	return nil
 }
 
@@ -290,7 +289,9 @@ func SyncValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string, isLog boo
 			err := QueryValidators(gwCosmosmux, gatewayAddr)
 
 			if err != nil && isLog {
-				common.GetLogger().Error("[sync-validators] Failed to query validators: ", err)
+				log.CustomLogger().Error("[SyncValidators] Failed to fetch validators.",
+					"error", err,
+				)
 			}
 
 			lastBlock = common.NodeStatus.Block

@@ -8,6 +8,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
@@ -87,7 +88,9 @@ func QueryEVMBlockRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-block] Entering block query: ", chain)
+		log.CustomLogger().Info("`QueryEVMBlockRequest` Starting EVM block request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryEVMBlock].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -98,7 +101,10 @@ func QueryEVMBlockRequest(rpcAddr string) http.HandlerFunc {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-block] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`QueryEVMBlockRequest` Returning from the cache",
+						"chain", chain,
+					)
+
 					return
 				}
 			}

@@ -10,6 +10,7 @@ import (
 	"cosmossdk.io/math"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
@@ -137,7 +138,7 @@ func QueryKiraTokensAliasesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-tokens-aliases] Entering token aliases query")
+		log.CustomLogger().Info("[query-tokens-aliases] Entering token aliases query")
 
 		if !common.RPCMethods["GET"][config.QueryKiraTokensAliases].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -148,7 +149,7 @@ func QueryKiraTokensAliasesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-tokens-aliases] Returning from the cache")
+					log.CustomLogger().Info("[query-tokens-aliases] Returning from the cache")
 					return
 				}
 			}
@@ -172,12 +173,12 @@ func queryKiraTokensRatesHandler(r *http.Request, gwCosmosmux *runtime.ServeMux)
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-token-rates] Invalid response format", err)
+			log.CustomLogger().Error("[query-token-rates] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-token-rates] Invalid response format", err)
+			log.CustomLogger().Error("[query-token-rates] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -200,7 +201,7 @@ func QueryKiraTokensRatesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) 
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-tokens-rates] Entering token rates query")
+		log.CustomLogger().Info("[query-tokens-rates] Entering token rates query")
 
 		if !common.RPCMethods["GET"][config.QueryKiraTokensRates].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -211,7 +212,7 @@ func QueryKiraTokensRatesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) 
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-tokens-rates] Returning from the cache")
+					log.CustomLogger().Info("[query-tokens-rates] Returning from the cache")
 					return
 				}
 			}

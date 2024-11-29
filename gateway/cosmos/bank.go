@@ -8,6 +8,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -34,7 +35,7 @@ func QuerySupplyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-supply] Entering total supply query")
+		log.CustomLogger().Info(" Starting QuerySupplyRequest request...")
 
 		if !common.RPCMethods["GET"][config.QueryTotalSupply].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -45,7 +46,8 @@ func QuerySupplyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-supply] Returning from the cache")
+					log.CustomLogger().Info(" Returning Supply from the cache.")
+
 					return
 				}
 			}
@@ -184,7 +186,9 @@ func QueryBalancesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-balances] Entering balances query: ", bech32addr)
+		log.CustomLogger().Info(" Starting QueryBalancesRequest request...",
+			"address", bech32addr,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryBalances].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -195,7 +199,10 @@ func QueryBalancesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-balances] Returning from the cache: ", bech32addr)
+					log.CustomLogger().Info(" Returning Balances from the cache",
+						"address", bech32addr,
+					)
+
 					return
 				}
 			}

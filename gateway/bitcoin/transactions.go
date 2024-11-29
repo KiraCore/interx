@@ -7,6 +7,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/gorilla/mux"
 
@@ -129,7 +130,9 @@ func QueryBtcTransactionRequest(rpcAddr string) http.HandlerFunc {
 		response := common.GetResponseFormat(request, rpcAddr)
 		statusCode := http.StatusOK
 
-		common.GetLogger().Info("[query-btc-transaction] Entering transaction query: ", chain)
+		log.CustomLogger().Info(" Starting QueryBtcTransactionRequest request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryBitcoinTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -140,7 +143,10 @@ func QueryBtcTransactionRequest(rpcAddr string) http.HandlerFunc {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-btc-transaction] Returning from the cache: ", chain)
+					log.CustomLogger().Info(" Returning Btc Transaction from the cache.",
+						"chain", chain,
+					)
+
 					return
 				}
 			}

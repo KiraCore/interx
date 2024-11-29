@@ -11,6 +11,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	govTypes "github.com/KiraCore/interx/types/kira/gov"
 	sekaitypes "github.com/KiraCore/sekai/types"
@@ -60,7 +61,7 @@ func queryProposalsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (inte
 	//------------ Offset ------------
 	if offsetStr := r.FormValue("offset"); offsetStr != "" {
 		if offset, err = strconv.Atoi(offsetStr); err != nil {
-			common.GetLogger().Error("[query-proposals] Failed to parse parameter 'offset': ", err)
+			log.CustomLogger().Error("[query-proposals] Failed to parse parameter 'offset': ", err)
 			return common.ServeError(0, "failed to parse parameter 'offset'", err.Error(), http.StatusBadRequest)
 		}
 	}
@@ -68,12 +69,12 @@ func queryProposalsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (inte
 	//------------ Limit ------------
 	if limitStr := r.FormValue("limit"); limitStr != "" {
 		if limit, err = strconv.Atoi(limitStr); err != nil {
-			common.GetLogger().Error("[query-proposals] Failed to parse parameter 'limit': ", err)
+			log.CustomLogger().Error("[query-proposals] Failed to parse parameter 'limit': ", err)
 			return common.ServeError(0, "failed to parse parameter 'limit'", err.Error(), http.StatusBadRequest)
 		}
 
 		if limit < 1 || limit > 100 {
-			common.GetLogger().Error("[query-proposals] Invalid 'limit' range: ", limit)
+			log.CustomLogger().Error("[query-proposals] Invalid 'limit' range: ", limit)
 			return common.ServeError(0, "'limit' should be 1 ~ 100", "", http.StatusBadRequest)
 		}
 	}
@@ -108,7 +109,7 @@ func queryProposalsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (inte
 			layout := "01/02/2006 3:04:05 PM"
 			t, err1 := time.Parse(layout, dateStStr+" 12:00:00 AM")
 			if err1 != nil {
-				common.GetLogger().Error("[query-proposals] Failed to parse parameter 'dateStart': ", err1)
+				log.CustomLogger().Error("[query-proposals] Failed to parse parameter 'dateStart': ", err1)
 				return common.ServeError(0, "failed to parse parameter 'dateStart'", err1.Error(), http.StatusBadRequest)
 			}
 
@@ -121,7 +122,7 @@ func queryProposalsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (inte
 			layout := "01/02/2006 3:04:05 PM"
 			t, err1 := time.Parse(layout, dateEdStr+" 12:00:00 AM")
 			if err1 != nil {
-				common.GetLogger().Error("[query-proposals] Failed to parse parameter 'dateEnd': ", err1)
+				log.CustomLogger().Error("[query-proposals] Failed to parse parameter 'dateEnd': ", err1)
 				return common.ServeError(0, "failed to parse parameter 'dateEnd'", err.Error(), http.StatusBadRequest)
 			}
 
@@ -246,7 +247,7 @@ func QueryProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.H
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-proposals] Entering proposals query")
+		log.CustomLogger().Info("[query-proposals] Entering proposals query")
 
 		if !common.RPCMethods["GET"][config.QueryProposals].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -257,7 +258,7 @@ func QueryProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.H
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-proposals] Returning from the cache")
+					log.CustomLogger().Info("[query-proposals] Returning from the cache")
 					return
 				}
 			}
@@ -278,13 +279,13 @@ func queryProposalHandler(r *http.Request, gwCosmosmux *runtime.ServeMux, propos
 		result := make(map[string]interface{})
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-proposal] Invalid response format", err)
+			log.CustomLogger().Error("[query-proposal] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-proposal] Invalid response format", err)
+			log.CustomLogger().Error("[query-proposal] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 		propResult := tasks.ProposalsMap[proposalID]
@@ -309,7 +310,7 @@ func QueryProposalRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-proposal] Entering proposal query by proposal_id: ", proposalID)
+		log.CustomLogger().Info("[query-proposal] Entering proposal query by proposal_id: ", proposalID)
 
 		if !common.RPCMethods["GET"][config.QueryProposal].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -320,7 +321,7 @@ func QueryProposalRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-proposal] Returning from the cache")
+					log.CustomLogger().Info("[query-proposal] Returning from the cache")
 					return
 				}
 			}
@@ -339,7 +340,7 @@ func queryVotersHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (interfa
 	if success != nil {
 		voters, err := common.QueryVotersFromGrpcResult(success)
 		if err != nil {
-			common.GetLogger().Error("[query-voters] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-voters] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -358,7 +359,7 @@ func QueryVotersRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-voters] Entering proposal query by proposal_id: ", proposalID)
+		log.CustomLogger().Info("[query-voters] Entering proposal query by proposal_id: ", proposalID)
 
 		if !common.RPCMethods["GET"][config.QueryVoters].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -369,7 +370,7 @@ func QueryVotersRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-voters] Returning from the cache")
+					log.CustomLogger().Info("[query-voters] Returning from the cache")
 					return
 				}
 			}
@@ -388,7 +389,7 @@ func queryVotesHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (interfac
 	if success != nil {
 		votes, err := common.QueryVotesFromGrpcResult(success)
 		if err != nil {
-			common.GetLogger().Error("[query-votes] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-votes] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -407,7 +408,7 @@ func QueryVotesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-votes] Entering proposal query by proposal_id: ", proposalID)
+		log.CustomLogger().Info("[query-votes] Entering proposal query by proposal_id: ", proposalID)
 
 		if !common.RPCMethods["GET"][config.QueryVotes].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -418,7 +419,7 @@ func QueryVotesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-votes] Returning from the cache")
+					log.CustomLogger().Info("[query-votes] Returning from the cache")
 					return
 				}
 			}

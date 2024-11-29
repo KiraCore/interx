@@ -10,6 +10,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	"github.com/gorilla/mux"
@@ -132,7 +133,7 @@ func QueryPubP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-pub-node-list] Entering pub p2p node lists query")
+		log.CustomLogger().Info("[query-pub-node-list] Entering pub p2p node lists query")
 
 		if !common.RPCMethods["GET"][config.QueryPubP2PList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -143,7 +144,7 @@ func QueryPubP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-pub-node-list] Returning from the cache")
+					log.CustomLogger().Info("[query-pub-node-list] Returning from the cache")
 					return
 				}
 			}
@@ -258,7 +259,7 @@ func QueryPrivP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-priv-node-list] Entering priv p2p node lists query")
+		log.CustomLogger().Info("[query-priv-node-list] Entering priv p2p node lists query")
 
 		if !common.RPCMethods["GET"][config.QueryPrivP2PList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -269,7 +270,7 @@ func QueryPrivP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-priv-node-list] Returning from the cache")
+					log.CustomLogger().Info("[query-priv-node-list] Returning from the cache")
 					return
 				}
 			}
@@ -336,7 +337,7 @@ func QueryInterxList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-interx-list] Entering interx lists query")
+		log.CustomLogger().Info("[query-interx-list] Entering interx lists query")
 
 		if !common.RPCMethods["GET"][config.QueryInterxList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -347,7 +348,7 @@ func QueryInterxList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-interx-list] Returning from the cache")
+					log.CustomLogger().Info("[query-interx-list] Returning from the cache")
 					return
 				}
 			}
@@ -414,7 +415,7 @@ func QuerySnapList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerFu
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-snap-list] Entering snap lists query")
+		log.CustomLogger().Info("[query-snap-list] Entering snap lists query")
 
 		if !common.RPCMethods["GET"][config.QuerySnapList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -425,7 +426,7 @@ func QuerySnapList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerFu
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-snap-list] Returning from the cache")
+					log.CustomLogger().Info("[query-snap-list] Returning from the cache")
 					return
 				}
 			}

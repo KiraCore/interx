@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -31,7 +32,7 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-current-upgrade-plan] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-current-upgrade-plan] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QueryCurrentPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -42,7 +43,7 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-current-upgrade-plan] Returning from the cache")
+					log.CustomLogger().Info("[query-current-upgrade-plan] Returning from the cache")
 					return
 				}
 			}
@@ -66,7 +67,7 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-next-upgrade-plan] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-next-upgrade-plan] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QueryNextPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -77,7 +78,7 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-next-upgrade-plan] Returning from the cache")
+					log.CustomLogger().Info("[query-next-upgrade-plan] Returning from the cache")
 					return
 				}
 			}

@@ -2,14 +2,13 @@ package tasks
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	common "github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 // CacheHeaderCheck is a function to check cache headers if it's expired.
@@ -39,7 +38,7 @@ func CacheHeaderCheck(rpcAddr string, isLog bool) {
 
 				if path != config.GetResponseCacheDir() && delete {
 					if isLog {
-						common.GetLogger().Info("[cache] Deleting file: ", path)
+						log.CustomLogger().Info("[cache] Deleting file: ", path)
 					}
 
 					global.Mutex.Lock()
@@ -53,7 +52,7 @@ func CacheHeaderCheck(rpcAddr string, isLog bool) {
 
 					if err != nil {
 						if isLog {
-							common.GetLogger().Error("[cache] Error deleting file: ", err)
+							log.CustomLogger().Error("[cache] Error deleting file: ", err)
 						}
 						return err
 					}
@@ -65,7 +64,9 @@ func CacheHeaderCheck(rpcAddr string, isLog bool) {
 			})
 
 		if err != nil {
-			log.Println(err)
+			log.CustomLogger().Error("[CacheHeaderCheck] Failed to check cache headers",
+				"error", err,
+			)
 		}
 
 		time.Sleep(2 * time.Second)

@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 )
 
 var (
@@ -22,12 +22,12 @@ func calcChecksum(isLog bool) {
 	SnapshotChecksumAvailable = false
 	SnapshotLength = 0
 
-	common.GetLogger().Info("[cache] calculating snapshot checksum: ")
+	log.CustomLogger().Info("[cache] calculating snapshot checksum: ")
 
 	f, err := os.Open(config.SnapshotPath())
 	if err != nil {
 		if isLog {
-			common.GetLogger().Error("[cache] can't read snapshot file: ", err)
+			log.CustomLogger().Error("[cache] can't read snapshot file: ", err)
 		}
 
 		return
@@ -46,7 +46,7 @@ func calcChecksum(isLog bool) {
 		if err != nil {
 			if err != io.EOF {
 				if isLog {
-					common.GetLogger().Error("[cache] failed to read snapshot: ", err)
+					log.CustomLogger().Error("[cache] failed to read snapshot: ", err)
 				}
 				return
 			}
@@ -64,7 +64,7 @@ func calcChecksum(isLog bool) {
 	SnapshotChecksumAvailable = true
 	SnapshotChecksum = hex.EncodeToString(h.Sum(nil))
 	SnapshotLength = totalRead
-	common.GetLogger().Info("[cache] snapshot checksum: ", SnapshotChecksum)
+	log.CustomLogger().Info("[cache] snapshot checksum: ", SnapshotChecksum)
 }
 
 // CalcSnapshotChecksum is a function for syncing sekaid status.
@@ -76,7 +76,7 @@ func CalcSnapshotChecksum(isLog bool) {
 
 		if err != nil {
 			if available != 1 && isLog {
-				common.GetLogger().Error("[cache] can't read snapshot file: ", err)
+				log.CustomLogger().Error("[cache] can't read snapshot file: ", err)
 				available = 1
 			}
 

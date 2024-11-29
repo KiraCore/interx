@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -39,7 +40,7 @@ func QueryUBIRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-ubi-records] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-ubi-records] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QueryUBIRecords].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -50,7 +51,7 @@ func QueryUBIRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-ubi-records] Returning from the cache")
+					log.CustomLogger().Info("[query-ubi-records] Returning from the cache")
 					return
 				}
 			}

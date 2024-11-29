@@ -11,13 +11,21 @@ import (
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 func getStatus(rpcAddr string, isLog bool) {
+
+	log.CustomLogger().Info("Starting `getStatus` request...",
+		"rpc Addr", rpcAddr,
+	)
+
 	url := fmt.Sprintf("%s/block", rpcAddr)
 	resp, err := http.Get(url)
 	if err != nil {
-		common.GetLogger().Error("[node-status] Unable to connect to ", url)
+		log.CustomLogger().Error(" [getStatus] Unable to connect to",
+			"url", url,
+		)
 		return
 	}
 	defer resp.Body.Close()
@@ -39,7 +47,9 @@ func getStatus(rpcAddr string, isLog bool) {
 
 	result := new(RPCTempResponse)
 	if json.NewDecoder(resp.Body).Decode(result) != nil {
-		common.GetLogger().Error("[node-status] Unexpected response: ", url)
+		log.CustomLogger().Error(" [getStatus] Unable to connect to",
+			"url", url,
+		)
 		return
 	}
 
@@ -50,7 +60,11 @@ func getStatus(rpcAddr string, isLog bool) {
 	global.Mutex.Unlock()
 
 	if isLog {
-		common.GetLogger().Info("[node-status] (new block) height: ", common.NodeStatus.Block, " time: ", common.NodeStatus.Blocktime)
+
+		log.CustomLogger().Info("Processed `getStatus` (new block) height",
+			"block", common.NodeStatus.Block,
+			"time", common.NodeStatus.Blocktime,
+		)
 	}
 
 	// save block height/time
@@ -68,10 +82,11 @@ func SyncStatus(rpcAddr string, isLog bool) {
 		getStatus(rpcAddr, isLog)
 
 		if isLog {
-			common.GetLogger().Info("[node-status] Syncing node status")
-			common.GetLogger().Info("[node-status] Chain_id = ", common.NodeStatus.Chainid)
-			common.GetLogger().Info("[node-status] Block = ", common.NodeStatus.Block)
-			common.GetLogger().Info("[node-status] Blocktime = ", common.NodeStatus.Blocktime)
+			log.CustomLogger().Info("Processed `getStatus` Syncing node status",
+				"Chain_id", common.NodeStatus.Chainid,
+				"Block", common.NodeStatus.Block,
+				"Blocktime", common.NodeStatus.Blocktime,
+			)
 		}
 
 		time.Sleep(time.Duration(config.Config.Block.StatusSync) * time.Second)

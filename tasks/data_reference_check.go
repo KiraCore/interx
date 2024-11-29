@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	common "github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	database "github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 // RefMeta is a struct to be used for reference metadata
@@ -103,9 +103,9 @@ func DataReferenceCheck(isLog bool) {
 				}
 
 				if isLog {
-					common.GetLogger().Info("[cache] Data reference updated")
-					common.GetLogger().Info("[cache] Key = ", v.Key)
-					common.GetLogger().Info("[cache] Ref = ", v.URL)
+					log.CustomLogger().Info("[cache] Data reference updated")
+					log.CustomLogger().Info("[cache] Key = ", v.Key)
+					log.CustomLogger().Info("[cache] Ref = ", v.URL)
 				}
 
 				database.AddReference(v.Key, v.URL, ref.ContentLength, ref.LastModified, v.FilePath)

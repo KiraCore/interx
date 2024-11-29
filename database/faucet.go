@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/sonyarouje/simdb/db"
 )
 
@@ -29,6 +30,9 @@ func LoadFaucetDbDriver() {
 }
 
 func isClaimExist(address string) bool {
+
+	log.CustomLogger().Info("Starting 'isClaimExist' request...")
+
 	if faucetDb == nil {
 		panic("cache dir not set")
 	}
@@ -38,11 +42,16 @@ func isClaimExist(address string) bool {
 	DisableStdout()
 	err := faucetDb.Open(FaucetClaim{}).Where("address", "=", address).First().AsEntity(&data)
 	EnableStdout()
+
+	log.CustomLogger().Info("Finished 'isClaimExist' request.")
 
 	return err == nil
 }
 
 func getClaim(address string) time.Time {
+
+	log.CustomLogger().Info("Starting 'getClaim' request...")
+
 	if faucetDb == nil {
 		panic("cache dir not set")
 	}
@@ -51,18 +60,26 @@ func getClaim(address string) time.Time {
 
 	DisableStdout()
 	err := faucetDb.Open(FaucetClaim{}).Where("address", "=", address).First().AsEntity(&data)
+
 	EnableStdout()
 
 	if err != nil {
+		log.CustomLogger().Error(err.Error())
 		panic(err)
 	}
+
+	log.CustomLogger().Info("Finished 'getClaim' request.")
 
 	return data.Claim
 }
 
 // GetClaimTimeLeft is a function to get left time for next claim
 func GetClaimTimeLeft(address string) int64 {
+
+	log.CustomLogger().Info("Starting 'GetClaimTimeLeft' request...")
+
 	if faucetDb == nil {
+		log.CustomLogger().Error("[GetClaimTimeLeft] faucet Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -76,12 +93,18 @@ func GetClaimTimeLeft(address string) int64 {
 		return 0
 	}
 
+	log.CustomLogger().Info("Finished 'GetClaimTimeLeft' request.")
+
 	return config.Config.Faucet.TimeLimit - diff
 }
 
 // AddNewClaim is a function to add current claim time
 func AddNewClaim(address string, claim time.Time) {
+
+	log.CustomLogger().Info("Starting 'AddNewClaim' request...")
+
 	if faucetDb == nil {
+		log.CustomLogger().Error("[AddNewClaim] faucet Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -98,6 +121,7 @@ func AddNewClaim(address string, claim time.Time) {
 		EnableStdout()
 
 		if err != nil {
+			log.CustomLogger().Error(err.Error())
 			panic(err)
 		}
 	} else {
@@ -106,9 +130,12 @@ func AddNewClaim(address string, claim time.Time) {
 		EnableStdout()
 
 		if err != nil {
+			log.CustomLogger().Error(err.Error())
 			panic(err)
 		}
 	}
+
+	log.CustomLogger().Info("Finished 'AddNewClaim' request.")
 }
 
 var (

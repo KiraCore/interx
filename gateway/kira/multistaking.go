@@ -11,6 +11,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -95,12 +96,12 @@ func queryStakingPoolHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (in
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-staking-pool] Invalid response format", err)
+			log.CustomLogger().Error("[query-staking-pool] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-staking-pool] Invalid response format", err)
+			log.CustomLogger().Error("[query-staking-pool] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -128,7 +129,7 @@ func QueryStakingPoolRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-staking-pool] Entering staking pool query")
+		log.CustomLogger().Info("[query-staking-pool] Entering staking pool query")
 
 		if !common.RPCMethods["GET"][config.QueryStakingPool].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -139,7 +140,7 @@ func QueryStakingPoolRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-staking-pool] Returning from the cache")
+					log.CustomLogger().Info("[query-staking-pool] Returning from the cache")
 					return
 				}
 			}
@@ -170,7 +171,7 @@ func queryUndelegationsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (
 	response := QueryUndelegationsResponse{}
 
 	if len(account) == 0 {
-		common.GetLogger().Error("[query-undelegations] 'undelegator address' is not set")
+		log.CustomLogger().Error("[query-undelegations] 'undelegator address' is not set")
 		return common.ServeError(0, "'delegator address' is not set", "", http.StatusBadRequest)
 	}
 
@@ -189,13 +190,13 @@ func queryUndelegationsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (
 		// parse user balance data and generate delegation responses from pool tokens
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-undelegations] Invalid response format", err)
+			log.CustomLogger().Error("[query-undelegations] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-undelegations] Invalid response format", err)
+			log.CustomLogger().Error("[query-undelegations] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -232,14 +233,14 @@ func queryUndelegationsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (
 		if len(offset) == 1 {
 			from, err = strconv.Atoi(offset[0])
 			if err != nil {
-				common.GetLogger().Error("[query-undelegation] Failed to parse parameter 'offset': ", err)
+				log.CustomLogger().Error("[query-undelegation] Failed to parse parameter 'offset': ", err)
 				return common.ServeError(0, "failed to parse parameter 'offset'", err.Error(), http.StatusBadRequest)
 			}
 		}
 		if len(limit) == 1 {
 			count, err = strconv.Atoi(limit[0])
 			if err != nil {
-				common.GetLogger().Error("[query-undelegation] Failed to parse parameter 'limit': ", err)
+				log.CustomLogger().Error("[query-undelegation] Failed to parse parameter 'limit': ", err)
 				return common.ServeError(0, "failed to parse parameter 'limit'", err.Error(), http.StatusBadRequest)
 			}
 		}
@@ -259,7 +260,7 @@ func QueryUndelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-undelegations] Entering undelegations query")
+		log.CustomLogger().Info("[query-undelegations] Entering undelegations query")
 
 		if !common.RPCMethods["GET"][config.QueryUndelegations].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -270,7 +271,7 @@ func QueryUndelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-undelegations] Returning from the cache")
+					log.CustomLogger().Info("[query-undelegations] Returning from the cache")
 					return
 				}
 			}
@@ -303,12 +304,12 @@ func queryDelegationsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (in
 		// parse user balance data and generate delegation responses from pool tokens
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-staking-pool] Invalid response format", err)
+			log.CustomLogger().Error("[query-staking-pool] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-staking-pool] Invalid response format", err)
+			log.CustomLogger().Error("[query-staking-pool] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -361,14 +362,14 @@ func queryDelegationsHandler(r *http.Request, gwCosmosmux *runtime.ServeMux) (in
 		if len(offset) == 1 {
 			from, err = strconv.Atoi(offset[0])
 			if err != nil {
-				common.GetLogger().Error("[query-staking-pool] Failed to parse parameter 'offset': ", err)
+				log.CustomLogger().Error("[query-staking-pool] Failed to parse parameter 'offset': ", err)
 				return common.ServeError(0, "failed to parse parameter 'offset'", err.Error(), http.StatusBadRequest)
 			}
 		}
 		if len(limit) == 1 {
 			count, err = strconv.Atoi(limit[0])
 			if err != nil {
-				common.GetLogger().Error("[query-staking-pool] Failed to parse parameter 'limit': ", err)
+				log.CustomLogger().Error("[query-staking-pool] Failed to parse parameter 'limit': ", err)
 				return common.ServeError(0, "failed to parse parameter 'limit'", err.Error(), http.StatusBadRequest)
 			}
 		}
@@ -388,7 +389,7 @@ func QueryDelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-delegations] Entering delegations query")
+		log.CustomLogger().Info("[query-delegations] Entering delegations query")
 
 		if !common.RPCMethods["GET"][config.QueryDelegations].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -399,7 +400,7 @@ func QueryDelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-staking-pool] Returning from the cache")
+					log.CustomLogger().Info("[query-staking-pool] Returning from the cache")
 					return
 				}
 			}
