@@ -40,21 +40,14 @@ func printUsage() {
 }
 
 func main() {
-	// Set the "PrintLogs" environment variable based on the logging configuration
-	os.Setenv("PrintLogs", ENABLE_LOGS)
+	homeDir, _ := os.UserHomeDir()
 
-	log.CustomLogger().Info("Starting INTERX server.")
-
-	defer log.RecoverFromPanic() // Ensure we recover from any panic
-
-	// Monitor system resources
-	go log.Monitor(25 * time.Second)
-
+	// Define flag sets
 	initCommand := flag.NewFlagSet("init", flag.ExitOnError)
 	startCommand := flag.NewFlagSet("start", flag.ExitOnError)
+	enableLogs := startCommand.Bool("verbose", false, "Enable detailed logging.")
 	versionCommand := flag.NewFlagSet("version", flag.ExitOnError)
 
-	homeDir, _ := os.UserHomeDir()
 	initHomePtr := initCommand.String("home", homeDir+"/.interxd", "The interx configuration path.")
 	initServeHTTPS := initCommand.Bool("serve_https", false, "http or https.")
 	initGrpcPtr := initCommand.String("grpc", "dns:///0.0.0.0:9090", "The grpc endpoint of the sekaid.")
@@ -114,6 +107,8 @@ func main() {
 		switch os.Args[1] {
 		case "init":
 
+			os.Setenv("PrintLogs", "true")
+
 			log.CustomLogger().Info("Initializing server with 'interxd init' command.")
 
 			err := initCommand.Parse(os.Args[2:])
@@ -123,6 +118,7 @@ func main() {
 			}
 
 			if initCommand.Parsed() {
+
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
 				faucetMnemonic := *initFaucetMnemonicPtr
@@ -192,6 +188,22 @@ func main() {
 			}
 
 			if startCommand.Parsed() {
+
+				if *enableLogs {
+					os.Setenv("PrintLogs", "true")
+					defer log.RecoverFromPanic() // Ensure we recover from any panic
+
+					// Monitor system resources
+					go log.Monitor(25 * time.Second)
+
+					log.CustomLogger().Info("Detailed logging is enabled.")
+				} else {
+					os.Setenv("PrintLogs", "false")
+				}
+
+				// Example: Call a function to start your application
+				fmt.Println("Starting the server...")
+
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
 				configFilePath := *startHomePtr + "/config.json"
@@ -207,6 +219,8 @@ func main() {
 				return
 			}
 		case "version":
+
+			os.Setenv("PrintLogs", "true")
 
 			log.CustomLogger().Info("Starting server with 'interxd version' command.")
 
