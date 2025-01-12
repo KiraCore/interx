@@ -1,9 +1,17 @@
 package common
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
@@ -11,93 +19,176 @@ import (
 	"github.com/KiraCore/interx/types"
 )
 
-// PutCache is a function to save value to cache
-func PutCache(chainIDHash string, endpointHash string, requestHash string, value types.InterxResponse) error {
+const MAX_CACHE_SIZE int64 = 2 * 1024 * 1024 * 1024 // Convert 2 GB to bytes
 
-	log.CustomLogger().Info("Starting 'PutCache' request...",
-		"chainIDHash", chainIDHash,
-		"endpointHash", endpointHash,
+// clearFolder deletes all files in the folder.
+func clearFolder(folderPath string) {
+	files, _ := ioutil.ReadDir(folderPath)
+
+	for _, file := range files {
+		filePath := filepath.Join(folderPath, file.Name())
+		_ = os.Remove(filePath)
+	}
+}
+
+func getFolderSize(folderPath string) (int64, error) {
+	cmd := exec.Command("du", "-sb", folderPath)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+
+	if err != nil {
+		return 0, fmt.Errorf("[AddCache][cmd.Run] failed to run du command")
+	}
+
+	// Parse the output of du command
+	output := strings.Fields(out.String())
+	if len(output) == 0 {
+		return 0, fmt.Errorf("[AddCache][getFolderSize] unexpected output from du command")
+	}
+
+	// Convert size to int64
+	size, err := strconv.ParseInt(output[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("[AddCache][ParseInt] failed to convert output to int")
+	}
+
+	return size, nil
+}
+
+// AddCache is a function to save value to cache
+func AddCache(chainIDHash string, endpointHash string, requestHash string, value types.InterxResponse) error {
+	log.CustomLogger().Info("Starting 'AddCache' request...",
+		"CacheBlockDuration", value.CacheBlockDuration,
+		"CacheDuration", value.CacheDuration,
 		"requestHash", requestHash,
+		"cacheTime", value.CacheTime,
 	)
+
+	if requestHash == "" {
+		return errors.New("[AddCache] One of path components is empty")
+	}
 
 	data, err := json.Marshal(value)
 	if err != nil {
-		log.CustomLogger().Error("[PutCache] Failed to marshal the response.",
+		log.CustomLogger().Error("[AddCache] Failed to marshal data",
 			"error", err,
 		)
 		return err
 	}
 
-	folderPath := fmt.Sprintf("%s/%s/%s", config.GetResponseCacheDir(), chainIDHash, endpointHash)
-	log.CustomLogger().Info("Create folder for saving cache result in the specific path.",
-		"folder_path_for_saving_cache", folderPath,
+	log.CustomLogger().Info("Successfully marshaled data for the 'AddCache' function.",
+		"datasize", len(data),
 	)
 
-	filePath := fmt.Sprintf("%s/%s", folderPath, requestHash)
-	log.CustomLogger().Info("Create file for saving cache result in the specific path.",
-		"file_path_for_saving_cache", filePath,
+	// Construct paths always /response
+	baseDir := config.GetResponseCacheDir()
+	filePath := fmt.Sprintf("%s/%s", baseDir, requestHash)
+
+	// Log paths for debugging
+	log.CustomLogger().Info("`AddCache` Created file & folde paths for storing the cache data.",
+		"basedir", baseDir,
+		"filepath", filePath,
 	)
 
+	// Acquire mutex
 	global.Mutex.Lock()
-	log.CustomLogger().Info("Mutex is locked for saving cache result.")
+	defer global.Mutex.Unlock() // Ensure unlock even on error
 
-	err = os.MkdirAll(folderPath, os.ModePerm)
+	size, err := getFolderSize(baseDir)
 	if err != nil {
-
-		global.Mutex.Unlock()
-		log.CustomLogger().Error("[PutCache][MkdirAll] Failed to create a directory or lack of permissions.",
+		log.CustomLogger().Error("[AddCache][getFolderSize] incorrect size.",
 			"error", err,
-			"folder_Path", folderPath,
-			"lock_status", "unlocked",
 		)
-
 		return err
 	}
 
-	err = os.WriteFile(filePath, data, 0644)
-	global.Mutex.Unlock()
-
-	if err != nil {
-		log.CustomLogger().Error("[PutCache][WriteFile] Failed to writes data to a specified file.",
-			"error", err,
-			"file_Path", filePath,
-			"lock_status", "unlocked",
-		)
+	// Check if the folder size exceeds the limit
+	if size > MAX_CACHE_SIZE {
+		log.CustomLogger().Info("`AddCache` Folder size exceeds the limit. Clearing older cached data...")
+		clearFolder(baseDir)
 	}
 
-	log.CustomLogger().Info("Finished 'PutCache' request. File written successfully.")
+	// Write data to the file
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.CustomLogger().Error("[AddCache][WriteFile] Failed to write data to the cache directory.",
+			"error", err,
+			"filepath", filePath,
+		)
+		return err
+	}
 
-	return err
+	log.CustomLogger().Info("`AddCache` Finished successfully. Data stored into the cache directory", "filePath", filePath)
+	return nil
 }
 
-// GetCache is a function to get value from cache
-func GetCache(chainIDHash string, endpointHash string, requestHash string) (types.InterxResponse, error) {
-
-	log.CustomLogger().Info("Starting 'GetCache' request...",
-		"chainID_hash", chainIDHash,
-		"endpoint_hash", endpointHash,
-		"request_hash", requestHash,
-	)
-
-	filePath := fmt.Sprintf("%s/%s/%s/%s", config.GetResponseCacheDir(), chainIDHash, endpointHash, requestHash)
-	log.CustomLogger().Info("`GetCache` Create file path to fetch the cached data from it.",
-		"file_path", filePath,
-	)
+func GetCache(requestHash string) (types.InterxResponse, bool, error) {
+	filePath := fmt.Sprintf("%s/%s", config.GetResponseCacheDir(), requestHash)
+	log.CustomLogger().Info("Starting 'GetCache' request...", "filepath", filePath)
 
 	response := types.InterxResponse{}
 
+	// Attempt to read the cache file
 	data, err := os.ReadFile(filePath)
 	if err != nil {
+		// Check if the error indicates that the file does not exist (cache miss)
+		if os.IsNotExist(err) {
+			log.CustomLogger().Info("[GetCache][ReadFile] Cache miss encountered. Proceeding to add query results to the cache.",
+				"filePath", filePath,
+			)
+			// Return a custom error for cache miss
+			return response, false, nil
+		}
+
+		// Log actual read errors that are not cache misses
 		log.CustomLogger().Error("[GetCache][ReadFile] Failed to read data from the specified file.",
+			"filePath", filePath,
 			"error", err,
-			"file_Path", filePath,
 		)
-		return response, err
+		return response, false, err
 	}
 
-	err = json.Unmarshal([]byte(data), &response)
+	// Verify that data is not nil after read (optional, as ReadFile should not return nil data)
+	if data == nil {
+		log.CustomLogger().Error("[GetCache][ReadFile] No data read from file.",
+			"filePath", filePath,
+		)
+		return response, false, nil
+	}
 
-	log.CustomLogger().Info("Finished 'GetCache' request. Data read successfully done.")
+	// Unmarshal the data into the response structure
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		log.CustomLogger().Error("[GetCache][Unmarshal] Failed to unmarshal cached data.",
+			"error", err,
+		)
+		return response, false, err // Return the unmarshal error
+	}
 
-	return response, err
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Println("Response directory does not exist ---filePath--->", filePath)
+	}
+
+	expired := cachedDuration(response)
+
+	log.CustomLogger().Info("Finished 'GetCache' request. Data read successfully.")
+
+	return response, expired, nil // Return the successfully read response
+}
+
+func cachedDuration(response types.InterxResponse) bool {
+	// Current time (or the newer time)
+	newerTime := time.Now()
+	duration := newerTime.Sub(response.CacheTime)
+	var expired bool
+
+	// Check if the duration is less than 5 blocks
+	if duration.Seconds() < 5 {
+		log.CustomLogger().Info("True: 'GetCache' Duration is less than 5 blocks.")
+		expired = false
+	} else {
+		log.CustomLogger().Info("False: 'GetCache' Duration is 5 blocks or more.")
+		expired = true
+	}
+	return expired
 }
