@@ -3,9 +3,11 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -163,18 +165,11 @@ func (c conventionalMarshaller) MarshalAndConvert(endpoint string) ([]byte, erro
 // GetInterxRequest is a function to get Interx Request
 func GetInterxRequest(r *http.Request) types.InterxRequest {
 
-	log.CustomLogger().Info("Starting 'GetInterxRequest' request...",
-		"method", r.Method,
-		"endpoint", r.URL.String(),
-	)
-
 	request := types.InterxRequest{}
 
 	request.Method = r.Method
 	request.Endpoint = r.URL.String()
 	request.Params, _ = ioutil.ReadAll(r.Body)
-
-	log.CustomLogger().Info("Finished 'GetInterxRequest' request.")
 
 	return request
 }
@@ -193,8 +188,6 @@ func GetResponseFormat(request types.InterxRequest, rpcAddr string) *types.Proxy
 
 // GetResponseSignature is a function to get response signature
 func GetResponseSignature(response types.ProxyResponse) (string, string) {
-
-	log.CustomLogger().Info("Starting 'GetResponseSignature' request...")
 
 	// Get Response Hash
 	responseHash := GetBlake2bHash(response.Response)
@@ -223,38 +216,43 @@ func GetResponseSignature(response types.ProxyResponse) (string, string) {
 		return "", responseHash
 	}
 
-	log.CustomLogger().Info("Finished 'GetResponseSignature' request.")
-
 	return base64.StdEncoding.EncodeToString([]byte(signature)), responseHash
 }
 
 // SearchCache is a function to search response in cache
 func SearchCache(request types.InterxRequest, response *types.ProxyResponse) (bool, interface{}, interface{}, int) {
 
-	log.CustomLogger().Info("Starting SearchCache")
+	log.CustomLogger().Info("Starting `SearchCache` function...")
 
-	chainIDHash := GetBlake2bHash(response.Chainid)
-	endpointHash := GetBlake2bHash(request.Endpoint)
 	requestHash := GetBlake2bHash(request)
 
-	log.CustomLogger().Info("`SearchCache` Config Path", "chainIDHash", chainIDHash,
-		"endpointHash", endpointHash, "requestHash", requestHash,
-	)
+	log.CustomLogger().Info("`SearchCache` created request hash", "requestHash", requestHash)
 
-	result, err := GetCache(chainIDHash, endpointHash, requestHash)
+	result, expired, err := GetCache(requestHash)
 
 	if err != nil {
-		log.CustomLogger().Error("[SearchCache] Failed to run GetCache function.",
+		log.CustomLogger().Error("[SearchCache][GetCache] Failed to find data from the cache",
 			"error", err,
 		)
 		return false, nil, nil, -1
 	}
 
+	baseDir := config.GetResponseCacheDir()
+	filePath := fmt.Sprintf("%s/%s", baseDir, requestHash)
+
+	if expired {
+		defer os.Remove(filePath)
+		log.CustomLogger().Info("`SearchCache` Query data expired and removed from cache.",
+			"filePath", filePath,
+		)
+	}
+
 	if IsCacheExpired(result) {
+		log.CustomLogger().Info("SearchCache: Cache data not found or marked as expired during IsCacheExpired query.")
 		return false, nil, nil, -1
 	}
 
-	log.CustomLogger().Info("Finished SearchCache")
+	log.CustomLogger().Info("Finished `SearchCache` request...")
 
 	return true, result.Response.Response, result.Response.Error, result.Status
 }
@@ -264,25 +262,42 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 	if statusCode == 0 {
 		statusCode = 503 // Service Unavailable Error
 	}
+
+	log.CustomLogger().Info("Starting `WrapResponse` request...",
+		"status_code", statusCode,
+		"save_to_cache", saveToCache,
+	)
+
 	if saveToCache {
-		log.CustomLogger().Info("Starting Wrap Response...")
+
+		log.CustomLogger().Info(" `WrapResponse` adding data to the cache started...",
+			"endpoint", request.Endpoint,
+		)
 
 		chainIDHash := GetBlake2bHash(response.Chainid)
 		endpointHash := GetBlake2bHash(request.Endpoint)
 		requestHash := GetBlake2bHash(request)
 		if conf, ok := RPCMethods[request.Method][request.Endpoint]; ok {
-			err := PutCache(chainIDHash, endpointHash, requestHash, types.InterxResponse{
-				Response:             response,
-				Status:               statusCode,
-				CacheTime:            time.Now().UTC(),
-				CachingDuration:      conf.CachingDuration,
-				CachingBlockDuration: conf.CachingBlockDuration,
+			err := AddCache(chainIDHash, endpointHash, requestHash, types.InterxResponse{
+				Response:           response,
+				Status:             statusCode,
+				CacheTime:          time.Now().UTC(),
+				CacheDuration:      conf.CacheDuration,
+				CacheBlockDuration: conf.CacheBlockDuration,
 			})
 			if err != nil {
-				log.CustomLogger().Error("[WrapResponse] Failed to save in the cache.",
+				log.CustomLogger().Error("[WrapResponse][AddCache] Failed to save data into the cache.",
 					"error", err,
 				)
 			}
+			log.CustomLogger().Info("`WrapResponse` adding data to the cache successfully done.",
+				"QueryName", request.Endpoint,
+				"ResponsechainId", response.Chainid,
+				"Status", statusCode,
+				"CacheTime", time.Now().UTC(),
+				"CacheDuration", conf.CacheDuration,
+				"CacheBlockDuration", conf.CacheBlockDuration,
+			)
 		}
 	}
 
@@ -292,6 +307,7 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 	w.Header().Add("Interx_blocktime", response.Blocktime)
 	w.Header().Add("Interx_timestamp", strconv.FormatInt(response.Timestamp, 10))
 	w.Header().Add("Interx_request_hash", response.RequestHash)
+
 	if request.Endpoint == config.QueryDataReference {
 		reference, err := database.GetReference(string(request.Params))
 		if err == nil {
@@ -310,7 +326,7 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		case string:
 			_, err := w.Write([]byte(v))
 			if err != nil {
-				log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+				log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
 					"error", err,
 				)
 			}
@@ -320,7 +336,7 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		encoded, _ := conventionalMarshaller{response.Response}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+			log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
 				"error", err,
 			)
 		}
@@ -328,17 +344,19 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		w.WriteHeader(statusCode)
 
 		if response.Error == nil {
-			response.Error = "service not available"
+			response.Error = "[WrapResponse] service not available"
 		}
 
 		encoded, _ := conventionalMarshaller{response.Error}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			log.CustomLogger().Error("[WrapResponse] Failed to make a response.",
+			log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
 				"error", err,
 			)
 		}
 	}
+
+	log.CustomLogger().Info("Finished `WrapResponse` request...")
 }
 
 // ServeGRPC is a function to serve GRPC
