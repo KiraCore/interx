@@ -26,11 +26,18 @@ import (
 
 // MakeTendermintRPCRequest is a function to make GET request
 func MakeTendermintRPCRequest(rpcAddr string, url string, query string) (interface{}, interface{}, int) {
+
+	log.CustomLogger().Info("Starting `MakeTendermintRPCRequest` request...",
+		"query", query,
+		"url", url,
+		"rpc_addr", rpcAddr,
+	)
+
 	endpoint := fmt.Sprintf("%s%s?%s", rpcAddr, url, query)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		log.CustomLogger().Error("[MakeTendermintRPCRequest] Unable to connect to ",
+		log.CustomLogger().Error("[MakeTendermintRPCRequest] Unable to connect to the endpoint",
 			"endpoint", endpoint,
 			"error", err,
 		)
@@ -41,11 +48,15 @@ func MakeTendermintRPCRequest(rpcAddr string, url string, query string) (interfa
 	response := new(types.RPCResponse)
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
-		log.CustomLogger().Error("[MakeTendermintRPCRequest][Decode] Unable to decode response",
+		log.CustomLogger().Error("[MakeTendermintRPCRequest][Decode] Failed to decode response",
 			"error", err,
 		)
 		return nil, err.Error(), resp.StatusCode
 	}
+
+	log.CustomLogger().Info("Finish `MakeTendermintRPCRequest` request.",
+		"status", resp.StatusCode,
+	)
 
 	return response.Result, response.Error, resp.StatusCode
 }
@@ -482,7 +493,8 @@ func GetKiraStatus(rpcAddr string) *types.KiraStatus {
 	success, _, _ := MakeTendermintRPCRequest(rpcAddr, "/status", "")
 
 	log.CustomLogger().Info("Starting 'GetKiraStatus' request...",
-		"success", success,
+		"rpc_addr", rpcAddr,
+		"query", "/status",
 	)
 
 	if success != nil {
