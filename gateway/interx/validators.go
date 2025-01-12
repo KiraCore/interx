@@ -129,7 +129,10 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 		if !common.RPCMethods["GET"][config.QueryValidators].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryValidators].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryValidators].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryValidators` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -189,7 +192,10 @@ func QueryValidatorInfos(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 		if !common.RPCMethods["GET"][config.QueryValidatorInfos].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryValidatorInfos].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryValidatorInfos].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryValidatorInfos` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -341,7 +347,10 @@ func QueryConsensus(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerF
 		if !common.RPCMethods["GET"][config.QueryConsensus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryConsensus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryConsensus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryConsensus` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -373,7 +382,10 @@ func QueryDumpConsensusState(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["GET"][config.QueryDumpConsensusState].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDumpConsensusState].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDumpConsensusState].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDumpConsensusState` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus

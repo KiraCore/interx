@@ -77,7 +77,10 @@ func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBlocks].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBlocks].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBlocksRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -92,7 +95,11 @@ func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 
 					return
 				}
+
+				log.CustomLogger().Error("Failed to find query result cache for 'QueryBlocksRequest' from the catche.")
 			}
+
+			log.CustomLogger().Error("Cache is not enabled for 'QueryBlocksRequest' query.")
 
 			response.Response, response.Error, statusCode = queryBlocksHandle(rpcAddr, r)
 		}
@@ -104,7 +111,7 @@ func QueryBlocksRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 			"error", response.Error,
 		)
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlocks].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlocks].CacheEnabled)
 
 		log.CustomLogger().Info("Finished 'QueryBlocksRequest' request.")
 	}
@@ -147,7 +154,10 @@ func QueryBlockByHeightOrHashRequest(gwCosmosmux *runtime.ServeMux, rpcAddr stri
 
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBlockByHeightOrHashRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -174,7 +184,7 @@ func QueryBlockByHeightOrHashRequest(gwCosmosmux *runtime.ServeMux, rpcAddr stri
 			"error", response.Error,
 		)
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockByHeightOrHash].CacheEnabled)
 
 		log.CustomLogger().Info("Finished `QueryBlockByHeightOrHashRequest` request.")
 
@@ -556,7 +566,10 @@ func QueryBlockTransactionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBlockTransactions].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBlockTransactions].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBlockTransactionsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -578,7 +591,7 @@ func QueryBlockTransactionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			"transaction_response", response.Response,
 			"error_details", response.Error,
 		)
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockTransactions].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBlockTransactions].CacheEnabled)
 
 		log.CustomLogger().Info("Completed `QueryBlockTransactionsRequest`.",
 			"block_height", height,
@@ -645,7 +658,10 @@ func QueryTransactionResultRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTransactionResult].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTransactionResult].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryTransactionResultRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -666,7 +682,7 @@ func QueryTransactionResultRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionResult].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionResult].CacheEnabled)
 
 		log.CustomLogger().Info("Completed `QueryBlockTransactionsRequest`.",
 			"tx_Hash", txHash,

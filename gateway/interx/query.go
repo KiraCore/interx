@@ -43,15 +43,12 @@ func QueryRPCMethods(rpcAddr string) http.HandlerFunc {
 		statusCode := http.StatusOK
 
 		log.CustomLogger().Info("Processed 'QueryRPCMethods' request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
 			"params", request.Params,
 			"statusCode", statusCode,
-			"error", response.Error,
 		)
 
 		response.Response = common.RPCMethods
-
 		common.WrapResponse(w, request, *response, statusCode, false)
 
 		log.CustomLogger().Info("Finished 'QueryRPCMethods' request.")
@@ -60,7 +57,6 @@ func QueryRPCMethods(rpcAddr string) http.HandlerFunc {
 
 func queryInterxFunctionsHandle(_ string) (interface{}, interface{}, int) {
 	metadata := functions.GetInterxMetadata()
-
 	return metadata, nil, http.StatusOK
 }
 
@@ -77,11 +73,9 @@ func QueryInterxFunctions(rpcAddr string) http.HandlerFunc {
 		response.Response, response.Error, statusCode = queryInterxFunctionsHandle(rpcAddr)
 
 		log.CustomLogger().Info("Processed 'QueryInterxFunctions' request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
 			"params", request.Params,
 			"statusCode", statusCode,
-			"error", response.Error,
 		)
 
 		common.WrapResponse(w, request, *response, statusCode, false)
@@ -97,13 +91,13 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 	pubkeyBytes, err := config.EncodingCg.Amino.MarshalJSON(&config.Config.PubKey)
 
 	if err != nil {
-		log.CustomLogger().Error("[query-status] Failed to marshal interx pubkey", err)
+		log.CustomLogger().Error("[queryStatusHandle][MarshalJSON] Failed to marshal interx pubkey", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
 	err = json.Unmarshal(pubkeyBytes, &result.InterxInfo.PubKey)
 	if err != nil {
-		log.CustomLogger().Error("[query-status] Failed to add interx pubkey to status response", err)
+		log.CustomLogger().Error("[queryStatusHandle][Unmarshal] Failed to add interx pubkey to the response", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
@@ -111,36 +105,33 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 
 	// Handle Genesis
 	genesis, checksum, err := GetGenesisResults(rpcAddr)
-	if err != nil {
-		log.CustomLogger().Error("[query-status] Failed to query genesis ", err)
-		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
+
+	if err == nil {
+		// Get Kira Status
+		sentryStatus := common.GetKiraStatus((rpcAddr))
+
+		if sentryStatus != nil {
+			result.NodeInfo = sentryStatus.NodeInfo
+			result.SyncInfo = sentryStatus.SyncInfo
+			result.ValidatorInfo = sentryStatus.ValidatorInfo
+
+			result.InterxInfo.Moniker = sentryStatus.NodeInfo.Moniker
+
+			result.InterxInfo.LatestBlockHeight = sentryStatus.SyncInfo.LatestBlockHeight
+			result.InterxInfo.CatchingUp = sentryStatus.SyncInfo.CatchingUp
+		}
+
+		result.InterxInfo.Node = config.Config.Node
+
+		result.InterxInfo.KiraAddr = config.Config.Address
+		result.InterxInfo.KiraPubKey = config.Config.PubKey.String()
+		result.InterxInfo.FaucetAddr = config.Config.Faucet.Address
+		result.InterxInfo.GenesisChecksum = checksum
+		result.InterxInfo.ChainID = genesis.ChainID
+
+		result.InterxInfo.InterxVersion = config.Config.InterxVersion
+		result.InterxInfo.SekaiVersion = config.Config.SekaiVersion
 	}
-
-	// Get Kira Status
-	sentryStatus := common.GetKiraStatus((rpcAddr))
-
-	if sentryStatus != nil {
-		result.NodeInfo = sentryStatus.NodeInfo
-		result.SyncInfo = sentryStatus.SyncInfo
-		result.ValidatorInfo = sentryStatus.ValidatorInfo
-
-		result.InterxInfo.Moniker = sentryStatus.NodeInfo.Moniker
-
-		result.InterxInfo.LatestBlockHeight = sentryStatus.SyncInfo.LatestBlockHeight
-		result.InterxInfo.CatchingUp = sentryStatus.SyncInfo.CatchingUp
-	}
-
-	result.InterxInfo.Node = config.Config.Node
-
-	result.InterxInfo.KiraAddr = config.Config.Address
-	result.InterxInfo.KiraPubKey = config.Config.PubKey.String()
-	result.InterxInfo.FaucetAddr = config.Config.Faucet.Address
-	result.InterxInfo.GenesisChecksum = checksum
-	result.InterxInfo.ChainID = genesis.ChainID
-
-	result.InterxInfo.InterxVersion = config.Config.InterxVersion
-	result.InterxInfo.SekaiVersion = config.Config.SekaiVersion
-
 	return result, nil, http.StatusOK
 }
 
@@ -148,7 +139,7 @@ func queryStatusHandle(rpcAddr string) (interface{}, interface{}, int) {
 func QueryStatusRequest(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		log.CustomLogger().Info("Starting `QueryStatus` request...")
+		log.CustomLogger().Info("Starting `QueryStatusRequest` request...")
 
 		var statusCode int
 		request := common.GetInterxRequest(r)
@@ -156,43 +147,36 @@ func QueryStatusRequest(rpcAddr string) http.HandlerFunc {
 
 		if !common.RPCMethods["GET"][config.QueryStatus].Enabled {
 
-			log.CustomLogger().Error("Query `QueryStatus` is disabled.",
-				"method", request.Method,
+			log.CustomLogger().Error("Cache for `QueryStatusRequest` is disabled.",
 				"endpoint", request.Endpoint,
-				"params", request.Params,
 				"error", response.Error,
 			)
 
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryStatus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryStatusRequest` request")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
 					log.CustomLogger().Info("Cache hit for `QueryStatus` request.",
-						"method", request.Method,
 						"endpoint", request.Endpoint,
-						"params", request.Params,
-						"error", response.Error,
 					)
-
 					return
 				}
 			}
-
 			response.Response, response.Error, statusCode = queryStatusHandle(rpcAddr)
 		}
 
 		log.CustomLogger().Info("Processed `QueryStatus` request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
-			"params", request.Params,
-			"error", response.Error,
 		)
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 
 		log.CustomLogger().Info("Finished `QueryStatus` request.")
 	}
@@ -215,10 +199,8 @@ func QueryAddrBook(rpcAddr string) http.HandlerFunc {
 		response.Response, response.Error, statusCode = queryAddrBookHandler(rpcAddr)
 
 		log.CustomLogger().Info("Processed 'QueryAddrBook' request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
 			"params", request.Params,
-			"error", response.Error,
 		)
 
 		common.WrapResponse(w, request, *response, statusCode, false)
@@ -249,10 +231,7 @@ func QueryNetInfo(rpcAddr string) http.HandlerFunc {
 		response.Response, response.Error, statusCode = queryNetInfoHandler(rpcAddr)
 
 		log.CustomLogger().Info("Processed 'QueryNetInfo' request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
-			"params", request.Params,
-			"error", response.Error,
 		)
 
 		common.WrapResponse(w, request, *response, statusCode, false)
@@ -375,10 +354,8 @@ func QueryDashboard(rpcAddr string, gwCosmosmux *runtime.ServeMux) http.HandlerF
 		response.Response, response.Error, statusCode = queryDashboardHandler(rpcAddr, r, gwCosmosmux)
 
 		log.CustomLogger().Info("Processed 'QueryDashboard' request.",
-			"method", request.Method,
 			"endpoint", request.Endpoint,
 			"params", request.Params,
-			"error", response.Error,
 		)
 
 		common.WrapResponse(w, request, *response, statusCode, false)

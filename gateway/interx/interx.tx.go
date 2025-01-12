@@ -575,7 +575,10 @@ func QueryTransactions(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryTransactions].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTransactions].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTransactions].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryTransactions` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -589,7 +592,7 @@ func QueryTransactions(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = QueryBlockTransactionsHandler(rpcAddr, r)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
 

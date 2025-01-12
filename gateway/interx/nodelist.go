@@ -138,7 +138,10 @@ func QueryPubP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 		if !common.RPCMethods["GET"][config.QueryPubP2PList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryPubP2PList].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryPubP2PList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryPubP2PNodeList` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -152,7 +155,7 @@ func QueryPubP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 			response.Response, response.Error, statusCode = queryPubP2PNodeList(r, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
 
@@ -264,7 +267,10 @@ func QueryPrivP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		if !common.RPCMethods["GET"][config.QueryPrivP2PList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryPrivP2PList].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryPrivP2PList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryPrivP2PNodeList` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -278,7 +284,7 @@ func QueryPrivP2PNodeList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = queryPrivP2PNodeList(r, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
 
@@ -342,7 +348,10 @@ func QueryInterxList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 		if !common.RPCMethods["GET"][config.QueryInterxList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryInterxList].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryInterxList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryInterxList` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -356,7 +365,7 @@ func QueryInterxList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 			response.Response, response.Error, statusCode = queryInterxList(r, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
 
@@ -420,7 +429,10 @@ func QuerySnapList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerFu
 		if !common.RPCMethods["GET"][config.QuerySnapList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QuerySnapList].CachingEnabled {
+			if common.RPCMethods["GET"][config.QuerySnapList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySnapList` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -434,6 +446,6 @@ func QuerySnapList(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerFu
 			response.Response, response.Error, statusCode = querySnapList(r, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
