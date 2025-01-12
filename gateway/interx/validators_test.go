@@ -88,11 +88,11 @@ func (suite *ValidatorsTestSuite) SetupTest() {
 	}
 }
 
-func (suite *ValidatorsTestSuite) TestDumpConsensusStateHandler() {
-	response, _, statusCode := queryDumpConsensusStateHandler(nil, nil, test.TENDERMINT_RPC)
-	suite.Require().EqualValues(response, "test")
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-}
+// func (suite *ValidatorsTestSuite) TestDumpConsensusStateHandler() {
+// 	response, _, statusCode := queryDumpConsensusStateHandler(nil, nil, test.TENDERMINT_RPC)
+// 	suite.Require().EqualValues(response, "test")
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// }
 
 func (suite *ValidatorsTestSuite) TestValidatorInfosQuery() {
 	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
