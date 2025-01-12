@@ -83,7 +83,10 @@ func QueryNetworkListRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkListRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -97,11 +100,11 @@ func QueryNetworkListRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = queryNetworkListHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }
 
-func queryNetworkOptionsHandler(r *http.Request, request types.InterxRequest, rpcAddr string, gwCosmosmux *runtime.ServeMux) (interface{}, interface{}, int) {
+func queryNetworkOptionsHandler(_ *http.Request, _ types.InterxRequest, rpcAddr string, gwCosmosmux *runtime.ServeMux) (interface{}, interface{}, int) {
 	var response dataapi.NetworkOptionsResponse
 
 	response.Version = rosetta.Version{
@@ -124,7 +127,10 @@ func QueryNetworkOptionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkOptionsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -138,7 +144,7 @@ func QueryNetworkOptionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = queryNetworkOptionsHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }
 
@@ -230,7 +236,10 @@ func QueryNetworkStatusRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -244,6 +253,6 @@ func QueryNetworkStatusRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = queryNetworkStatusHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }

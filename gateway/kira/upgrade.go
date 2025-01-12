@@ -37,7 +37,10 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["GET"][config.QueryCurrentPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryCurrentPlan].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryCurrentPlan].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryCurrentPlanRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -51,7 +54,7 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = QueryCurrentPlanHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryCurrentPlan].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryCurrentPlan].CacheEnabled)
 	}
 }
 
@@ -72,7 +75,10 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		if !common.RPCMethods["GET"][config.QueryNextPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryNextPlan].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryNextPlan].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNextPlanRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -86,6 +92,6 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = QueryNextPlanHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNextPlan].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNextPlan].CacheEnabled)
 	}
 }

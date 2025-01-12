@@ -170,7 +170,10 @@ func RegisterEVMBalancesRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMBalances].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMBalances].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMBalances].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `RegisterEVMBalancesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -187,6 +190,6 @@ func RegisterEVMBalancesRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMBalancesRequestHandle(r, chain, address)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CacheEnabled)
 	}
 }

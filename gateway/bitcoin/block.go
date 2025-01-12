@@ -141,7 +141,10 @@ func QueryBitcoinBlockRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryBitcoinBlock].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBitcoinBlock].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBitcoinBlock].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBitcoinBlockRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -162,6 +165,6 @@ func QueryBitcoinBlockRequest(rpcAddr string) http.HandlerFunc {
 		if isSupportedChain {
 			enableCache = response.Response.(BlockResult).BlockConfirmations == strconv.Itoa(int(conf.BTC_CONFIRMATIONS))+"+"
 		}
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinBlock].CachingEnabled && enableCache)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinBlock].CacheEnabled && enableCache)
 	}
 }

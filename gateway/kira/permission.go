@@ -48,7 +48,10 @@ func QueryPermissionsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 		if !common.RPCMethods["GET"][config.QueryPermissionsByAddress].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryPermissionsByAddress].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryPermissionsByAddress].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryPermissionsByAddressRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -62,6 +65,6 @@ func QueryPermissionsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 			response.Response, response.Error, statusCode = queryPermissionsByAddressHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRoles].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRoles].CacheEnabled)
 	}
 }

@@ -86,7 +86,10 @@ func QueryEVMTransactionRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMTransaction].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMTransaction].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryEVMTransactionRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -100,6 +103,6 @@ func QueryEVMTransactionRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMTransactionRequestHandle(r, chain, transactionHash)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransaction].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransaction].CacheEnabled)
 	}
 }

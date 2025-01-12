@@ -252,7 +252,10 @@ func QueryProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.H
 		if !common.RPCMethods["GET"][config.QueryProposals].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryProposals].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryProposals].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryProposalsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -266,7 +269,7 @@ func QueryProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.H
 			response.Response, response.Error, statusCode = queryProposalsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryProposals].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryProposals].CacheEnabled)
 	}
 }
 
@@ -315,7 +318,10 @@ func QueryProposalRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		if !common.RPCMethods["GET"][config.QueryProposal].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryProposal].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryProposal].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryProposalRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -329,7 +335,7 @@ func QueryProposalRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = queryProposalHandler(r, gwCosmosmux, proposalID, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryProposal].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryProposal].CacheEnabled)
 	}
 }
 
@@ -364,7 +370,10 @@ func QueryVotersRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 		if !common.RPCMethods["GET"][config.QueryVoters].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryVoters].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryVoters].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryVotersRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -378,7 +387,7 @@ func QueryVotersRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 			response.Response, response.Error, statusCode = queryVotersHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryVoters].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryVoters].CacheEnabled)
 	}
 }
 
@@ -413,7 +422,10 @@ func QueryVotesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 		if !common.RPCMethods["GET"][config.QueryVotes].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryVotes].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryVotes].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryVotesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -427,6 +439,6 @@ func QueryVotesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 			response.Response, response.Error, statusCode = queryVotesHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryVotes].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryVotes].CacheEnabled)
 	}
 }

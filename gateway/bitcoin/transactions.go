@@ -137,7 +137,10 @@ func QueryBtcTransactionRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryBitcoinTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBitcoinTransaction].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBitcoinTransaction].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBtcTransactionRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -159,6 +162,6 @@ func QueryBtcTransactionRequest(rpcAddr string) http.HandlerFunc {
 		if isSupportedChain {
 			enableCache = response.Response.(SearchRawTransactionsResult).BlockConfirmations == strconv.Itoa(int(conf.BTC_CONFIRMATIONS))+"+"
 		}
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinTransaction].CachingEnabled && enableCache)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinTransaction].CacheEnabled && enableCache)
 	}
 }

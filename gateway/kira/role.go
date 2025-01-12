@@ -39,7 +39,10 @@ func QueryRolesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 		if !common.RPCMethods["GET"][config.QueryRoles].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryRoles].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryRoles].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryRolesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -53,7 +56,7 @@ func QueryRolesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handl
 			response.Response, response.Error, statusCode = queryRolesHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRoles].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRoles].CacheEnabled)
 	}
 }
 
@@ -85,7 +88,10 @@ func QueryRolesByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		if !common.RPCMethods["GET"][config.QueryRolesByAddress].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryRolesByAddress].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryRolesByAddress].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryRolesByAddressRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -99,6 +105,6 @@ func QueryRolesByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = queryRolesByAddressHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRolesByAddress].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryRolesByAddress].CacheEnabled)
 	}
 }

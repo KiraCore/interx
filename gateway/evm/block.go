@@ -58,7 +58,7 @@ func queryEVMBlockFromNode(nodeInfo config.EVMNodeConfig, blockHeightOrHash stri
 	return response, nil, http.StatusOK
 }
 
-func queryEVMBlockRequestHandle(r *http.Request, chain string, blockHeightOrHash string) (interface{}, interface{}, int) {
+func queryEVMBlockRequestHandle(_ *http.Request, chain string, blockHeightOrHash string) (interface{}, interface{}, int) {
 
 	isSupportedChain, chainConfig := GetChainConfig(chain)
 	if !isSupportedChain {
@@ -95,7 +95,10 @@ func QueryEVMBlockRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMBlock].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMBlock].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMBlock].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryEVMBlockRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -112,6 +115,6 @@ func QueryEVMBlockRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMBlockRequestHandle(r, chain, blockHeightOrHash)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBlock].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBlock].CacheEnabled)
 	}
 }

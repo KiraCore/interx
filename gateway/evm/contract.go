@@ -216,7 +216,10 @@ func QueryReadContractRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryReadContract].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryReadContract].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryReadContract].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryReadContractRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -232,7 +235,7 @@ func QueryReadContractRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryReadSmartContractHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryReadContract].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryReadContract].CacheEnabled)
 	}
 }
 
@@ -424,7 +427,10 @@ func QueryWriteContractRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryWriteContract].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryWriteContract].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryWriteContract].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryWriteContractRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -438,6 +444,6 @@ func QueryWriteContractRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryWriteSmartContractHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryWriteContract].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryWriteContract].CacheEnabled)
 	}
 }

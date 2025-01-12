@@ -45,7 +45,10 @@ func QueryUBIRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 		if !common.RPCMethods["GET"][config.QueryUBIRecords].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryUBIRecords].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryUBIRecords].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryUBIRecordsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -59,6 +62,6 @@ func QueryUBIRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.
 			response.Response, response.Error, statusCode = QueryUBIRecordsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryUBIRecords].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryUBIRecords].CacheEnabled)
 	}
 }

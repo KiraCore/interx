@@ -139,7 +139,10 @@ func QueryTxHashRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryTransactionHash].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTransactionHash].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTransactionHash].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryTxHashRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -154,7 +157,7 @@ func QueryTxHashRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryTxHashHandle(hash, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionHash].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionHash].CacheEnabled)
 	}
 }
 
@@ -198,7 +201,10 @@ func EncodeTransaction(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["POST"][config.EncodeTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.EncodeTransaction].CachingEnabled {
+			if common.RPCMethods["POST"][config.EncodeTransaction].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `EncodeTransaction` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -213,6 +219,6 @@ func EncodeTransaction(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = encodeTransactionHandle(r, request, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.EncodeTransaction].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.EncodeTransaction].CacheEnabled)
 	}
 }

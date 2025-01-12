@@ -186,7 +186,10 @@ func QueryEVMStatusRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMStatus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryEVMStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -200,6 +203,6 @@ func QueryEVMStatusRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMStatusHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMStatus].CacheEnabled)
 	}
 }

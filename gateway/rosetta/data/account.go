@@ -68,7 +68,10 @@ func QueryAccountBalanceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		if !common.RPCMethods["POST"][config.QueryRosettaAccountBalance].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAccountBalanceRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -82,6 +85,6 @@ func QueryAccountBalanceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = queryAccountBalanceHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CacheEnabled)
 	}
 }

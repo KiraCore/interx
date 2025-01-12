@@ -60,7 +60,10 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryABI].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryABI].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryABI].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAbiRequests` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -77,6 +80,6 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryAbiHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryABI].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryABI].CacheEnabled)
 	}
 }

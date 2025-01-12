@@ -9,12 +9,11 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
-	interxLog "github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
 	jsonrpc2 "github.com/KeisukeYamashita/go-jsonrpc"
-
+	interxLog "github.com/KiraCore/interx/log"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -162,7 +161,10 @@ func QueryEVMTransferRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMTransfer].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMTransfer].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMTransfer].CacheEnabled {
+
+				interxLog.CustomLogger().Info("Starting search cache for `QueryEVMTransferRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -176,6 +178,6 @@ func QueryEVMTransferRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMTransferRequestHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransfer].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransfer].CacheEnabled)
 	}
 }

@@ -72,7 +72,10 @@ func QueryDataReferenceKeysRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		if !common.RPCMethods["GET"][config.QueryDataReferenceKeys].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDataReferenceKeys].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDataReferenceKeys].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDataReferenceKeysRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -86,7 +89,7 @@ func QueryDataReferenceKeysRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = queryDataReferenceKeysHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReferenceKeys].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReferenceKeys].CacheEnabled)
 	}
 }
 
@@ -136,7 +139,10 @@ func QueryDataReferenceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		if !common.RPCMethods["GET"][config.QueryDataReference].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDataReference].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDataReference].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDataReferenceRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -150,7 +156,7 @@ func QueryDataReferenceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = queryDataReferenceHandle(r, gwCosmosmux, key)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReference].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReference].CacheEnabled)
 	}
 }
 
@@ -181,7 +187,10 @@ func QueryNetworkPropertiesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		if !common.RPCMethods["GET"][config.QueryNetworkProperties].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryNetworkProperties].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryNetworkProperties].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkPropertiesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -195,7 +204,7 @@ func QueryNetworkPropertiesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = QueryNetworkPropertiesHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNetworkProperties].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNetworkProperties].CacheEnabled)
 	}
 }
 
@@ -222,7 +231,10 @@ func QueryExecutionFeeRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) htt
 		if !common.RPCMethods["GET"][config.QueryExecutionFee].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryExecutionFee].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryExecutionFee].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryExecutionFeeRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -236,7 +248,7 @@ func QueryExecutionFeeRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) htt
 			response.Response, response.Error, statusCode = QueryExecutionFeeHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFee].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFee].CacheEnabled)
 	}
 }
 
@@ -257,7 +269,10 @@ func QueryExecutionFeesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		if !common.RPCMethods["GET"][config.QueryExecutionFees].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryExecutionFees].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryExecutionFees].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryExecutionFeesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -271,6 +286,6 @@ func QueryExecutionFeesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = QueryExecutionFeesHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFees].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFees].CacheEnabled)
 	}
 }

@@ -51,7 +51,10 @@ func QuerySpendingPoolsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		if !common.RPCMethods["GET"][config.QuerySpendingPools].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QuerySpendingPools].CachingEnabled {
+			if common.RPCMethods["GET"][config.QuerySpendingPools].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySpendingPoolsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -65,7 +68,7 @@ func QuerySpendingPoolsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = QuerySpendingPoolsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPools].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPools].CacheEnabled)
 	}
 }
 
@@ -93,7 +96,10 @@ func QuerySpendingPoolProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr st
 		if !common.RPCMethods["GET"][config.QuerySpendingPoolProposals].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CachingEnabled {
+			if common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySpendingPoolProposalsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -107,6 +113,6 @@ func QuerySpendingPoolProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr st
 			response.Response, response.Error, statusCode = QuerySpendingPoolProposalHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CacheEnabled)
 	}
 }

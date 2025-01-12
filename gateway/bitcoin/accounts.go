@@ -120,7 +120,10 @@ func QueryBtcAccountsRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryBitcoinAccounts].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBitcoinAccounts].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBitcoinAccounts].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBtcAccountsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -137,6 +140,6 @@ func QueryBtcAccountsRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryBtcAccountsRequestHandle(r, chain, address)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinAccounts].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinAccounts].CacheEnabled)
 	}
 }

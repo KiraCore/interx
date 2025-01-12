@@ -40,7 +40,10 @@ func QuerySupplyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 		if !common.RPCMethods["GET"][config.QueryTotalSupply].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTotalSupply].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTotalSupply].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySupplyRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -55,7 +58,7 @@ func QuerySupplyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Hand
 			response.Response, response.Error, statusCode = querySupplyHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTotalSupply].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTotalSupply].CacheEnabled)
 	}
 }
 
@@ -193,7 +196,10 @@ func QueryBalancesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		if !common.RPCMethods["GET"][config.QueryBalances].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBalances].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBalances].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBalancesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -210,6 +216,6 @@ func QueryBalancesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = queryBalancesHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBalances].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBalances].CacheEnabled)
 	}
 }

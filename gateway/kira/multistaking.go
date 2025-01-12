@@ -134,7 +134,10 @@ func QueryStakingPoolRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["GET"][config.QueryStakingPool].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryStakingPool].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryStakingPool].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryStakingPoolRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -148,7 +151,7 @@ func QueryStakingPoolRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = queryStakingPoolHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStakingPool].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStakingPool].CacheEnabled)
 	}
 }
 
@@ -265,7 +268,10 @@ func QueryUndelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		if !common.RPCMethods["GET"][config.QueryUndelegations].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryUndelegations].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryUndelegations].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryUndelegationsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -279,7 +285,7 @@ func QueryUndelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = queryUndelegationsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryUndelegations].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryUndelegations].CacheEnabled)
 	}
 }
 
@@ -394,7 +400,10 @@ func QueryDelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["GET"][config.QueryDelegations].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDelegations].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDelegations].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDelegationsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -408,6 +417,6 @@ func QueryDelegationsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = queryDelegationsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDelegations].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDelegations].CacheEnabled)
 	}
 }

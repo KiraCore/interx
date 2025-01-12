@@ -112,7 +112,10 @@ func RegisterEVMAccountsRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMAccounts].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMAccounts].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMAccounts].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `RegisterEVMAccountsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -129,6 +132,6 @@ func RegisterEVMAccountsRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMAccountsRequestHandle(r, chain, address)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMAccounts].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMAccounts].CacheEnabled)
 	}
 }

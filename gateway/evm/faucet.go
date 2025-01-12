@@ -380,7 +380,10 @@ func RegisterEVMFaucetRequest(rpcAddr string) http.HandlerFunc {
 		if !common.RPCMethods["GET"][config.QueryEVMFaucet].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMFaucet].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMFaucet].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `RegisterEVMFaucetRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -394,6 +397,6 @@ func RegisterEVMFaucetRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMFaucetRequestHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CacheEnabled)
 	}
 }

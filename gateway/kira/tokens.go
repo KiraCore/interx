@@ -138,12 +138,18 @@ func QueryKiraTokensAliasesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		log.CustomLogger().Info("[query-tokens-aliases] Entering token aliases query")
+		log.CustomLogger().Info("`query-tokens-aliases` Starting token aliases request...",
+			"rpcAddr", rpcAddr,
+			"Endpoint", request.Endpoint,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryKiraTokensAliases].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryKiraTokensAliases].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryKiraTokensAliases].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryKiraTokensAliasesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -157,7 +163,10 @@ func QueryKiraTokensAliasesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = queryKiraTokensAliasesHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraTokensAliases].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraTokensAliases].CacheEnabled)
+		log.CustomLogger().Info("`query-tokens-aliases` Finished token aliases request...",
+			"response", response.Response,
+		)
 	}
 }
 
@@ -206,7 +215,10 @@ func QueryKiraTokensRatesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) 
 		if !common.RPCMethods["GET"][config.QueryKiraTokensRates].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryKiraTokensRates].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryKiraTokensRates].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryKiraTokensRatesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -220,6 +232,6 @@ func QueryKiraTokensRatesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) 
 			response.Response, response.Error, statusCode = queryKiraTokensRatesHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraTokensRates].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraTokensRates].CacheEnabled)
 	}
 }

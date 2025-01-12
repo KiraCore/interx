@@ -39,7 +39,10 @@ func QueryAccountsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		if !common.RPCMethods["GET"][config.QueryAccounts].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryAccounts].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryAccounts].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAccountsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
@@ -56,6 +59,6 @@ func QueryAccountsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = queryAccountsHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAccounts].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAccounts].CacheEnabled)
 	}
 }
