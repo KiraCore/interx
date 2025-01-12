@@ -6,17 +6,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/gateway"
 	"github.com/KiraCore/interx/log"
 	_ "github.com/KiraCore/interx/statik"
 	"github.com/tyler-smith/go-bip39"
-	"google.golang.org/grpc/grpclog"
 )
-
-// Enable or disable logging by setting the environment variable
-const ENABLE_LOGS = "true"
 
 func printUsage() {
 	fmt.Println("Interx Daemon (server)")
@@ -70,7 +65,7 @@ func main() {
 
 	initCacheDirPtr := initCommand.String("cache_dir", "", "The interx cache directory path.")
 	initMaxCacheSize := initCommand.String("max_cache_size", "2GB", "The maximum cache size.")
-	initCachingDuration := initCommand.Int64("caching_duration", 5, "The caching clear duration in seconds.")
+	initCacheDuration := initCommand.Int64("cache_duration", 5, "The caching clear duration in seconds.")
 	initMaxDownloadSize := initCommand.String("download_file_size_limitation", "10MB", "The maximum download file size.")
 
 	initFaucetMnemonicPtr := initCommand.String("faucet_mnemonic", "", "The interx faucet mnemonic file path or seeds.")
@@ -126,7 +121,7 @@ func main() {
 					faucetMnemonic = *initSigningMnemonicPtr
 				}
 
-				err := os.MkdirAll(*initHomePtr, os.ModePerm)
+				err := os.MkdirAll(*initHomePtr, os.ModePerm) // create root
 				if err != nil {
 					fmt.Printf("Not available to create folder: %s\n", *initHomePtr)
 				}
@@ -157,7 +152,7 @@ func main() {
 					*initHaltedAvgBlockTimes,
 					cacheDir,
 					*initMaxCacheSize,
-					*initCachingDuration,
+					*initCacheDuration,
 					*initMaxDownloadSize,
 					faucetMnemonic,
 					*initFaucetTimeLimit,
@@ -209,13 +204,9 @@ func main() {
 				configFilePath := *startHomePtr + "/config.json"
 				log.CustomLogger().Info("Config Path", configFilePath)
 
-				// Adds gRPC internal logs. This is quite verbose, so adjust as desired!
-				log := common.GetLogger()
-				grpclog.SetLoggerV2(log)
+				err := gateway.Run(configFilePath)
+				log.CustomLogger().Error("failed to run the gateway", err)
 
-				err := gateway.Run(configFilePath, log)
-
-				log.Fatalln(err)
 				return
 			}
 		case "version":

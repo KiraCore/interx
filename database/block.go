@@ -2,7 +2,6 @@ package database
 
 import (
 	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/log"
 	"github.com/sonyarouje/simdb/db"
 )
 
@@ -29,13 +28,7 @@ func LoadBlockDbDriver() {
 
 // GetBlockTime is a function to get blockTime
 func GetBlockTime(height int64) (int64, error) {
-
-	log.CustomLogger().Info("Starting 'GetBlockTime' request...")
-
 	if blockDb == nil {
-		log.CustomLogger().Error("[GetBlockTime] block db is null.",
-			"height", height,
-		)
 		panic("cache dir not set")
 	}
 
@@ -49,18 +42,12 @@ func GetBlockTime(height int64) (int64, error) {
 		return 0, err
 	}
 
-	log.CustomLogger().Info("Finished 'GetBlockTime' request.")
-
 	return data.Timestamp, nil
 }
 
 // GetAllBlocks is a function to get all blockTimes
 func GetAllBlocks() []interface{} {
-
-	log.CustomLogger().Info("Starting 'GetAllBlocks' request...")
-
 	if blockDb == nil {
-		log.CustomLogger().Error("[GetBlockTime] block db is null.")
 		panic("cache dir not set")
 	}
 
@@ -68,18 +55,12 @@ func GetAllBlocks() []interface{} {
 	rawData := blockDb.Open(BlockData{}).RawArray()
 	EnableStdout()
 
-	log.CustomLogger().Info("Finished 'GetAllBlocks' request.")
-
 	return rawData
 }
 
 // AddBlockTime is a function to add blockTime
 func AddBlockTime(height int64, timestamp int64) {
-
-	log.CustomLogger().Info("Starting 'AddBlockTime' request...")
-
 	if blockDb == nil {
-		log.CustomLogger().Error("[AddBlockTime] block db is null.")
 		panic("cache dir not set")
 	}
 
@@ -100,8 +81,6 @@ func AddBlockTime(height int64, timestamp int64) {
 		}
 
 	}
-
-	log.CustomLogger().Info("Finished 'AddBlockTime' request.")
 }
 
 var (

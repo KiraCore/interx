@@ -321,7 +321,7 @@ func LoadConfig(configFilePath string) {
 
 	Config.Cache.CacheDir = configFromFile.Cache.CacheDir
 	Config.Cache.MaxCacheSize = parseSizeString(configFromFile.Cache.MaxCacheSize)
-	Config.Cache.CachingDuration = configFromFile.Cache.CachingDuration
+	Config.Cache.CacheDuration = configFromFile.Cache.CacheDuration
 	Config.Cache.DownloadFileSizeLimitation = parseSizeString(configFromFile.Cache.DownloadFileSizeLimitation)
 
 	// Display cache configurations
@@ -330,7 +330,7 @@ func LoadConfig(configFilePath string) {
 
 	fmt.Println("Interx Cache CacheDir                  : ", Config.Cache.CacheDir)
 	fmt.Println("Interx Cache MaxCacheSize              : ", Config.Cache.MaxCacheSize)
-	fmt.Println("Interx Cache CachingDuration           : ", Config.Cache.CachingDuration)
+	fmt.Println("Interx Cache CachingDuration           : ", Config.Cache.CacheDuration)
 	fmt.Println("Interx Cache DownloadFileSizeLimitation: ", Config.Cache.DownloadFileSizeLimitation)
 
 	// RPC Configuration
