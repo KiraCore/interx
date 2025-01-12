@@ -282,13 +282,13 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) error {
 	return nil
 }
 
-func SyncValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string, isLog bool) {
+func SyncValidators(gwCosmosmux *runtime.ServeMux, gatewayAddr string) {
 	lastBlock := int64(0)
 	for {
 		if common.NodeStatus.Block != lastBlock {
 			err := QueryValidators(gwCosmosmux, gatewayAddr)
 
-			if err != nil && isLog {
+			if err != nil {
 				log.CustomLogger().Error("[SyncValidators] Failed to fetch validators.",
 					"error", err,
 				)

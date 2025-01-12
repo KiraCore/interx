@@ -322,13 +322,13 @@ func GetCachedProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAd
 	return database.GetProposals()
 }
 
-func SyncProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAddr string, isLog bool) {
+func SyncProposals(gwCosmosmux *runtime.ServeMux, gatewayAddr string, rpcAddr string) {
 	lastBlock := int64(0)
 	for {
 		if common.NodeStatus.Block != lastBlock {
 			err := QueryProposals(gwCosmosmux, gatewayAddr, rpcAddr)
 
-			if err != nil && isLog {
+			if err != nil {
 				log.CustomLogger().Error("[sync-proposals] Failed to query proposals: ", err)
 			}
 

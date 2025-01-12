@@ -232,7 +232,7 @@ func getBlock(rpcAddr string, height string) (*struct {
 	Time    string `json:"time"`
 }, error) {
 	url := fmt.Sprintf("%s/block?height=%s", rpcAddr, height)
-	log.CustomLogger().Info("getBlock", url)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -318,7 +318,7 @@ func getBlockFromInterx(rpcAddr string, height string) (*struct {
 	Time    string `json:"time"`
 }, error) {
 	url := fmt.Sprintf("%s/api/block/%s", rpcAddr, height)
-	log.CustomLogger().Info("getBlockFromInterx", url)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -405,7 +405,7 @@ func getGeoData(ipAddr string) GeoData {
 	return geodata
 }
 
-func NodeDiscover(rpcAddr string, isLog bool) {
+func NodeDiscover(rpcAddr string) {
 	initPrivateIps()
 
 	idOfPubList := make(map[string]int)
@@ -467,10 +467,6 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 
 			ipAddr := uniqueIPAddresses[index]
 			index++
-
-			if isLog {
-				log.CustomLogger().Info("[node-discovery] ", ipAddr)
-			}
 
 			kiraStatus, err := QueryStatus(ipAddr)
 			if err != nil {
@@ -687,10 +683,6 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 		InterxP2PNodeListResponse.Scanning = false
 		SnapNodeListResponse.Scanning = false
 		global.Mutex.Unlock()
-
-		if isLog {
-			log.CustomLogger().Info("[node-discovery] finished!")
-		}
 
 		time.Sleep(10 * time.Second)
 	}

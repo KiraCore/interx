@@ -14,7 +14,7 @@ import (
 	"github.com/KiraCore/interx/log"
 )
 
-func getStatus(rpcAddr string, isLog bool) {
+func getStatus(rpcAddr string) {
 
 	log.CustomLogger().Info("Starting `getStatus` request...",
 		"rpc Addr", rpcAddr,
@@ -59,13 +59,10 @@ func getStatus(rpcAddr string, isLog bool) {
 	common.NodeStatus.Blocktime = result.Result.Block.Header.Time
 	global.Mutex.Unlock()
 
-	if isLog {
-
-		log.CustomLogger().Info("Processed `getStatus` (new block) height",
-			"block", common.NodeStatus.Block,
-			"time", common.NodeStatus.Blocktime,
-		)
-	}
+	log.CustomLogger().Info("Processed `getStatus` (new block) height",
+		"block", common.NodeStatus.Block,
+		"time", common.NodeStatus.Blocktime,
+	)
 
 	// save block height/time
 	blockTime, _ := time.Parse(time.RFC3339, result.Result.Block.Header.Time)
@@ -76,18 +73,16 @@ func getStatus(rpcAddr string, isLog bool) {
 }
 
 // SyncStatus is a function for syncing sekaid status.
-func SyncStatus(rpcAddr string, isLog bool) {
+func SyncStatus(rpcAddr string) {
 	common.LoadAllBlocks()
 	for {
-		getStatus(rpcAddr, isLog)
+		getStatus(rpcAddr)
 
-		if isLog {
-			log.CustomLogger().Info("Processed `getStatus` Syncing node status",
-				"Chain_id", common.NodeStatus.Chainid,
-				"Block", common.NodeStatus.Block,
-				"Blocktime", common.NodeStatus.Blocktime,
-			)
-		}
+		log.CustomLogger().Info("Processed `getStatus` Syncing node status",
+			"Chain_id", common.NodeStatus.Chainid,
+			"Block", common.NodeStatus.Block,
+			"Blocktime", common.NodeStatus.Blocktime,
+		)
 
 		time.Sleep(time.Duration(config.Config.Block.StatusSync) * time.Second)
 	}

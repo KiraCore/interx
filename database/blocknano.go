@@ -2,7 +2,6 @@ package database
 
 import (
 	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/log"
 	"github.com/sonyarouje/simdb/db"
 )
 
@@ -29,11 +28,7 @@ func LoadBlockNanoDbDriver() {
 
 // GetBlockNanoTime is a function to get blockTime
 func GetBlockNanoTime(height int64) (int64, error) {
-
-	log.CustomLogger().Info("Starting 'GetBlockNanoTime' request...")
-
 	if blockNanoDb == nil {
-		log.CustomLogger().Error("[GetBlockNanoTime] block Nano Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -47,18 +42,12 @@ func GetBlockNanoTime(height int64) (int64, error) {
 		return 0, err
 	}
 
-	log.CustomLogger().Info("Finished 'GetBlockNanoTime' request.")
-
 	return data.Timestamp, nil
 }
 
 // AddBlockNanoTime is a function to add blockTime
 func AddBlockNanoTime(height int64, timestamp int64) {
-
-	log.CustomLogger().Info("Starting 'AddBlockNanoTime' request...")
-
 	if blockNanoDb == nil {
-		log.CustomLogger().Error("[AddBlockNanoTime] block Nano Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -79,8 +68,6 @@ func AddBlockNanoTime(height int64, timestamp int64) {
 		}
 
 	}
-
-	log.CustomLogger().Info("Finished 'AddBlockNanoTime' request.")
 }
 
 var (
