@@ -1,16 +1,13 @@
 package common
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
+	"syscall"
 	"time"
 
 	"github.com/KiraCore/interx/config"
@@ -31,29 +28,38 @@ func clearFolder(folderPath string) {
 	}
 }
 
+// disk usage of path/disk
+func DiskUsage(path string) (disk types.DiskStatus, err error) {
+	fs := syscall.Statfs_t{}
+	err = syscall.Statfs(path, &fs)
+	if err != nil {
+		log.CustomLogger().Error("[DiskUsage] Failed to get disk usage",
+			"error", err,
+		)
+		return types.DiskStatus{}, err
+	}
+	disk.All = fs.Blocks * uint64(fs.Bsize)
+	disk.Free = fs.Bfree * uint64(fs.Bsize)
+	disk.Used = disk.All - disk.Free
+	log.CustomLogger().Info("`DiskUsage` Get disk usage",
+		"disk", disk,
+	)
+	return disk, nil
+}
+
 func getFolderSize(folderPath string) (int64, error) {
-	cmd := exec.Command("du", "-sb", folderPath)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-
+	// Getting filesystem statistics
+	disk, err := DiskUsage(folderPath)
 	if err != nil {
-		return 0, fmt.Errorf("[AddCache][cmd.Run] failed to run du command")
+		log.CustomLogger().Error("[getFolderSize] Failed to get folder size",
+			"error", err,
+		)
+		return 0, err
 	}
-
-	// Parse the output of du command
-	output := strings.Fields(out.String())
-	if len(output) == 0 {
-		return 0, fmt.Errorf("[AddCache][getFolderSize] unexpected output from du command")
-	}
-
-	// Convert size to int64
-	size, err := strconv.ParseInt(output[0], 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("[AddCache][ParseInt] failed to convert output to int")
-	}
-
-	return size, nil
+	log.CustomLogger().Info("`getFolderSize` Get folder size",
+		"disk usage", int64(disk.Used),
+	)
+	return int64(disk.Used), nil
 }
 
 // AddCache is a function to save value to cache
@@ -102,6 +108,11 @@ func AddCache(chainIDHash string, endpointHash string, requestHash string, value
 		)
 		return err
 	}
+
+	log.CustomLogger().Info("`AddCache` Folder size",
+		"MAX_CACHE_SIZE", MAX_CACHE_SIZE,
+		"size", size,
+	)
 
 	// Check if the folder size exceeds the limit
 	if size > MAX_CACHE_SIZE {
