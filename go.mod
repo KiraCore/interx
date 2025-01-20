@@ -23,7 +23,6 @@ require (
 	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.8.2
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible
-	github.com/sirupsen/logrus v1.9.0
 	github.com/sonyarouje/simdb v0.0.0-20181202125413-c2488dfc374a
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.0.2
