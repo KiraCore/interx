@@ -12,6 +12,7 @@ import (
 	"os"
 	"testing"
 
+	"cosmossdk.io/math"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	"github.com/KiraCore/interx/config"
@@ -138,7 +139,7 @@ func (s *govServer) NetworkProperties(ctx context.Context, in *govTypes.NetworkP
 		Properties: &govTypes.NetworkProperties{
 			MinTxFee:   777,
 			MaxTxFee:   888,
-			VoteQuorum: 999,
+			VoteQuorum: math.LegacyNewDecWithPrec(33, 2),
 		},
 	}, nil
 }
