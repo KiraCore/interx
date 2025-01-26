@@ -187,24 +187,6 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 
 	//=============== faucet address ===============
 
-	amount, found := configFromFile.Faucet.FaucetAmounts["ukex"]
-	if found {
-		configFromFile.Faucet.FaucetAmounts[defaultDenom] = amount
-		delete(configFromFile.Faucet.FaucetAmounts, "ukex")
-	}
-
-	amount, found = configFromFile.Faucet.FaucetMinimumAmounts["ukex"]
-	if found {
-		configFromFile.Faucet.FaucetMinimumAmounts[defaultDenom] = amount
-		delete(configFromFile.Faucet.FaucetMinimumAmounts, "ukex")
-	}
-
-	amount, found = configFromFile.Faucet.FeeAmounts["ukex"]
-	if found {
-		configFromFile.Faucet.FeeAmounts[defaultDenom] = amount
-		delete(configFromFile.Faucet.FeeAmounts, "ukex")
-	}
-
 	for denom, coinStr := range configFromFile.Faucet.FeeAmounts {
 		configFromFile.Faucet.FeeAmounts[denom] = strings.ReplaceAll(coinStr, "ukex", defaultDenom)
 	}
