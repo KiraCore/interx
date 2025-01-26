@@ -102,11 +102,15 @@ func main() {
 		switch os.Args[1] {
 		case "init":
 
-			os.Setenv("PrintLogs", "true")
+			err := log.InitializeLogger(true)
+			if err != nil {
+				log.CustomLogger().Error("Failed to initialize logs.")
+				panic(err)
+			}
 
 			log.CustomLogger().Info("Initializing server with 'interxd init' command.")
 
-			err := initCommand.Parse(os.Args[2:])
+			err = initCommand.Parse(os.Args[2:])
 			if err != nil {
 				log.CustomLogger().Error("Failed to initialize server with 'interxd init' command.")
 				panic(err)
@@ -185,19 +189,27 @@ func main() {
 			if startCommand.Parsed() {
 
 				if *enableLogs {
-					os.Setenv("PrintLogs", "true")
+					err := log.InitializeLogger(true)
+					if err != nil {
+						log.CustomLogger().Error("Failed to initialize logs.")
+						panic(err)
+					}
 					defer log.RecoverFromPanic() // Ensure we recover from any panic
 
 					// Monitor system resources
-					go log.Monitor(25 * time.Second)
+					go log.Monitor(25*time.Second, true)
 
 					log.CustomLogger().Info("Detailed logging is enabled.")
 				} else {
-					os.Setenv("PrintLogs", "false")
+					err := log.InitializeLogger(false)
+					if err != nil {
+						log.CustomLogger().Error("Failed to initialize logs.")
+						panic(err)
+					}
 				}
 
 				// Example: Call a function to start your application
-				fmt.Println("Starting the server...")
+				log.CustomLogger().Info("Starting the server...")
 
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
@@ -211,18 +223,24 @@ func main() {
 			}
 		case "version":
 
-			os.Setenv("PrintLogs", "true")
+			err := log.InitializeLogger(true)
+			if err != nil {
+				log.CustomLogger().Error("Failed to initialize logs.")
+				panic(err)
+			}
 
 			log.CustomLogger().Info("Starting server with 'interxd version' command.")
 
-			err := versionCommand.Parse(os.Args[2:])
+			err = versionCommand.Parse(os.Args[2:])
 			if err != nil {
 				log.CustomLogger().Error("Failed to find INTERX version.")
 				panic(err)
 			}
 
 			if versionCommand.Parsed() {
-				fmt.Println(config.InterxVersion)
+				log.CustomLogger().Info("Successfully find Interx version",
+					"InterxVersion", config.InterxVersion,
+				)
 				return
 			}
 		default:

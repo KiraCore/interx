@@ -3,20 +3,30 @@ package log
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	cosmosLog "cosmossdk.io/log"
 )
 
-func CustomLogger() cosmosLog.Logger {
+var PrintLoges bool
 
-	printLogs, err := strconv.ParseBool(os.Getenv("PrintLogs"))
-	if err != nil {
-		fmt.Println("[CustomLogger] Error parsing PrintLogs environment variable:", err)
+// InitializeLogger sets up the logging behavior based on the value of printLogs.
+func InitializeLogger(printLogs bool) error {
+	// Handle logging behavior based on the value of printLogs
+	if printLogs {
+		fmt.Println("Custom Logging is enabled.")
+		PrintLoges = true
+	} else {
+		fmt.Println("Custom Logging is disabled.")
+		PrintLoges = false
 	}
 
-	if !printLogs {
+	return nil
+}
+
+func CustomLogger() cosmosLog.Logger {
+
+	if !PrintLoges {
 		return cosmosLog.NewNopLogger()
 	}
 
