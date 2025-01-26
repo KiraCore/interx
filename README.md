@@ -343,7 +343,7 @@ QueryTransactionHash is a function to query transaction details from transaction
 
 GET <http://0.0.0.0:11000/api/cosmos/txs/0x4A41257AC228F6CE476E9C9AD67BB98057412A22B035E1C0A4CCEB0E4E8E364D>
 
-### `/api/faucet`
+### `/api/kira/faucet`
 
 Faucet is a function to claim tokens to the account for free. Returns the available faucet amount when 'claim' and 'token' is unset.
 
@@ -354,8 +354,8 @@ Faucet is a function to claim tokens to the account for free. Returns the availa
 
 2- Example
 
-GET <http://0.0.0.0:11000/api/faucet>
-GET <http://0.0.0.0:11000/api/faucet?claim=kira1kdnep4lm3z6yd3pah0rzfu3dvudgwfjejs9ans&token=stake>
+GET <http://0.0.0.0:11000/api/kira/faucet>
+GET <http://0.0.0.0:11000/api/kira/faucet?claim=kira1kdnep4lm3z6yd3pah0rzfu3dvudgwfjejs9ans&token=stake>
 
 ### `/api/withdraws`
 
