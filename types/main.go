@@ -76,6 +76,7 @@ type ResponseSign struct {
 type TransactionResponse struct {
 	Time      int64         `json:"time"`
 	Hash      string        `json:"hash"`
+	Height    int64         `json:"height"`
 	Status    string        `json:"status"`
 	Direction string        `json:"direction"`
 	Memo      string        `json:"memo"`
@@ -337,3 +338,8 @@ const (
 	// POST is a constant to refer POST HTTP Method
 	POST string = "POST"
 )
+
+type TxsResponse struct {
+	Transactions []TransactionResponse `json:"transactions"`
+	TotalCount   int                   `json:"total_count"`
+}
