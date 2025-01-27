@@ -1,17 +1,6 @@
 package interx
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"os"
-
-	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/database"
-	"github.com/KiraCore/interx/test"
-	"github.com/KiraCore/interx/types"
-	tmjson "github.com/cometbft/cometbft/libs/json"
-	tmRPCTypes "github.com/cometbft/cometbft/rpc/core/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -26,78 +15,78 @@ type BlockQueryTestSuite struct {
 func (suite *BlockQueryTestSuite) SetupTest() {
 }
 
-func (suite *BlockQueryTestSuite) TestInitBlockQuery() {
-	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
-	response, error, statusCode := queryBlocksHandle(test.TENDERMINT_RPC, r)
+// func (suite *BlockQueryTestSuite) TestInitBlockQuery() {
+// 	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
+// 	response, error, statusCode := queryBlocksHandle(test.TENDERMINT_RPC, r)
 
-	byteData, err := json.Marshal(response)
-	if err != nil {
-		suite.Assert()
-	}
+// 	byteData, err := json.Marshal(response)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	result := tmRPCTypes.ResultBlock{}
-	err = tmjson.Unmarshal(byteData, &result)
-	if err != nil {
-		suite.Assert()
-	}
+// 	result := tmRPCTypes.ResultBlock{}
+// 	err = tmjson.Unmarshal(byteData, &result)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	resultBlock := tmRPCTypes.ResultBlock{}
-	err = tmjson.Unmarshal(suite.blockQueryResponse.Result, &resultBlock)
-	suite.Require().NoError(err)
-	suite.Require().EqualValues(result.Block.Header.Time.Unix(), resultBlock.Block.Header.Time.Unix())
-	suite.Require().Nil(error)
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-}
+// 	resultBlock := tmRPCTypes.ResultBlock{}
+// 	err = tmjson.Unmarshal(suite.blockQueryResponse.Result, &resultBlock)
+// 	suite.Require().NoError(err)
+// 	suite.Require().EqualValues(result.Block.Header.Time.Unix(), resultBlock.Block.Header.Time.Unix())
+// 	suite.Require().Nil(error)
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// }
 
-func (suite *BlockQueryTestSuite) TestHeightOrHashBlockQuery() {
-	response, error, statusCode := queryBlockByHeightOrHashHandle(test.TENDERMINT_RPC, "1")
+// func (suite *BlockQueryTestSuite) TestHeightOrHashBlockQuery() {
+// 	response, error, statusCode := queryBlockByHeightOrHashHandle(test.TENDERMINT_RPC, "1")
 
-	byteData, err := json.Marshal(response)
-	if err != nil {
-		suite.Assert()
-	}
+// 	byteData, err := json.Marshal(response)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	result := tmRPCTypes.ResultBlock{}
-	err = tmjson.Unmarshal(byteData, &result)
-	if err != nil {
-		suite.Assert()
-	}
+// 	result := tmRPCTypes.ResultBlock{}
+// 	err = tmjson.Unmarshal(byteData, &result)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	resultBlock := tmRPCTypes.ResultBlock{}
-	err = tmjson.Unmarshal(suite.blockQueryResponse.Result, &resultBlock)
-	suite.Require().NoError(err)
-	suite.Require().EqualValues(result.Block.Header.Time.Unix(), resultBlock.Block.Header.Time.Unix())
-	suite.Require().Nil(error)
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-}
+// 	resultBlock := tmRPCTypes.ResultBlock{}
+// 	err = tmjson.Unmarshal(suite.blockQueryResponse.Result, &resultBlock)
+// 	suite.Require().NoError(err)
+// 	suite.Require().EqualValues(result.Block.Header.Time.Unix(), resultBlock.Block.Header.Time.Unix())
+// 	suite.Require().Nil(error)
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// }
 
-func (suite *BlockQueryTestSuite) TestBlockTransactionsHandle() {
-	config.Config.Cache.CacheDir = "./"
-	_ = os.Mkdir("./db", 0777)
+// func (suite *BlockQueryTestSuite) TestBlockTransactionsHandle() {
+// 	config.Config.Cache.CacheDir = "./"
+// 	_ = os.Mkdir("./db", 0777)
 
-	database.LoadBlockDbDriver()
-	database.LoadBlockNanoDbDriver()
-	response, error, statusCode := QueryBlockTransactionsHandle(test.TENDERMINT_RPC, "1")
+// 	database.LoadBlockDbDriver()
+// 	database.LoadBlockNanoDbDriver()
+// 	response, error, statusCode := QueryBlockTransactionsHandle(test.TENDERMINT_RPC, "1")
 
-	byteData, err := json.Marshal(response)
-	if err != nil {
-		suite.Assert()
-	}
+// 	byteData, err := json.Marshal(response)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	result := types.TransactionSearchResult{}
-	err = json.Unmarshal(byteData, &result)
-	if err != nil {
-		suite.Assert()
-	}
+// 	result := types.TransactionSearchResult{}
+// 	err = json.Unmarshal(byteData, &result)
+// 	if err != nil {
+// 		suite.Assert()
+// 	}
 
-	resultTxSearch := tmRPCTypes.ResultTxSearch{}
-	err = tmjson.Unmarshal(suite.blockTransactionsQueryResponse.Result, &resultTxSearch)
-	suite.Require().NoError(err)
-	suite.Require().EqualValues(result.TotalCount, resultTxSearch.TotalCount)
-	suite.Require().Nil(error)
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-	os.RemoveAll("./db")
-}
+// 	resultTxSearch := tmRPCTypes.ResultTxSearch{}
+// 	err = tmjson.Unmarshal(suite.blockTransactionsQueryResponse.Result, &resultTxSearch)
+// 	suite.Require().NoError(err)
+// 	suite.Require().EqualValues(result.TotalCount, resultTxSearch.TotalCount)
+// 	suite.Require().Nil(error)
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// 	os.RemoveAll("./db")
+// }
 
 // func TestBlockQueryTestSuite(t *testing.T) {
 // 	testSuite := new(BlockQueryTestSuite)

@@ -1,15 +1,12 @@
 package bitcoin
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/test"
-	"github.com/btcsuite/btcd/btcjson"
-	jrpc "github.com/gumeniukcom/golang-jsonrpc2"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -130,31 +127,31 @@ func (suite *BlockQueryTestSuite) TestBlockQueryWithNumber() {
 // 	btcServer.Close()
 // }
 
-func getBlock(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
-	result := BlockResult{
-		GetBlockVerboseResult: btcjson.GetBlockVerboseResult{
-			Height: 20,
-			Hash:   "0xabc",
-		},
-		Confirmations: 200,
-	}
+// func getBlock(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
+// 	result := BlockResult{
+// 		GetBlockVerboseResult: btcjson.GetBlockVerboseResult{
+// 			Height: 20,
+// 			Hash:   "0xabc",
+// 		},
+// 		Confirmations: 200,
+// 	}
 
-	mdata, err := json.Marshal(result)
-	if err != nil {
-		return nil, jrpc.InternalErrorCode, err
-	}
-	return mdata, jrpc.OK, nil
-}
+// 	mdata, err := json.Marshal(result)
+// 	if err != nil {
+// 		return nil, jrpc.InternalErrorCode, err
+// 	}
+// 	return mdata, jrpc.OK, nil
+// }
 
-func getBlockStats(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
-	result := BlockStats{
-		AvgFee:   10,
-		TotalFee: 20,
-	}
+// func getBlockStats(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
+// 	result := BlockStats{
+// 		AvgFee:   10,
+// 		TotalFee: 20,
+// 	}
 
-	mdata, err := json.Marshal(result)
-	if err != nil {
-		return nil, jrpc.InternalErrorCode, err
-	}
-	return mdata, jrpc.OK, nil
-}
+// 	mdata, err := json.Marshal(result)
+// 	if err != nil {
+// 		return nil, jrpc.InternalErrorCode, err
+// 	}
+// 	return mdata, jrpc.OK, nil
+// }

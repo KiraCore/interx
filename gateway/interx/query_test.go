@@ -1,15 +1,7 @@
 package interx
 
 import (
-	"encoding/json"
-	"net/http"
-	"os"
-
-	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/test"
 	"github.com/KiraCore/interx/types"
-	tmjson "github.com/cometbft/cometbft/libs/json"
-	tmRPCTypes "github.com/cometbft/cometbft/rpc/core/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -97,27 +89,27 @@ func (suite *StatusTestSuite) SetupTest() {
 // 	os.RemoveAll("./db")
 // }
 
-func (suite *StatusTestSuite) TestAddrBookQuery() {
-	err := os.Mkdir("./config", 0777)
-	if err != nil {
-		panic(err)
-	}
+// func (suite *StatusTestSuite) TestAddrBookQuery() {
+// 	err := os.Mkdir("./config", 0777)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	_, err = os.Create("./config/test_addr.json")
-	if err != nil {
-		panic(err)
-	}
+// 	_, err = os.Create("./config/test_addr.json")
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	config.Config.AddrBooks = []string{
-		"./config/test_addr.json",
-	}
-	_, _, statusCode := queryAddrBookHandler("")
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-	err = os.RemoveAll("./config")
-	if err != nil {
-		panic(err)
-	}
-}
+// 	config.Config.AddrBooks = []string{
+// 		"./config/test_addr.json",
+// 	}
+// 	_, _, statusCode := queryAddrBookHandler("")
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// 	err = os.RemoveAll("./config")
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
 
 // func (suite *StatusTestSuite) TestStatusHandler() {
 // 	config.Config.Cache.CacheDir = "./"
@@ -167,26 +159,26 @@ func (suite *StatusTestSuite) TestAddrBookQuery() {
 // 	os.RemoveAll("./reference")
 // }
 
-func (suite *StatusTestSuite) TestNetInfoHandler() {
-	res, _, statusCode := queryNetInfoHandler(test.TENDERMINT_RPC)
-	bz, _ := json.Marshal(res)
+// func (suite *StatusTestSuite) TestNetInfoHandler() {
+// 	res, _, statusCode := queryNetInfoHandler(test.TENDERMINT_RPC)
+// 	bz, _ := json.Marshal(res)
 
-	tmRes := tmRPCTypes.ResultNetInfo{}
-	suiteRes := tmRPCTypes.ResultNetInfo{}
+// 	tmRes := tmRPCTypes.ResultNetInfo{}
+// 	suiteRes := tmRPCTypes.ResultNetInfo{}
 
-	err := tmjson.Unmarshal(suite.netInfoQueryResponse.Result, &suiteRes)
-	if err != nil {
-		panic(err)
-	}
+// 	err := tmjson.Unmarshal(suite.netInfoQueryResponse.Result, &suiteRes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	err = json.Unmarshal(bz, &tmRes)
-	if err != nil {
-		panic(err)
-	}
+// 	err = json.Unmarshal(bz, &tmRes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	suite.Require().EqualValues(suiteRes.NPeers, tmRes.NPeers)
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-}
+// 	suite.Require().EqualValues(suiteRes.NPeers, tmRes.NPeers)
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// }
 
 // func TestStatusTestSuite(t *testing.T) {
 // 	testSuite := new(StatusTestSuite)
