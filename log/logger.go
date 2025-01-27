@@ -2,12 +2,17 @@ package log
 
 import (
 	"os"
+	"sync"
 	"time"
 
 	cosmosLog "cosmossdk.io/log"
 )
 
-var PrintLoges bool
+var (
+	PrintLoges bool
+	once       sync.Once
+	logger     cosmosLog.Logger
+)
 
 // InitializeLogger sets up the logging behavior based on the value of printLogs.
 func InitializeLogger(printLogs bool) error {
@@ -22,17 +27,16 @@ func InitializeLogger(printLogs bool) error {
 }
 
 func CustomLogger() cosmosLog.Logger {
-
-	if !PrintLoges {
-		return cosmosLog.NewNopLogger()
-	}
-
-	// Initialize a new `cosmosLog` logger instance
-	logger := cosmosLog.NewLogger(os.Stderr)
-
-	logger = logger.With(
-		"timestamp", time.Now().UTC().Format(time.RFC3339),
-	)
-
+	once.Do(func() {
+		if PrintLoges {
+			// Create and initialize the logger only once
+			logger = cosmosLog.NewLogger(os.Stderr).With(
+				"timestamp", time.Now().UTC().Format(time.RFC3339),
+			)
+		} else {
+			// Use a no-op logger if logging is disabled
+			logger = cosmosLog.NewNopLogger()
+		}
+	})
 	return logger
 }
