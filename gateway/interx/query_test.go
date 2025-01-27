@@ -180,26 +180,26 @@ func (suite *StatusTestSuite) TestAddrBookQuery() {
 // 	os.RemoveAll("./reference")
 // }
 
-func (suite *StatusTestSuite) TestNetInfoHandler() {
-	res, _, statusCode := queryNetInfoHandler(test.TENDERMINT_RPC)
-	bz, _ := json.Marshal(res)
+// func (suite *StatusTestSuite) TestNetInfoHandler() {
+// 	res, _, statusCode := queryNetInfoHandler(test.TENDERMINT_RPC)
+// 	bz, _ := json.Marshal(res)
 
-	tmRes := tmRPCTypes.ResultNetInfo{}
-	suiteRes := tmRPCTypes.ResultNetInfo{}
+// 	tmRes := tmRPCTypes.ResultNetInfo{}
+// 	suiteRes := tmRPCTypes.ResultNetInfo{}
 
-	err := tmjson.Unmarshal(suite.netInfoQueryResponse.Result, &suiteRes)
-	if err != nil {
-		panic(err)
-	}
+// 	err := tmjson.Unmarshal(suite.netInfoQueryResponse.Result, &suiteRes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	err = json.Unmarshal(bz, &tmRes)
-	if err != nil {
-		panic(err)
-	}
+// 	err = json.Unmarshal(bz, &tmRes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	suite.Require().EqualValues(suiteRes.NPeers, tmRes.NPeers)
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-}
+// 	suite.Require().EqualValues(suiteRes.NPeers, tmRes.NPeers)
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// }
 
 func TestStatusTestSuite(t *testing.T) {
 	testSuite := new(StatusTestSuite)

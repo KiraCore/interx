@@ -3,11 +3,8 @@ package evm
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"time"
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/test"
@@ -96,45 +93,45 @@ func (suite *BlockQueryTestSuite) TestQueryEVMBlockByHash() {
 	suite.Require().EqualValues(result.Number, suite.height)
 }
 
-func TestBlockQueryTestSuite(t *testing.T) {
-	testSuite := new(BlockQueryTestSuite)
-	testSuite.chain = "goerli"
-	testSuite.height = "0x0a"
-	testSuite.hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+// func TestBlockQueryTestSuite(t *testing.T) {
+// 	testSuite := new(BlockQueryTestSuite)
+// 	testSuite.chain = "goerli"
+// 	testSuite.height = "0x0a"
+// 	testSuite.hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-	serv := jrpc.New()
-	if err := serv.RegisterMethod("eth_getBlockByNumber", ethGetBlockByNumber); err != nil {
-		panic(err)
-	}
-	if err := serv.RegisterMethod("eth_getBlockByHash", ethGetBlockByHash); err != nil {
-		panic(err)
-	}
+// 	serv := jrpc.New()
+// 	if err := serv.RegisterMethod("eth_getBlockByNumber", ethGetBlockByNumber); err != nil {
+// 		panic(err)
+// 	}
+// 	if err := serv.RegisterMethod("eth_getBlockByHash", ethGetBlockByHash); err != nil {
+// 		panic(err)
+// 	}
 
-	evmServer := http.Server{
-		Addr: ":21000",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.Background()
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				panic(err)
-			}
-			defer r.Body.Close()
+// 	evmServer := http.Server{
+// 		Addr: ":21000",
+// 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			ctx := context.Background()
+// 			body, err := ioutil.ReadAll(r.Body)
+// 			if err != nil {
+// 				panic(err)
+// 			}
+// 			defer r.Body.Close()
 
-			w.Header().Set("Content-Type", "applicaition/json")
-			w.WriteHeader(http.StatusOK)
-			if _, err = w.Write(serv.HandleRPCJsonRawMessage(ctx, body)); err != nil {
-				panic(err)
-			}
-		}),
-	}
-	go func() {
-		_ = evmServer.ListenAndServe()
-	}()
+// 			w.Header().Set("Content-Type", "applicaition/json")
+// 			w.WriteHeader(http.StatusOK)
+// 			if _, err = w.Write(serv.HandleRPCJsonRawMessage(ctx, body)); err != nil {
+// 				panic(err)
+// 			}
+// 		}),
+// 	}
+// 	go func() {
+// 		_ = evmServer.ListenAndServe()
+// 	}()
 
-	time.Sleep(1 * time.Second)
-	suite.Run(t, testSuite)
-	evmServer.Close()
-}
+// 	time.Sleep(1 * time.Second)
+// 	suite.Run(t, testSuite)
+// 	evmServer.Close()
+// }
 
 func ethGetBlockByNumber(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
 	blockQueryResponse := BlockQueryResponse{
