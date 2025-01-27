@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -343,4 +344,10 @@ func RosettaBuildError(code int, message string, description string, retriable b
 
 func RosettaServeError(code int, data string, message string, statusCode int) (interface{}, interface{}, int) {
 	return nil, RosettaBuildError(code, message, data, true, nil), statusCode
+}
+
+// BuildTxSearchEndpoint creates a tx_search endpoint.
+func BuildTxSearchEndpoint(rpcAddr string, query string, page int, limit int, orderBy string) string {
+	return fmt.Sprintf("%s/tx_search?query=\"%s\"&page=%d&per_page=%d&order_by=\"%s\"",
+		rpcAddr, query, page, limit, orderBy)
 }

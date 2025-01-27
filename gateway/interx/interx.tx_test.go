@@ -2,12 +2,16 @@ package interx
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/test"
@@ -96,7 +100,7 @@ func (suite *InterxTxTestSuite) TestBlockTransactionsHandler() {
 		suite.Assert()
 	}
 
-	resultTxSearch := TxsResponse{}
+	resultTxSearch := types.TxsResponse{}
 	err = json.Unmarshal(suite.blockTransactionsQueryResponse.Result, &resultTxSearch)
 	suite.Require().NoError(err)
 	suite.Require().EqualValues(result.TotalCount, resultTxSearch.TotalCount)
@@ -140,7 +144,7 @@ func TestInterxTxTestSuite(t *testing.T) {
 
 	txMsg := make(map[string]interface{})
 	txMsg["type"] = "send"
-	resBytes, err = json.Marshal(TxsResponse{
+	resBytes, err = json.Marshal(types.TxsResponse{
 		TotalCount: 1,
 		Transactions: []types.TransactionResponse{
 			{
@@ -228,4 +232,37 @@ func TestInterxTxTestSuite(t *testing.T) {
 	suite.Run(t, testSuite)
 
 	tendermintServer.Close()
+}
+
+// Get block height for tx hash from cache or tendermint
+func getBlockHeight(rpcAddr string, hash string) (int64, error) {
+	endpoint := fmt.Sprintf("%s/tx?hash=%s", rpcAddr, hash)
+	common.GetLogger().Info("[query-block] Entering block query: ", endpoint)
+
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		common.GetLogger().Error("[query-block] Unable to connect to ", endpoint)
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+	response := new(tmJsonRPCTypes.RPCResponse)
+
+	if err := json.Unmarshal(respBody, response); err != nil {
+		common.GetLogger().Error("[query-block] Unable to decode response: ", err)
+		return 0, err
+	}
+	if response.Error != nil {
+		common.GetLogger().Error("[query-block] Error response:", response.Error.Message)
+		return 0, errors.New(response.Error.Message)
+	}
+
+	result := new(tmRPCTypes.ResultTx)
+	if err := tmjson.Unmarshal(response.Result, result); err != nil {
+		common.GetLogger().Error("[query-block] Failed to unmarshal result:", err)
+		return 0, fmt.Errorf("error unmarshalling result: %w", err)
+	}
+
+	return result.Height, nil
 }
