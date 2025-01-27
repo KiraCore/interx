@@ -2,267 +2,173 @@ package interx
 
 import (
 	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/database"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-
-	"os"
-
-	cosmosAuth "github.com/KiraCore/interx/proto-gen/cosmos/auth/v1beta1"
-	cosmosBank "github.com/KiraCore/interx/proto-gen/cosmos/bank/v1beta1"
-	kiraGov "github.com/KiraCore/interx/proto-gen/kira/gov"
-	kiraSlashing "github.com/KiraCore/interx/proto-gen/kira/slashing/v1beta1"
-	kiraSpending "github.com/KiraCore/interx/proto-gen/kira/spending"
-	kiraStaking "github.com/KiraCore/interx/proto-gen/kira/staking"
-	kiraTokens "github.com/KiraCore/interx/proto-gen/kira/tokens"
-	kiraUbi "github.com/KiraCore/interx/proto-gen/kira/ubi"
-	kiraUpgrades "github.com/KiraCore/interx/proto-gen/kira/upgrade"
-	"github.com/KiraCore/interx/test"
-	"github.com/KiraCore/interx/types"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/go-bip39"
-	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
+
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
-var (
-	port        = flag.Int("port", 50051, "The server port")
-	addr        = flag.String("addr", "localhost:50051", "the address to connect to")
-	faucet_addr = "cosmos1jae3cq9c8y2lnsmh9q0rf7gjlwsglenkttgu85"
-	user_addr   = "cosmos18x8js8kfyrlmqtnzcqzfjs3qhackxep5ww4nx7"
-	mnemonic    = "slush panic rifle trust delay exist reduce submit female figure alert ugly rally clever expose humor category regular engine casual blanket carry tape museum"
+const (
+	FAUCET_ADDRESS   = "kira16gjh36qaxr2u2ltsraqnvvg2wywtk0gdug2r2u"
+	RECEIVER_ADDRESS = "kira15xt4fm40hl50ufdf9sxmdlkn9cn5w9gk053y3l"
+	TOKEN            = "ukex"
+	CLAIM_AMOUNT     = 10000
+	PREFIX           = "kira"
+	MENEMONIC        = "marine code consider stuff paddle junk pond reduce undo they hamster rubber cereal purpose practice own early blast pipe match agent baby nice fetch"
 )
 
-// GetGrpcServeMux is a function to get ServerMux for GRPC server.
-func GetGrpcServeMux(grpcAddr string) (*runtime.ServeMux, error) {
-	// Create a client connection to the gRPC Server we just started.
-	// This is where the gRPC-Gateway proxies the requests.
-	// WITH_TRANSPORT_CREDENTIALS: Empty parameters mean set transport security.
-	security := grpc.WithInsecure()
+func TestSendingTransaction1(t *testing.T) {
 
-	// With transport credentials
-	// if strings.ToLower(os.Getenv("WITH_TRANSPORT_CREDENTIALS")) == "true" {
-	// 	security = grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(insecure.CertPool, ""))
-	// }
+	sdk.GetConfig().SetBech32PrefixForAccount(PREFIX, sdk.PrefixPublic)
 
-	conn, err := grpc.DialContext(
-		context.Background(),
-		grpcAddr,
-		security,
-		grpc.WithBlock(),
-	)
-
+	txBuilder := config.EncodingCg.TxConfig.NewTxBuilder()
+	msg := banktypes.NewMsgSend(sdk.MustAccAddressFromBech32(FAUCET_ADDRESS), sdk.MustAccAddressFromBech32(RECEIVER_ADDRESS), sdk.NewCoins(sdk.NewInt64Coin(TOKEN, CLAIM_AMOUNT)))
+	err := txBuilder.SetMsgs(msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial server: %w", err)
+		fmt.Println("tx-builder error", err)
 	}
 
-	gwCosmosmux := runtime.NewServeMux()
-	err = cosmosBank.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
+	feeAmount := sdk.NewCoins(sdk.NewInt64Coin("ukex", 100))
+	memo := "test api"
+	gasLimit := uint64(200000)
+	chainID := "localnet-1"
 
-	err = cosmosAuth.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraGov.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraStaking.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraSlashing.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraTokens.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraUpgrades.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraSpending.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	err = kiraUbi.RegisterQueryHandler(context.Background(), gwCosmosmux, conn)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register gateway: %w", err)
-	}
-
-	return gwCosmosmux, nil
-}
-
-type bankServer struct {
-	bankTypes.UnimplementedQueryServer
-	bankTypes.UnimplementedMsgServer
-}
-
-func (s *bankServer) AllBalances(ctx context.Context, in *bankTypes.QueryAllBalancesRequest) (*bankTypes.QueryAllBalancesResponse, error) {
-	if in.Address == faucet_addr {
-		return &bankTypes.QueryAllBalancesResponse{Balances: sdk.Coins{{Denom: "ukex", Amount: sdk.NewInt(10000000)}}}, nil
-	} else {
-		return &bankTypes.QueryAllBalancesResponse{Balances: sdk.Coins{{Denom: "ukex", Amount: sdk.NewInt(0)}}}, nil
-	}
-}
-
-func (*bankServer) Send(ctx context.Context, req *bankTypes.MsgSend) (*bankTypes.MsgSendResponse, error) {
-	return nil, nil
-}
-
-type FaucetResponse struct {
-	Hash string `json:"hash"`
-}
-
-type RPCTempResponse struct {
-	Jsonrpc string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Result  struct {
-		Height string `json:"height"`
-		Hash   string `json:"hash"`
-	} `json:"result,omitempty"`
-	Error struct {
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
-}
-
-type FaucetTestSuite struct {
-	suite.Suite
-
-	faucetResponse RPCTempResponse
-}
-
-func (suite *FaucetTestSuite) SetupTest() {
-}
-
-func (suite *FaucetTestSuite) TestServerFaucet() {
-	config.Config.Cache.CacheDir = "./"
-	_ = os.Mkdir("./db", 0777)
-
-	database.LoadFaucetDbDriver()
-
-	config.Config.Faucet = config.FaucetConfig{
-		Mnemonic:             mnemonic,
-		FaucetAmounts:        map[string]string{"ukex": "1000"},
-		FaucetMinimumAmounts: map[string]string{"ukex": "100"},
-		FeeAmounts:           map[string]string{"ukex": "100ukex"},
-		TimeLimit:            3600,
-	}
-
-	config.Config.Faucet.Address = faucet_addr
-	config.Config.GRPC = *addr
-	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
-
-	gwCosmosmux, err := GetGrpcServeMux(*addr)
-	if err != nil {
-		panic("failed to serve grpc")
-	}
-
-	request := common.GetInterxRequest(r)
-
+	txBuilder.SetGasLimit(gasLimit)
+	txBuilder.SetFeeAmount(feeAmount)
+	txBuilder.SetMemo(memo)
+	txBuilder.SetTimeoutHeight(0)
+	//
+	mnemonic := MENEMONIC
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
 		panic(err)
 	}
 	master, ch := hd.ComputeMastersFromSeed(seed)
-	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
+	priv, _ := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
 	config.Config.Faucet.PrivKey = &secp256k1.PrivKey{Key: priv}
-	config.Config.Faucet.PubKey = config.Config.Faucet.PrivKey.PubKey()
 
-	if err != nil {
-		panic(err)
+	privs := []cryptotypes.PrivKey{config.Config.Faucet.PrivKey}
+	// First round: we gather all the signer infos. We use the "set empty signature" hack to do that.
+	var sigsV2 []signing.SignatureV2
+	for _, priv := range privs {
+		sigV2 := signing.SignatureV2{
+			PubKey: priv.PubKey(),
+			Data: &signing.SingleSignatureData{
+				SignMode:  config.EncodingCg.TxConfig.SignModeHandler().DefaultMode(),
+				Signature: nil,
+			},
+			Sequence: 8,
+		}
+
+		sigsV2 = append(sigsV2, sigV2)
+	}
+	txBuildErr := txBuilder.SetSignatures(sigsV2...)
+	if txBuildErr != nil {
+		fmt.Println("Test failed: first round signing failed")
+		return
 	}
 
-	resultInfo, _, _ := serveFaucet(r, gwCosmosmux, request, test.INTERX_RPC, user_addr, "ukex")
-	resultHash := FaucetResponse{}
-	bz, err := json.Marshal(resultInfo)
+	// Second round: all signer infos are set, so each signer can sign.
+	sigsV2 = []signing.SignatureV2{}
+	for _, priv := range privs {
+		signerData := authsigning.SignerData{
+			ChainID:       chainID,
+			AccountNumber: 5,
+			Sequence:      8,
+		}
+		sigV2, err := tx.SignWithPrivKey(
+			config.EncodingCg.TxConfig.SignModeHandler().DefaultMode(), signerData,
+			txBuilder, priv, config.EncodingCg.TxConfig, 5)
+		if err != nil {
+			fmt.Println("Test failed: first round signing failed")
+			return
+		}
+
+		sigsV2 = append(sigsV2, sigV2)
+	}
+	err = txBuilder.SetSignatures(sigsV2...)
 	if err != nil {
-		panic(err)
+		fmt.Println("Test failed: first round signing failed")
+		return
 	}
 
-	err = json.Unmarshal(bz, &resultHash)
+	// Generated Protobuf-encoded bytes.
+	txBytes, err := config.EncodingCg.TxConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		panic(err)
+		fmt.Println("Test failed: first round signing failed", txBytes)
+		return
 	}
 
-	suite.Require().EqualValues(resultHash.Hash, suite.faucetResponse.Result.Hash)
-	os.RemoveAll("./db")
+	grpcConn, _ := grpc.Dial(
+		"0.0.0.0:9090",      // Or your gRPC server address.
+		grpc.WithInsecure(), // The Cosmos SDK doesn't support any transport security mechanism.
+	)
+	defer grpcConn.Close()
+
+	// Simulation
+	txClient1 := txtypes.NewServiceClient(grpcConn)
+	grpcRes1, txClientErr := txClient1.Simulate(
+		context.Background(),
+		&txtypes.SimulateRequest{
+			TxBytes: txBytes,
+		},
+	)
+	if txClientErr != nil {
+		fmt.Println("Test failed: first round signing failed", txClientErr)
+		return
+	}
+	fmt.Println("gas info ---->", grpcRes1.GasInfo)
+
 }
 
-func (suite *FaucetTestSuite) TestServerFaucetInfo() {
+func AccountNumber(inputAddress string) (accountNum uint64, sequence uint64) {
 
-	config.Config.Faucet.Address = faucet_addr
-	config.Config.GRPC = *addr
-	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
+	sdk.GetConfig().SetBech32PrefixForAccount("kira", sdk.PrefixPublic)
 
-	gwCosmosmux, err := GetGrpcServeMux(*addr)
+	grpcConn, err := grpc.Dial("0.0.0.0:9090", grpc.WithInsecure())
 	if err != nil {
-		panic("failed to serve grpc")
+		log.Fatalf("failed to connect to gRPC server: %v", err)
 	}
-	faucetInfo, _, _ := serveFaucetInfo(r, gwCosmosmux)
-	suite.Require().EqualValues(faucetInfo.(types.FaucetAccountInfo).Balances[0].Amount, "10000000")
-}
+	defer grpcConn.Close()
 
-func TestFaucetTestSuite(t *testing.T) {
-	testSuite := new(FaucetTestSuite)
+	// Set up a query client for account info
+	queryClient := authtypes.NewQueryClient(grpcConn)
 
-	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	// Replace with your address
+
+	accountAddr, err := sdk.AccAddressFromBech32(inputAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("failed to parse address: %v", err)
 	}
-	s := grpc.NewServer()
-	bankTypes.RegisterQueryServer(s, &bankServer{})
-	log.Printf("server listening at %v", lis.Addr())
 
-	go func() {
-		_ = s.Serve(lis)
-	}()
-
-	testSuite.faucetResponse.Result.Hash = "faucet_hash"
-	interxServer := http.Server{
-		Addr: ":11000",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/broadcast_tx_async" {
-				response, _ := json.Marshal(testSuite.faucetResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}),
+	// Query the account
+	accountRes, err := queryClient.Account(context.Background(), &authtypes.QueryAccountRequest{Address: accountAddr.String()})
+	if err != nil {
+		log.Fatalf("failed to query account: %v", err)
 	}
-	go func() {
-		_ = interxServer.ListenAndServe()
-	}()
 
-	suite.Run(t, testSuite)
-	interxServer.Close()
-	s.Stop()
+	// Extract account information
+	var account authtypes.BaseAccount
+	err = account.Unmarshal(accountRes.Account.Value)
+	if err != nil {
+		log.Fatalf("failed to unmarshal account: %v", err)
+	}
+
+	fmt.Printf("Account Number: %d\n", account.AccountNumber)
+	fmt.Printf("Sequence: %d\n", account.Sequence)
+	return account.AccountNumber, account.Sequence
 }

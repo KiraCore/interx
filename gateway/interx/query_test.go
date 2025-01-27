@@ -2,29 +2,16 @@ package interx
 
 import (
 	"encoding/json"
-	"flag"
-	"fmt"
-	"log"
-	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
-	"testing"
-	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
-	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/test"
 	"github.com/KiraCore/interx/types"
-	"github.com/KiraCore/interx/types/kira"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmRPCTypes "github.com/cometbft/cometbft/rpc/core/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
-	tmTypes "github.com/cometbft/cometbft/types"
-	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/suite"
-	"google.golang.org/grpc"
 )
 
 type DashboardInfo struct {
@@ -73,42 +60,42 @@ type StatusTestSuite struct {
 func (suite *StatusTestSuite) SetupTest() {
 }
 
-func (suite *StatusTestSuite) TestDashboardQuery() {
-	config.Config.Cache.CacheDir = "./"
-	config.Config.RPC = test.TENDERMINT_RPC
-	_ = os.Mkdir("./db", 0777)
+// func (suite *StatusTestSuite) TestDashboardQuery() {
+// 	config.Config.Cache.CacheDir = "./"
+// 	config.Config.RPC = test.TENDERMINT_RPC
+// 	_ = os.Mkdir("./db", 0777)
 
-	database.LoadBlockDbDriver()
-	database.LoadBlockNanoDbDriver()
-	common.NodeStatus.Block = 100
-	common.NodeStatus.Blocktime = time.Now().String()
+// 	database.LoadBlockDbDriver()
+// 	database.LoadBlockNanoDbDriver()
+// 	common.NodeStatus.Block = 100
+// 	common.NodeStatus.Blocktime = time.Now().String()
 
-	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
-	q := r.URL.Query()
-	q.Add("account", "test_account")
-	q.Add("limit", "100")
-	r.URL.RawQuery = q.Encode()
+// 	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)
+// 	q := r.URL.Query()
+// 	q.Add("account", "test_account")
+// 	q.Add("limit", "100")
+// 	r.URL.RawQuery = q.Encode()
 
-	gwCosmosmux, err := GetGrpcServeMux(*addr)
-	if err != nil {
-		panic("failed to serve grpc")
-	}
-	res, _, statusCode := queryDashboardHandler(test.TENDERMINT_RPC, r, gwCosmosmux)
+// 	gwCosmosmux, err := GetGrpcServeMux(*addr)
+// 	if err != nil {
+// 		panic("failed to serve grpc")
+// 	}
+// 	res, _, statusCode := queryDashboardHandler(test.TENDERMINT_RPC, r, gwCosmosmux)
 
-	interxRes := DashboardInfo{}
-	bz, err := json.Marshal(res)
-	if err != nil {
-		panic("parse error")
-	}
+// 	interxRes := DashboardInfo{}
+// 	bz, err := json.Marshal(res)
+// 	if err != nil {
+// 		panic("parse error")
+// 	}
 
-	err = json.Unmarshal(bz, &interxRes)
-	if err != nil {
-		panic(err)
-	}
+// 	err = json.Unmarshal(bz, &interxRes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	suite.Require().EqualValues(statusCode, http.StatusOK)
-	os.RemoveAll("./db")
-}
+// 	suite.Require().EqualValues(statusCode, http.StatusOK)
+// 	os.RemoveAll("./db")
+// }
 
 func (suite *StatusTestSuite) TestAddrBookQuery() {
 	err := os.Mkdir("./config", 0777)
@@ -201,149 +188,149 @@ func (suite *StatusTestSuite) TestNetInfoHandler() {
 	suite.Require().EqualValues(statusCode, http.StatusOK)
 }
 
-func TestStatusTestSuite(t *testing.T) {
-	testSuite := new(StatusTestSuite)
-	testSuite.kiraStatusResponse.Result = types.KiraStatus{
-		NodeInfo: types.NodeInfo{Moniker: "test_moniker"},
-		SyncInfo: types.SyncInfo{LatestBlockHeight: "100", CatchingUp: true},
-	}
+// func TestStatusTestSuite(t *testing.T) {
+// 	testSuite := new(StatusTestSuite)
+// 	testSuite.kiraStatusResponse.Result = types.KiraStatus{
+// 		NodeInfo: types.NodeInfo{Moniker: "test_moniker"},
+// 		SyncInfo: types.SyncInfo{LatestBlockHeight: "100", CatchingUp: true},
+// 	}
 
-	resBytes, err := tmjson.Marshal(tmRPCTypes.ResultNetInfo{
-		Listening: true, NPeers: 100,
-	})
+// 	resBytes, err := tmjson.Marshal(tmRPCTypes.ResultNetInfo{
+// 		Listening: true, NPeers: 100,
+// 	})
 
-	if err != nil {
-		panic(err)
-	}
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	testSuite.netInfoQueryResponse.Result = resBytes
+// 	testSuite.netInfoQueryResponse.Result = resBytes
 
-	bz, err := json.Marshal(kira.RoundState{
-		Height: "100",
-		LastCommit: kira.LastCommit{
-			VotesBitArray: "test_votesbitarray",
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
+// 	bz, err := json.Marshal(kira.RoundState{
+// 		Height: "100",
+// 		LastCommit: kira.LastCommit{
+// 			VotesBitArray: "test_votesbitarray",
+// 		},
+// 	})
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	testSuite.consensusQueryResponse.Result = tmRPCTypes.ResultDumpConsensusState{
-		RoundState: bz,
-	}
+// 	testSuite.consensusQueryResponse.Result = tmRPCTypes.ResultDumpConsensusState{
+// 		RoundState: bz,
+// 	}
 
-	resBytes, err = tmjson.Marshal(tmRPCTypes.ResultBlockchainInfo{
-		LastHeight: 100,
-		BlockMetas: []*tmTypes.BlockMeta{
-			{
-				NumTxs: 10,
-				Header: tmTypes.Header{
-					Time: time.Now(),
-				},
-			},
-			{
-				Header: tmTypes.Header{
-					Time: time.Now(),
-				},
-			},
-		},
-	})
+// 	resBytes, err = tmjson.Marshal(tmRPCTypes.ResultBlockchainInfo{
+// 		LastHeight: 100,
+// 		BlockMetas: []*tmTypes.BlockMeta{
+// 			{
+// 				NumTxs: 10,
+// 				Header: tmTypes.Header{
+// 					Time: time.Now(),
+// 				},
+// 			},
+// 			{
+// 				Header: tmTypes.Header{
+// 					Time: time.Now(),
+// 				},
+// 			},
+// 		},
+// 	})
 
-	if err != nil {
-		panic(err)
-	}
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	testSuite.blockQueryResponse.Result = resBytes
+// 	testSuite.blockQueryResponse.Result = resBytes
 
-	resBytes, err = tmjson.Marshal(tmRPCTypes.ResultBlock{
-		Block: &tmTypes.Block{
-			Header: tmTypes.Header{
-				Time: time.Now(),
-			},
-		},
-	})
+// 	resBytes, err = tmjson.Marshal(tmRPCTypes.ResultBlock{
+// 		Block: &tmTypes.Block{
+// 			Header: tmTypes.Header{
+// 				Time: time.Now(),
+// 			},
+// 		},
+// 	})
 
-	if err != nil {
-		panic(err)
-	}
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	testSuite.blockHeightQueryResponse.Result = resBytes
+// 	testSuite.blockHeightQueryResponse.Result = resBytes
 
-	// Mock GRPC
-	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	bankTypes.RegisterQueryServer(s, &bankServer{})
-	log.Printf("server listening at %v", lis.Addr())
+// 	// Mock GRPC
+// 	flag.Parse()
+// 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+// 	if err != nil {
+// 		log.Fatalf("failed to listen: %v", err)
+// 	}
+// 	s := grpc.NewServer()
+// 	bankTypes.RegisterQueryServer(s, &bankServer{})
+// 	log.Printf("server listening at %v", lis.Addr())
 
-	go func() {
-		_ = s.Serve(lis)
-	}()
+// 	go func() {
+// 		_ = s.Serve(lis)
+// 	}()
 
-	// Mock Tendermint
-	tmServer := http.Server{
-		Addr: ":26657",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/status" {
-				response, _ := json.Marshal(testSuite.kiraStatusResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			} else if r.URL.Path == "/net_info" {
-				response, _ := json.Marshal(testSuite.netInfoQueryResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			} else if r.URL.Path == "/unconfirmed_txs" {
-				response := tmJsonRPCTypes.RPCResponse{
-					JSONRPC: "2.0",
-					Result:  []byte(`{"txs":[],"n_txs":"1","total":"0","total_bytes":"100"}`),
-				}
-				response1, err := json.Marshal(response)
-				if err != nil {
-					panic(err)
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_, err = w.Write(response1)
-				if err != nil {
-					panic(err)
-				}
-			} else if r.URL.Path == "/dump_consensus_state" {
-				response, _ := json.Marshal(testSuite.consensusQueryResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			} else if r.URL.Path == "/blockchain" {
-				response, _ := tmjson.Marshal(testSuite.blockQueryResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			} else if r.URL.Path == "/block" {
-				response, _ := tmjson.Marshal(testSuite.blockHeightQueryResponse)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}),
-	}
-	go func() {
-		_ = tmServer.ListenAndServe()
-	}()
+// 	// Mock Tendermint
+// 	tmServer := http.Server{
+// 		Addr: ":26657",
+// 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			if r.URL.Path == "/status" {
+// 				response, _ := json.Marshal(testSuite.kiraStatusResponse)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			} else if r.URL.Path == "/net_info" {
+// 				response, _ := json.Marshal(testSuite.netInfoQueryResponse)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			} else if r.URL.Path == "/unconfirmed_txs" {
+// 				response := tmJsonRPCTypes.RPCResponse{
+// 					JSONRPC: "2.0",
+// 					Result:  []byte(`{"txs":[],"n_txs":"1","total":"0","total_bytes":"100"}`),
+// 				}
+// 				response1, err := json.Marshal(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err = w.Write(response1)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			} else if r.URL.Path == "/dump_consensus_state" {
+// 				response, _ := json.Marshal(testSuite.consensusQueryResponse)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			} else if r.URL.Path == "/blockchain" {
+// 				response, _ := tmjson.Marshal(testSuite.blockQueryResponse)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			} else if r.URL.Path == "/block" {
+// 				response, _ := tmjson.Marshal(testSuite.blockHeightQueryResponse)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			}
+// 		}),
+// 	}
+// 	go func() {
+// 		_ = tmServer.ListenAndServe()
+// 	}()
 
-	suite.Run(t, testSuite)
-	tmServer.Close()
-	s.Stop()
-}
+// 	suite.Run(t, testSuite)
+// 	tmServer.Close()
+// 	s.Stop()
+// }

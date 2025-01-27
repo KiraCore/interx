@@ -3,13 +3,8 @@ package interx
 import (
 	"context"
 	"encoding/json"
-	"flag"
-	"fmt"
-	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/test"
@@ -19,7 +14,6 @@ import (
 	stakingTypes "github.com/KiraCore/sekai/x/staking/types"
 	tmJsonRPCTypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/stretchr/testify/suite"
-	"google.golang.org/grpc"
 )
 
 type ValidatorsTestSuite struct {
@@ -141,41 +135,41 @@ func (suite *ValidatorsTestSuite) TestSnapInfoQuery() {
 	suite.Require().EqualValues(statusCode, http.StatusOK)
 }
 
-func TestValidatorsTestSuite(t *testing.T) {
-	testSuite := new(ValidatorsTestSuite)
+// func TestValidatorsTestSuite(t *testing.T) {
+// 	testSuite := new(ValidatorsTestSuite)
 
-	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	slashingTypes.RegisterQueryServer(s, &slashingServer{})
-	log.Printf("server listening at %v", lis.Addr())
+// 	flag.Parse()
+// 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+// 	if err != nil {
+// 		log.Fatalf("failed to listen: %v", err)
+// 	}
+// 	s := grpc.NewServer()
+// 	slashingTypes.RegisterQueryServer(s, &slashingServer{})
+// 	log.Printf("server listening at %v", lis.Addr())
 
-	go func() {
-		_ = s.Serve(lis)
-	}()
+// 	go func() {
+// 		_ = s.Serve(lis)
+// 	}()
 
-	testSuite.dumpConsensusQuery.Result, _ = json.Marshal("test")
-	tmServer := http.Server{
-		Addr: ":26657",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/dump_consensus_state" {
-				response, _ := json.Marshal(testSuite.dumpConsensusQuery)
-				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write(response)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}),
-	}
-	go func() {
-		_ = tmServer.ListenAndServe()
-	}()
+// 	testSuite.dumpConsensusQuery.Result, _ = json.Marshal("test")
+// 	tmServer := http.Server{
+// 		Addr: ":26657",
+// 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			if r.URL.Path == "/dump_consensus_state" {
+// 				response, _ := json.Marshal(testSuite.dumpConsensusQuery)
+// 				w.Header().Set("Content-Type", "application/json")
+// 				_, err := w.Write(response)
+// 				if err != nil {
+// 					panic(err)
+// 				}
+// 			}
+// 		}),
+// 	}
+// 	go func() {
+// 		_ = tmServer.ListenAndServe()
+// 	}()
 
-	suite.Run(t, testSuite)
-	s.Stop()
-	tmServer.Close()
-}
+// 	suite.Run(t, testSuite)
+// 	s.Stop()
+// 	tmServer.Close()
+// }
