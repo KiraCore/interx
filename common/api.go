@@ -180,10 +180,10 @@ func GetAccountNumberSequence(gwCosmosmux *runtime.ServeMux, r *http.Request, be
 
 	type QueryAccountResponse struct {
 		Account struct {
-			Address       string `json:"addresss"`
-			PubKey        string `json:"pubKey"`
-			AccountNumber string `json:"accountNumber"`
-			Sequence      string `json:"sequence"`
+			Address       string      `json:"addresss"`
+			PubKey        interface{} `json:"pubKey"`
+			AccountNumber string      `json:"accountNumber"`
+			Sequence      string      `json:"sequence"`
 		} `json:"account"`
 	}
 	result := QueryAccountResponse{}
@@ -410,7 +410,6 @@ func GetTokenAliases(gwCosmosmux *runtime.ServeMux, r *http.Request) ([]types.To
 	}
 
 	result := TokenAliasesResponse{}
-
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		log.CustomLogger().Error("[GetTokenAliases][Decode] Unable to decode response", "error", err)

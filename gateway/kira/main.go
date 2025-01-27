@@ -1,6 +1,7 @@
 package kira
 
 import (
+	"github.com/KiraCore/interx/gateway/kira/metamask"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -18,4 +19,5 @@ func RegisterRequest(router *mux.Router, gwCosmosmux *runtime.ServeMux, rpcAddr 
 	RegisterKiraSpendingRoutes(router, gwCosmosmux, rpcAddr)
 	RegisterKiraUbiRoutes(router, gwCosmosmux, rpcAddr)
 	RegisterKiraMultiStakingRoutes(router, gwCosmosmux, rpcAddr)
+	metamask.RegisterKiraMetamaskRoutes(router, gwCosmosmux, rpcAddr)
 }
