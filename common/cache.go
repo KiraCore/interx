@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/KiraCore/interx/config"
@@ -20,46 +19,37 @@ const MAX_CACHE_SIZE int64 = 2 * 1024 * 1024 * 1024 // Convert 2 GB to bytes
 
 // clearFolder deletes all files in the folder.
 func clearFolder(folderPath string) {
-	files, _ := ioutil.ReadDir(folderPath)
+	log.CustomLogger().Info("`clearFolder` Srating clearing folders",
+		"folder path", folderPath,
+	)
+
+	files, err := os.ReadDir(folderPath)
+	if err != nil {
+		log.CustomLogger().Error("[clearFolder] failed to fetch files from the folder to clear them",
+			"error", err,
+		)
+	}
+
+	log.CustomLogger().Info("`clearFolder` fetched all files from the folder to clear them",
+		"files", files,
+	)
 
 	for _, file := range files {
+		log.CustomLogger().Info("`clearFolder` file",
+			"folderPath", folderPath,
+			"file", file,
+			"file.Name()", file.Name(),
+			"filePath", filepath.Join(folderPath, file.Name()),
+		)
 		filePath := filepath.Join(folderPath, file.Name())
-		_ = os.Remove(filePath)
-	}
-}
 
-// disk usage of path/disk
-func DiskUsage(path string) (disk types.DiskStatus, err error) {
-	fs := syscall.Statfs_t{}
-	err = syscall.Statfs(path, &fs)
-	if err != nil {
-		log.CustomLogger().Error("[DiskUsage] Failed to get disk usage",
-			"error", err,
-		)
-		return types.DiskStatus{}, err
+		err := os.Remove(filePath)
+		if err != nil {
+			log.CustomLogger().Error("[clearFolder] failed to remove files",
+				"error", err,
+			)
+		}
 	}
-	disk.All = fs.Blocks * uint64(fs.Bsize)
-	disk.Free = fs.Bfree * uint64(fs.Bsize)
-	disk.Used = disk.All - disk.Free
-	log.CustomLogger().Info("`DiskUsage` Get disk usage",
-		"disk", disk,
-	)
-	return disk, nil
-}
-
-func getFolderSize(folderPath string) (int64, error) {
-	// Getting filesystem statistics
-	disk, err := DiskUsage(folderPath)
-	if err != nil {
-		log.CustomLogger().Error("[getFolderSize] Failed to get folder size",
-			"error", err,
-		)
-		return 0, err
-	}
-	log.CustomLogger().Info("`getFolderSize` Get folder size",
-		"disk usage", int64(disk.Used),
-	)
-	return int64(disk.Used), nil
 }
 
 // AddCache is a function to save value to cache
@@ -101,27 +91,29 @@ func AddCache(chainIDHash string, endpointHash string, requestHash string, value
 	global.Mutex.Lock()
 	defer global.Mutex.Unlock() // Ensure unlock even on error
 
-	size, err := getFolderSize(baseDir)
-	if err != nil {
-		log.CustomLogger().Error("[AddCache][getFolderSize] incorrect size.",
-			"error", err,
-		)
-		return err
+	files, _ := ioutil.ReadDir(baseDir)
+
+	var total int64 = 0
+	for _, file := range files {
+		total += file.Size()
 	}
 
 	log.CustomLogger().Info("`AddCache` Folder size",
 		"MAX_CACHE_SIZE", MAX_CACHE_SIZE,
-		"size", size,
+		"baseDir", baseDir,
+		"size", total,
 	)
 
 	// Check if the folder size exceeds the limit
-	if size > MAX_CACHE_SIZE {
+	if total > MAX_CACHE_SIZE {
 		log.CustomLogger().Info("`AddCache` Folder size exceeds the limit. Clearing older cached data...")
 		clearFolder(baseDir)
 	}
 
+	filename := filePath + ".json"
+
 	// Write data to the file
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filename, data, 0644); err != nil {
 		log.CustomLogger().Error("[AddCache][WriteFile] Failed to write data to the cache directory.",
 			"error", err,
 			"filepath", filePath,
@@ -134,7 +126,7 @@ func AddCache(chainIDHash string, endpointHash string, requestHash string, value
 }
 
 func GetCache(requestHash string) (types.InterxResponse, bool, error) {
-	filePath := fmt.Sprintf("%s/%s", config.GetResponseCacheDir(), requestHash)
+	filePath := fmt.Sprintf("%s/%s", config.GetResponseCacheDir(), requestHash+".json")
 	log.CustomLogger().Info("Starting 'GetCache' request...", "filepath", filePath)
 
 	response := types.InterxResponse{}
