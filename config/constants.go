@@ -1,9 +1,18 @@
 package config
 
 const (
-	InterxVersion = "v0.4.50"
-	SekaiVersion  = "v0.4.1"
+
+	InterxVersion = "v0.4.49"
+	SekaiVersion  = "v0.3.45"
 	CosmosVersion = "v0.47.6"
+
+	DefaultChainID           = 8789
+	DefaultKiraAddrPrefix    = "kira"
+	DefaultKiraValAddrPrefix = "kiravaloper"
+	DefaultKiraDenom         = "ukex"
+
+	MetamaskEndpoint     = "/api/kira/evm"
+	RegisterAddrEndpoint = "/api/kira/evm/register_address/{eth_addr}{cosmos_addr}"
 
 	QueryDashboard = "/api/dashboard"
 
