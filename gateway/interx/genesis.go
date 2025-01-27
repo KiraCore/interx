@@ -10,6 +10,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/gorilla/mux"
@@ -39,6 +40,9 @@ func JSONRemarshal(bytes []byte) ([]byte, error) {
 }
 
 func getChunkedGenesisData(rpcAddr string, chunkedNum int) ([]byte, int, error) {
+
+	log.CustomLogger().Info("Starting `getChunkedGenesisData` request...")
+
 	data, _, _ := common.MakeTendermintRPCRequest(rpcAddr, "/genesis_chunked", fmt.Sprintf("chunk=%d", chunkedNum))
 
 	type GenesisChunkedResponse struct {
@@ -55,25 +59,35 @@ func getChunkedGenesisData(rpcAddr string, chunkedNum int) ([]byte, int, error) 
 
 	err = json.Unmarshal(byteData, &genesis)
 	if err != nil {
+		log.CustomLogger().Error("`getChunkedGenesisData` Failed to unmarshal genesis data.",
+			"chunkedNum", chunkedNum,
+		)
 		return nil, 0, err
 	}
 
 	total, err := strconv.Atoi(genesis.Total)
 	if err != nil {
+		log.CustomLogger().Error("`getChunkedGenesisData` Failed to unmarshal genesisi data.",
+			"chunked_Num", chunkedNum,
+			"error", err,
+		)
 		return nil, 0, err
 	}
+
+	log.CustomLogger().Info("Completed `getChunkedGenesisData`.")
 
 	return genesis.Data, total, nil
 }
 
 func saveGenesis(rpcAddr string) error {
-	_, err := getGenesisCheckSum()
-	if err == nil {
-		return nil
-	}
+
+	log.CustomLogger().Info("Starting `saveGenesis` request...")
 
 	cBytes, cTotal, err := getChunkedGenesisData(rpcAddr, 0)
 	if err != nil {
+		log.CustomLogger().Error("[saveGenesis][getChunkedGenesisData] Failed to fetch genesis chunked data.",
+			"error", err,
+		)
 		return err
 	}
 
@@ -92,6 +106,9 @@ func saveGenesis(rpcAddr string) error {
 
 	err = genesis.ValidateAndComplete()
 	if err != nil {
+		log.CustomLogger().Error("[saveGenesis][ValidateAndComplete] Failed to validate genesis data.",
+			"error", err,
+		)
 		return err
 	}
 
@@ -99,15 +116,23 @@ func saveGenesis(rpcAddr string) error {
 	err = os.WriteFile(genesisPath(), cBytes, 0644)
 	global.Mutex.Unlock()
 
+	log.CustomLogger().Info("Finished `saveGenesis` request.")
+
 	return err
 }
 
 func getGenesisCheckSum() (string, error) {
 	global.Mutex.Lock()
+
 	data, err := os.ReadFile(genesisPath())
+
 	global.Mutex.Unlock()
 
 	if err != nil {
+		log.CustomLogger().Error("[getGenesisCheckSum][ReadFile] Failed to read from genesis file.",
+			"genesisPath", genesisPath,
+			"error", err,
+		)
 		return "", err
 	}
 
@@ -115,38 +140,71 @@ func getGenesisCheckSum() (string, error) {
 }
 
 func GetGenesisResults(rpcAddr string) (*tmtypes.GenesisDoc, string, error) {
-	err := saveGenesis(rpcAddr)
-	if err != nil {
-		return nil, "", err
-	}
-
-	global.Mutex.Lock()
-	data, err := os.ReadFile(genesisPath())
-	global.Mutex.Unlock()
-
-	if err != nil {
-		return nil, "", err
-	}
-
 	genesis := tmtypes.GenesisDoc{}
-	err = tmjson.Unmarshal(data, &genesis)
+	var shFromData string
 
-	return &genesis, common.GetSha256SumFromBytes(data), err
+	err := saveGenesis(rpcAddr)
+	if err == nil {
+
+		global.Mutex.Lock()
+		data, err := os.ReadFile(genesisPath())
+		global.Mutex.Unlock()
+
+		if err != nil {
+			log.CustomLogger().Error("[GetGenesisResults][ReadFile] Failed to read genesis content from the file.",
+				"error", err,
+			)
+			return nil, "", err
+		}
+
+		err = tmjson.Unmarshal(data, &genesis)
+		if err != nil {
+			log.CustomLogger().Error("[GetGenesisResults][Unmarshal] Failed to unmarshal genesis content.",
+				"error", err,
+			)
+			return nil, "", err
+		}
+
+		shFromData = common.GetSha256SumFromBytes(data)
+	}
+
+	return &genesis, shFromData, err
 }
 
 // QueryGenesis is a function to query genesis.
 func QueryGenesis(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var statusCode int
+
+		log.CustomLogger().Info("Starting 'QueryGenesis' request...")
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		if saveGenesis(rpcAddr) != nil {
+		err := saveGenesis(rpcAddr)
+
+		if err != nil {
+
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "interx error", http.StatusInternalServerError)
 			common.WrapResponse(w, request, *response, statusCode, false)
+
+			log.CustomLogger().Info("Processed 'QueryGenesis' request for %s. Not Found file in tho the genesis path.", request.Endpoint,
+				"endpoint", request.Endpoint,
+				"rpc", rpcAddr,
+				"params", request.Params,
+			)
+
 		} else {
 			http.ServeFile(w, r, genesisPath())
+
+			log.CustomLogger().Info("Processed 'QueryGenesis' request for %s. Found file in tho the genesis path.", request.Endpoint,
+				"endpoint", request.Endpoint,
+				"rpc", rpcAddr,
+				"params", request.Params,
+			)
 		}
+
+		log.CustomLogger().Info("Finished 'QueryGenesis' request.")
 	}
 }
 
@@ -175,11 +233,21 @@ func queryGenesisSumHandler(rpcAddr string) (interface{}, interface{}, int) {
 func QueryGenesisSum(rpcAddr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var statusCode int
+
+		log.CustomLogger().Info("Starting 'QueryGenesisSum' request...")
+
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
 		response.Response, response.Error, statusCode = queryGenesisSumHandler(rpcAddr)
 
+		log.CustomLogger().Info("Processed 'QueryGenesis' request.",
+			"endpoint", request.Endpoint,
+			"params", request.Params,
+		)
+
 		common.WrapResponse(w, request, *response, statusCode, false)
+
+		log.CustomLogger().Info("Finished 'QueryGenesisSum' request.")
 	}
 }

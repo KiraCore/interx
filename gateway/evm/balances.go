@@ -10,6 +10,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/holiman/uint256"
 
@@ -162,18 +163,26 @@ func RegisterEVMBalancesRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-balances] Entering transactions execute: ", chain)
+		log.CustomLogger().Info("`RegisterEVMBalancesRequest` Starting EVM balance request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryEVMBalances].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMBalances].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMBalances].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `RegisterEVMBalancesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-balances] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`RegisterEVMBalancesRequest` Returning from the cache...",
+						"chain", chain,
+					)
+
 					return
 				}
 			}
@@ -181,6 +190,6 @@ func RegisterEVMBalancesRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMBalancesRequestHandle(r, chain, address)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMBalances].CacheEnabled)
 	}
 }

@@ -1,11 +1,15 @@
 package common
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,10 +17,26 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/rosetta"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	keyssecp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/go-bip39"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc"
 )
+
+//TODO: Some of endpoints do not work.
 
 // Regexp definitions
 var gasWantedRemoveRegex = regexp.MustCompile(`\s*\"gas_wanted\" *: *\".*\"(,|)`)
@@ -161,6 +181,7 @@ func (c conventionalMarshaller) MarshalAndConvert(endpoint string) ([]byte, erro
 
 // GetInterxRequest is a function to get Interx Request
 func GetInterxRequest(r *http.Request) types.InterxRequest {
+
 	request := types.InterxRequest{}
 
 	request.Method = r.Method
@@ -184,6 +205,7 @@ func GetResponseFormat(request types.InterxRequest, rpcAddr string) *types.Proxy
 
 // GetResponseSignature is a function to get response signature
 func GetResponseSignature(response types.ProxyResponse) (string, string) {
+
 	// Get Response Hash
 	responseHash := GetBlake2bHash(response.Response)
 
@@ -196,12 +218,18 @@ func GetResponseSignature(response types.ProxyResponse) (string, string) {
 	sign.Response = responseHash
 	signBytes, err := json.Marshal(sign)
 	if err != nil {
+		log.CustomLogger().Error("[GetResponseSignature] Failed to create signature.",
+			"error", err,
+		)
 		return "", responseHash
 	}
 
 	// Get Signature
 	signature, err := config.Config.PrivKey.Sign(signBytes)
 	if err != nil {
+		log.CustomLogger().Error("[GetResponseSignature] Failed to fetch signature.",
+			"error", err,
+		)
 		return "", responseHash
 	}
 
@@ -210,21 +238,38 @@ func GetResponseSignature(response types.ProxyResponse) (string, string) {
 
 // SearchCache is a function to search response in cache
 func SearchCache(request types.InterxRequest, response *types.ProxyResponse) (bool, interface{}, interface{}, int) {
-	chainIDHash := GetBlake2bHash(response.Chainid)
-	endpointHash := GetBlake2bHash(request.Endpoint)
+
+	log.CustomLogger().Info("Starting `SearchCache` function...")
+
 	requestHash := GetBlake2bHash(request)
 
-	// GetLogger().Info(chainIDHash, endpointHash, requestHash)
-	result, err := GetCache(chainIDHash, endpointHash, requestHash)
-	// GetLogger().Info(result)
+	log.CustomLogger().Info("`SearchCache` created request hash", "requestHash", requestHash)
+
+	result, expired, err := GetCache(requestHash)
 
 	if err != nil {
+		log.CustomLogger().Error("[SearchCache][GetCache] Failed to find data from the cache",
+			"error", err,
+		)
 		return false, nil, nil, -1
+	}
+
+	baseDir := config.GetResponseCacheDir()
+	filePath := fmt.Sprintf("%s/%s", baseDir, requestHash)
+
+	if expired {
+		defer os.Remove(filePath)
+		log.CustomLogger().Info("`SearchCache` Query data expired and removed from cache.",
+			"filePath", filePath,
+		)
 	}
 
 	if IsCacheExpired(result) {
+		log.CustomLogger().Info("SearchCache: Cache data not found or marked as expired during IsCacheExpired query.")
 		return false, nil, nil, -1
 	}
+
+	log.CustomLogger().Info("Finished `SearchCache` request...")
 
 	return true, result.Response.Response, result.Response.Error, result.Status
 }
@@ -234,24 +279,42 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 	if statusCode == 0 {
 		statusCode = 503 // Service Unavailable Error
 	}
+
+	log.CustomLogger().Info("Starting `WrapResponse` request...",
+		"status_code", statusCode,
+		"save_to_cache", saveToCache,
+	)
+
 	if saveToCache {
-		// GetLogger().Info("[gateway] Saving in the cache")
+
+		log.CustomLogger().Info(" `WrapResponse` adding data to the cache started...",
+			"endpoint", request.Endpoint,
+		)
 
 		chainIDHash := GetBlake2bHash(response.Chainid)
 		endpointHash := GetBlake2bHash(request.Endpoint)
 		requestHash := GetBlake2bHash(request)
 		if conf, ok := RPCMethods[request.Method][request.Endpoint]; ok {
-			err := PutCache(chainIDHash, endpointHash, requestHash, types.InterxResponse{
-				Response:             response,
-				Status:               statusCode,
-				CacheTime:            time.Now().UTC(),
-				CachingDuration:      conf.CachingDuration,
-				CachingBlockDuration: conf.CachingBlockDuration,
+			err := AddCache(chainIDHash, endpointHash, requestHash, types.InterxResponse{
+				Response:           response,
+				Status:             statusCode,
+				CacheTime:          time.Now().UTC(),
+				CacheDuration:      conf.CacheDuration,
+				CacheBlockDuration: conf.CacheBlockDuration,
 			})
 			if err != nil {
-				GetLogger().Error("[gateway] Failed to save in the cache: ", err.Error())
+				log.CustomLogger().Error("[WrapResponse][AddCache] Failed to save data into the cache.",
+					"error", err,
+				)
 			}
-			// GetLogger().Info("[gateway] Save finished")
+			log.CustomLogger().Info("`WrapResponse` adding data to the cache successfully done.",
+				"QueryName", request.Endpoint,
+				"ResponsechainId", response.Chainid,
+				"Status", statusCode,
+				"CacheTime", time.Now().UTC(),
+				"CacheDuration", conf.CacheDuration,
+				"CacheBlockDuration", conf.CacheBlockDuration,
+			)
 		}
 	}
 
@@ -261,6 +324,7 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 	w.Header().Add("Interx_blocktime", response.Blocktime)
 	w.Header().Add("Interx_timestamp", strconv.FormatInt(response.Timestamp, 10))
 	w.Header().Add("Interx_request_hash", response.RequestHash)
+
 	if request.Endpoint == config.QueryDataReference {
 		reference, err := database.GetReference(string(request.Params))
 		if err == nil {
@@ -279,7 +343,9 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		case string:
 			_, err := w.Write([]byte(v))
 			if err != nil {
-				GetLogger().Error("[gateway] Failed to make a response", err.Error())
+				log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
+					"error", err,
+				)
 			}
 			return
 		}
@@ -287,21 +353,27 @@ func WrapResponse(w http.ResponseWriter, request types.InterxRequest, response t
 		encoded, _ := conventionalMarshaller{response.Response}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			GetLogger().Error("[gateway] Failed to make a response", err.Error())
+			log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
+				"error", err,
+			)
 		}
 	} else {
 		w.WriteHeader(statusCode)
 
 		if response.Error == nil {
-			response.Error = "service not available"
+			response.Error = "[WrapResponse] service not available"
 		}
 
 		encoded, _ := conventionalMarshaller{response.Error}.MarshalAndConvert(request.Endpoint)
 		_, err := w.Write(encoded)
 		if err != nil {
-			GetLogger().Error("[gateway] Failed to make a response", err.Error())
+			log.CustomLogger().Error("[WrapResponse][Write] Failed to writes the data to the response.",
+				"error", err,
+			)
 		}
 	}
+
+	log.CustomLogger().Info("Finished `WrapResponse` request...")
 }
 
 // ServeGRPC is a function to serve GRPC
@@ -343,4 +415,251 @@ func RosettaBuildError(code int, message string, description string, retriable b
 
 func RosettaServeError(code int, data string, message string, statusCode int) (interface{}, interface{}, int) {
 	return nil, RosettaBuildError(code, message, data, true, nil), statusCode
+}
+
+func GetAccountNumber(address string) (uint64, uint64, error) {
+
+	log.CustomLogger().Info("Starting `GetAccountNumber` request...",
+		"address", address,
+	)
+
+	grpcConn, _ := grpc.Dial(config.DefaultGrpc, grpc.WithInsecure())
+	defer grpcConn.Close()
+
+	queryClient := authtypes.NewQueryClient(grpcConn)
+	accountAddr, err := sdk.AccAddressFromBech32(address)
+	if err != nil {
+		log.CustomLogger().Error("[GetAccountNumber][AccAddressFromBech32] failed to parse address",
+			"error", err,
+		)
+		return 0, 0, err
+	}
+
+	// Query the account
+	accountRes, err := queryClient.Account(context.Background(), &authtypes.QueryAccountRequest{Address: accountAddr.String()})
+	if err != nil {
+		log.CustomLogger().Error("[GetAccountNumber][Account] failed to query account",
+			"error", err,
+		)
+		return 0, 0, err
+	}
+
+	// Extract account information
+	var account authtypes.BaseAccount
+	err = account.Unmarshal(accountRes.Account.Value)
+	if err != nil {
+		log.CustomLogger().Error("[GetAccountNumber][Unmarshal] failed to unmarshal account",
+			"error", err,
+		)
+		return 0, 0, err
+	}
+
+	log.CustomLogger().Info("`GetAccountNumber` finished successfully",
+		"Account Number", account.AccountNumber,
+		"Sequence", account.Sequence,
+	)
+	return account.AccountNumber, account.Sequence, nil
+}
+
+// ConvertStringToCoins takes a string and returns sdk.Coins
+func ConvertStringToCoins(input string) (sdk.Coins, error) {
+	// Use ParseCoinsNormalized to convert the string into sdk.Coins
+	coins, err := sdk.ParseCoinsNormalized(input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse coins: %v", err)
+	}
+
+	return coins, nil
+}
+
+func CreateTransaction(sender string, reciever string, token string, txBuilder client.TxBuilder) error {
+	faucetAmount, _ := strconv.ParseInt(config.Config.Faucet.FaucetAmounts[token], 10, 64)
+	feeAmount, _ := ConvertStringToCoins(config.Config.Faucet.FeeAmounts[token])
+	msg := banktypes.NewMsgSend(sdk.MustAccAddressFromBech32(sender), sdk.MustAccAddressFromBech32(reciever), sdk.NewCoins(sdk.NewInt64Coin(token, faucetAmount)))
+	err := txBuilder.SetMsgs(msg)
+	if err != nil {
+		log.CustomLogger().Error("[CreateTransaction][SetMsgs] failed to create message of transaction",
+			"error", err,
+		)
+		return err
+	}
+	memo := "send transaction"
+	gasLimit := uint64(config.DefaultGasLimit)
+
+	txBuilder.SetGasLimit(gasLimit)
+	txBuilder.SetFeeAmount(feeAmount)
+	txBuilder.SetMemo(memo)
+	txBuilder.SetTimeoutHeight(0)
+	return nil
+}
+
+func DerivePrivateKeyFromMnemonic() []byte {
+	mnemonic := config.Config.Faucet.Mnemonic
+	seed, _ := bip39.NewSeedWithErrorChecking(mnemonic, "")
+	master, ch := hd.ComputeMastersFromSeed(seed)
+	priv, _ := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
+	return priv
+}
+
+func IsEligibleToTransferToken(r *http.Request, gwCosmosmux *runtime.ServeMux, receiver string, token string) bool {
+	faucetBalances := GetAccountBalances(gwCosmosmux, r.Clone(r.Context()), config.Config.Faucet.Address)
+	var faucetBalance string
+	for _, balance := range faucetBalances {
+		if balance.Denom == token {
+			faucetBalance = balance.Amount
+		}
+	}
+
+	bigFaucetBalance, ok := new(big.Float).SetString(faucetBalance)
+	if !ok {
+		log.CustomLogger().Error("[IsEligibleToTransferToken] failed to convert faucet balance.",
+			"faucet Balance", faucetBalance,
+		)
+		return false
+	}
+
+	bigFaucetAmount, ok := new(big.Float).SetString(config.Config.Faucet.FaucetAmounts[token])
+	if !ok {
+		log.CustomLogger().Error("[IsEligibleToTransferToken] failed to convert calim amount.",
+			"calim Amount", faucetBalance,
+		)
+		return false
+	}
+
+	log.CustomLogger().Info("[IsEligibleToTransferToken] fetching balance of the accounts is done",
+		"faucet balance", bigFaucetBalance,
+		"calim amount", bigFaucetAmount,
+		"is faucet balance greather than calim amount", bigFaucetAmount.Cmp(bigFaucetBalance) > 0,
+	)
+	return bigFaucetAmount.Cmp(bigFaucetBalance) > 0
+}
+
+func TransferToken(reciever string, token string) (string, error) {
+
+	log.CustomLogger().Info(" Starting `TransferToken` request...")
+
+	txBuilder := config.EncodingCg.TxConfig.NewTxBuilder()
+	err := CreateTransaction(config.Config.Faucet.Address, reciever, token, txBuilder)
+	if err != nil {
+		log.CustomLogger().Error("[TransferToken][CreateTransaction] failed to create transaction.",
+			"error", err,
+		)
+		return "failed to create transaction", err
+	}
+
+	dif := &keyssecp256k1.PrivKey{Key: DerivePrivateKeyFromMnemonic()}
+	privs := []cryptotypes.PrivKey{dif}
+	num, seq, accountErr := GetAccountNumber(config.Config.Faucet.Address)
+	if accountErr != nil {
+		log.CustomLogger().Error("[TransferToken][GetAccountNumber] failed to get account. Faucet balance is empty. Please add tokens to the faucet before attempting a transfer.",
+			"error", err,
+		)
+		return "faucet balance is empty", err
+	}
+	accSeqs := []uint64{seq}
+	accNums := []uint64{num}
+
+	// First round: we gather all the signer infos. We use the "set empty signature" hack to do that.
+	var sigsV2 []signing.SignatureV2
+	for i, priv := range privs {
+		sigV2 := signing.SignatureV2{
+			PubKey: priv.PubKey(),
+			Data: &signing.SingleSignatureData{
+				SignMode:  config.EncodingCg.TxConfig.SignModeHandler().DefaultMode(),
+				Signature: nil,
+			},
+			Sequence: accSeqs[i],
+		}
+
+		sigsV2 = append(sigsV2, sigV2)
+	}
+
+	err = txBuilder.SetSignatures(sigsV2...)
+	if err != nil {
+		log.CustomLogger().Error("[TransferToken][SetSignatures] first round signing failed.",
+			"error", err,
+		)
+		return "first round signing failed", err
+	}
+
+	// Second round: all signer infos are set, so each signer can sign.
+	sigsV2 = []signing.SignatureV2{}
+	for i, priv := range privs {
+		signerData := authsigning.SignerData{
+			ChainID:       config.DefaultChainId,
+			AccountNumber: accNums[i],
+			Sequence:      accSeqs[i],
+		}
+		sigV2, sigErr := tx.SignWithPrivKey(
+			config.EncodingCg.TxConfig.SignModeHandler().DefaultMode(), signerData,
+			txBuilder, priv, config.EncodingCg.TxConfig, accSeqs[i])
+		if sigErr != nil {
+			log.CustomLogger().Error("[TransferToken][SignWithPrivKey] second round signing failed.",
+				"error", sigErr,
+			)
+			return "", sigErr
+		}
+		sigsV2 = append(sigsV2, sigV2)
+	}
+
+	err = txBuilder.SetSignatures(sigsV2...)
+	if err != nil {
+		log.CustomLogger().Error("[TransferToken][SetSignatures] failed to setup signature.",
+			"error", err,
+		)
+		return "failed to setup signature", err
+	}
+
+	txBytes, err := config.EncodingCg.TxConfig.TxEncoder()(txBuilder.GetTx())
+	if err != nil {
+		log.CustomLogger().Error("[TransferToken][TxEncoder] failed to encode tx.",
+			"error", err,
+		)
+		return "failed to encode tx", err
+	}
+
+	grpcConn, _ := grpc.Dial(
+		config.DefaultGrpc,
+		grpc.WithInsecure(),
+	)
+	defer grpcConn.Close()
+
+	// Simulation
+	simClient := txtypes.NewServiceClient(grpcConn)
+	simResponse, simErr := simClient.Simulate(
+		context.Background(),
+		&txtypes.SimulateRequest{
+			TxBytes: txBytes,
+		},
+	)
+	if simErr != nil {
+		log.CustomLogger().Error("[TransferToken][Simulate] failed to run simulation.",
+			"error", simErr,
+		)
+		return "failed to run simulation", simErr
+	}
+
+	log.CustomLogger().Info("`TransferToken` Simulation have done successfully.",
+		"simulation result", simResponse.GasInfo,
+	)
+
+	txClient := txtypes.NewServiceClient(grpcConn)
+	grpcRes, breadcastErr := txClient.BroadcastTx(
+		context.Background(),
+		&txtypes.BroadcastTxRequest{
+			Mode:    txtypes.BroadcastMode_BROADCAST_MODE_SYNC,
+			TxBytes: txBytes,
+		},
+	)
+	if breadcastErr != nil {
+		log.CustomLogger().Error("[TransferToken][BroadcastTx] failed to broadcast tx.",
+			"error", breadcastErr,
+		)
+		return "failed to broadcast tx", breadcastErr
+	}
+
+	log.CustomLogger().Info("`TransferToken` broadcasting transaction have sent successfully.",
+		"transaction hash", grpcRes.TxResponse.TxHash,
+	)
+	return grpcRes.TxResponse.TxHash, nil
 }

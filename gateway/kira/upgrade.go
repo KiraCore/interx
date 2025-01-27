@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -31,18 +32,21 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-current-upgrade-plan] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-current-upgrade-plan] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QueryCurrentPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryCurrentPlan].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryCurrentPlan].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryCurrentPlanRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-current-upgrade-plan] Returning from the cache")
+					log.CustomLogger().Info("[query-current-upgrade-plan] Returning from the cache")
 					return
 				}
 			}
@@ -50,7 +54,7 @@ func QueryCurrentPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = QueryCurrentPlanHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryCurrentPlan].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryCurrentPlan].CacheEnabled)
 	}
 }
 
@@ -66,18 +70,21 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-next-upgrade-plan] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-next-upgrade-plan] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QueryNextPlan].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryNextPlan].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryNextPlan].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNextPlanRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-next-upgrade-plan] Returning from the cache")
+					log.CustomLogger().Info("[query-next-upgrade-plan] Returning from the cache")
 					return
 				}
 			}
@@ -85,6 +92,6 @@ func QueryNextPlanRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Ha
 			response.Response, response.Error, statusCode = QueryNextPlanHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNextPlan].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNextPlan].CacheEnabled)
 	}
 }

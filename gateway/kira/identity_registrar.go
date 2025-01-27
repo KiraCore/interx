@@ -9,6 +9,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types/kira/gov"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
@@ -44,18 +45,21 @@ func QueryIdentityRecordRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-identity-record] entering query")
+		log.CustomLogger().Info("[query-identity-record] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryIdentityRecord].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryIdentityRecord].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryIdentityRecord].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryIdentityRecordRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-identity-record] returning from the cache")
+					log.CustomLogger().Info("[query-identity-record] returning from the cache")
 					return
 				}
 			}
@@ -63,7 +67,7 @@ func QueryIdentityRecordRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = QueryIdentityRecordHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecord].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecord].CacheEnabled)
 	}
 }
 
@@ -84,18 +88,21 @@ func QueryIdentityRecordsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-identity-records-by-address] entering query")
+		log.CustomLogger().Info("[query-identity-records-by-address] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryIdentityRecordsByAddress].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryIdentityRecordsByAddress].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryIdentityRecordsByAddress].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryIdentityRecordsByAddressRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-identity-records-by-address] returning from the cache")
+					log.CustomLogger().Info("[query-identity-records-by-address] returning from the cache")
 					return
 				}
 			}
@@ -103,7 +110,7 @@ func QueryIdentityRecordsByAddressRequest(gwCosmosmux *runtime.ServeMux, rpcAddr
 			response.Response, response.Error, statusCode = QueryIdentityRecordsByAddressHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordsByAddress].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordsByAddress].CacheEnabled)
 	}
 }
 
@@ -140,18 +147,21 @@ func QueryAllIdentityRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr strin
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-all-identity-records] entering query")
+		log.CustomLogger().Info("[query-all-identity-records] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryAllIdentityRecords].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryAllIdentityRecords].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryAllIdentityRecords].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAllIdentityRecordsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-all-identity-records] returning from the cache")
+					log.CustomLogger().Info("[query-all-identity-records] returning from the cache")
 					return
 				}
 			}
@@ -159,7 +169,7 @@ func QueryAllIdentityRecordsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr strin
 			response.Response, response.Error, statusCode = QueryAllIdentityRecordsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAllIdentityRecords].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAllIdentityRecords].CacheEnabled)
 	}
 }
 
@@ -174,18 +184,21 @@ func QueryIdentityRecordVerifyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-identity-record-verify-request] entering query")
+		log.CustomLogger().Info("[query-identity-record-verify-request] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequest].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequest].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequest].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryIdentityRecordVerifyRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-identity-record-verify-request] returning from the cache")
+					log.CustomLogger().Info("[query-identity-record-verify-request] returning from the cache")
 					return
 				}
 			}
@@ -193,7 +206,7 @@ func QueryIdentityRecordVerifyRequest(gwCosmosmux *runtime.ServeMux, rpcAddr str
 			response.Response, response.Error, statusCode = QueryIdentityRecordVerifyRequestHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequest].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequest].CacheEnabled)
 	}
 }
 
@@ -231,13 +244,13 @@ func QueryIdentityRecordVerifyRequestsByRequesterHandler(r *http.Request, gwCosm
 		res := gov.IdVerifyRequests{}
 		bz, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-identity-record-verify-requests-by-requester] Invalid response format", err)
+			log.CustomLogger().Error("[query-identity-record-verify-requests-by-requester] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(bz, &res)
 		if err != nil {
-			common.GetLogger().Error("[query-identity-record-verify-requests-by-requester] Invalid response format", err)
+			log.CustomLogger().Error("[query-identity-record-verify-requests-by-requester] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -256,18 +269,21 @@ func QueryIdentityRecordVerifyRequestsByRequester(gwCosmosmux *runtime.ServeMux,
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-identity-record-verify-request-by-requester] entering query")
+		log.CustomLogger().Info("[query-identity-record-verify-request-by-requester] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByRequester].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByRequester].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByRequester].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryIdentityRecordVerifyRequestsByRequester` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-identity-record-verify-request-by-requester] returning from the cache")
+					log.CustomLogger().Info("[query-identity-record-verify-request-by-requester] returning from the cache")
 					return
 				}
 			}
@@ -275,7 +291,7 @@ func QueryIdentityRecordVerifyRequestsByRequester(gwCosmosmux *runtime.ServeMux,
 			response.Response, response.Error, statusCode = QueryIdentityRecordVerifyRequestsByRequesterHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByRequester].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByRequester].CacheEnabled)
 	}
 }
 
@@ -314,13 +330,13 @@ func QueryIdentityRecordVerifyRequestsByApproverHandler(r *http.Request, gwCosmo
 		res := gov.IdVerifyRequests{}
 		bz, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-identity-record-verify-requests-by-approver] Invalid response format", err)
+			log.CustomLogger().Error("[query-identity-record-verify-requests-by-approver] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(bz, &res)
 		if err != nil {
-			common.GetLogger().Error("[query-identity-record-verify-requests-by-approver] Invalid response format", err)
+			log.CustomLogger().Error("[query-identity-record-verify-requests-by-approver] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -339,18 +355,21 @@ func QueryIdentityRecordVerifyRequestsByApprover(gwCosmosmux *runtime.ServeMux, 
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-identity-record-verify-request-by-approver] entering query")
+		log.CustomLogger().Info("[query-identity-record-verify-request-by-approver] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByApprover].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByApprover].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByApprover].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryIdentityRecordVerifyRequestsByApprover` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-identity-record-verify-request-by-approver] returning from the cache")
+					log.CustomLogger().Info("[query-identity-record-verify-request-by-approver] returning from the cache")
 					return
 				}
 			}
@@ -358,7 +377,7 @@ func QueryIdentityRecordVerifyRequestsByApprover(gwCosmosmux *runtime.ServeMux, 
 			response.Response, response.Error, statusCode = QueryIdentityRecordVerifyRequestsByApproverHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByApprover].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryIdentityRecordVerifyRequestsByApprover].CacheEnabled)
 	}
 }
 
@@ -395,18 +414,21 @@ func QueryAllIdentityRecordVerifyRequests(gwCosmosmux *runtime.ServeMux, rpcAddr
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-all-identity-record-verify-requests] entering query")
+		log.CustomLogger().Info("[query-all-identity-record-verify-requests] entering query")
 
 		if !common.RPCMethods["GET"][config.QueryAllIdentityRecords].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryAllIdentityRecords].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryAllIdentityRecords].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAllIdentityRecordVerifyRequests` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-all-identity-record-verify-requests] returning from the cache")
+					log.CustomLogger().Info("[query-all-identity-record-verify-requests] returning from the cache")
 					return
 				}
 			}
@@ -414,6 +436,6 @@ func QueryAllIdentityRecordVerifyRequests(gwCosmosmux *runtime.ServeMux, rpcAddr
 			response.Response, response.Error, statusCode = QueryAllIdentityRecordVerifyRequestsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAllIdentityRecords].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryAllIdentityRecords].CacheEnabled)
 	}
 }

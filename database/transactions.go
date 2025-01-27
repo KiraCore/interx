@@ -8,6 +8,7 @@ import (
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	tmTypes "github.com/cometbft/cometbft/rpc/core/types"
 )
 
@@ -75,9 +76,13 @@ func SaveTransactions(address string, txsData tmTypes.ResultTxSearch, isWithdraw
 	global.Mutex.Lock()
 	err = os.MkdirAll(folderPath, os.ModePerm)
 	if err != nil {
-		global.Mutex.Unlock()
 
-		fmt.Println("[cache] Unable to create a folder: ", folderPath)
+		global.Mutex.Unlock()
+		log.CustomLogger().Error("[SaveTransactions][cache] Unable to create a folder",
+			"folder path", folderPath,
+			"error", err,
+		)
+
 		return err
 	}
 
@@ -85,7 +90,12 @@ func SaveTransactions(address string, txsData tmTypes.ResultTxSearch, isWithdraw
 	global.Mutex.Unlock()
 
 	if err != nil {
-		fmt.Println("[cache] Unable to save response: ", filePath)
+
+		log.CustomLogger().Error("[SaveTransactions][cache] Unable to save response",
+			"file path", filePath,
+			"error", err,
+		)
+
 	}
 
 	return err

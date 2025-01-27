@@ -10,6 +10,7 @@ import (
 	jsonrpc2 "github.com/KeisukeYamashita/go-jsonrpc"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	"github.com/btcsuite/btcd/btcjson"
@@ -151,18 +152,25 @@ func QueryBitcoinStatusRequest(rpcAddr string) http.HandlerFunc {
 		response := common.GetResponseFormat(request, rpcAddr)
 		statusCode := http.StatusOK
 
-		common.GetLogger().Info("[query-bitcoin-status] Entering status query: ", chain)
+		log.CustomLogger().Info(" Starting QueryBitcoinStatusRequest request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryBitcoinStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBitcoinStatus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBitcoinStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBitcoinStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-bitcoin-status] Returning from the cache: ", chain)
+					log.CustomLogger().Info(" Returning Bitcoin Status from the cache",
+						"chain", chain,
+					)
 					return
 				}
 			}
@@ -170,6 +178,6 @@ func QueryBitcoinStatusRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryBitcoinStatusHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinStatus].CacheEnabled)
 	}
 }

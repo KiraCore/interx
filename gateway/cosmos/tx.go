@@ -9,6 +9,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	legacytx "github.com/cosmos/cosmos-sdk/x/auth/migrations/legacytx"
 	"github.com/gorilla/mux"
@@ -36,7 +37,9 @@ func postTxHandle(r *http.Request, request types.InterxRequest, rpcAddr string) 
 	var req PostTxReq
 	err := json.Unmarshal(request.Params, &req)
 	if err != nil {
-		common.GetLogger().Error("[post-transaction] Failed to unmarshal request: ", err)
+		log.CustomLogger().Error("[postTxHandle] Failed to unmarshal request.",
+			"error", err,
+		)
 		return common.ServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
@@ -49,7 +52,9 @@ func postTxHandle(r *http.Request, request types.InterxRequest, rpcAddr string) 
 	}
 
 	if !txModeAllowed {
-		common.GetLogger().Error("[post-transaction] Invalid transaction mode")
+		log.CustomLogger().Error("[postTxHandle] Invalid transaction mode.",
+			"tx mode", req.Mode,
+		)
 		return common.ServeError(0, "invalid transaction mode: ", req.Mode, http.StatusBadRequest)
 	}
 
@@ -61,25 +66,33 @@ func postTxHandle(r *http.Request, request types.InterxRequest, rpcAddr string) 
 	} else if req.Mode == "async" {
 		url = "/broadcast_tx_async"
 	} else {
-		common.GetLogger().Error("[post-transaction] Invalid mode: ", req.Mode)
+		log.CustomLogger().Error("[postTxHandle] Invalid transaction mode.",
+			"tx mode", req.Mode,
+		)
 		return common.ServeError(0, "", "invalid mode", http.StatusBadRequest)
 	}
 
 	signedTx, err := config.EncodingCg.TxConfig.TxJSONDecoder()(req.Tx)
 	if err != nil {
-		common.GetLogger().Error("[post-transaction] Failed to decode tx request: ", err)
+		log.CustomLogger().Error("[postTxHandle] Failed to decode tx request.",
+			"error", err,
+		)
 		return common.ServeError(0, "failed to get signed TX", err.Error(), http.StatusBadRequest)
 	}
 
 	txBuilder, err := config.EncodingCg.TxConfig.WrapTxBuilder(signedTx)
 	if err != nil {
-		common.GetLogger().Error("[post-transaction] Failed to get tx builder: ", err)
+		log.CustomLogger().Error("[postTxHandle] Failed to get tx builder.",
+			"error", err,
+		)
 		return common.ServeError(0, "failed to get TX builder", err.Error(), http.StatusBadRequest)
 	}
 
 	txBytes, err := config.EncodingCg.TxConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		common.GetLogger().Error("[post-transaction] Failed to get tx bytes: ", err)
+		log.CustomLogger().Error("[postTxHandle] Failed to get tx bytes.",
+			"error", err,
+		)
 		return common.ServeError(0, "failed to get TX bytes", err.Error(), http.StatusBadRequest)
 	}
 
@@ -93,7 +106,7 @@ func PostTxRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[post-transaction] Entering transaction broadcast: ")
+		log.CustomLogger().Info("`PostTxRequest` Starting Request...")
 
 		if !common.RPCMethods["POST"][config.PostTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
@@ -121,18 +134,22 @@ func QueryTxHashRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-txhash] Entering transaction hash query: ", hash)
+		log.CustomLogger().Info("`QueryTxHashRequest` Transaction Hash Request...", "hash", hash)
 
 		if !common.RPCMethods["GET"][config.QueryTransactionHash].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTransactionHash].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTransactionHash].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryTxHashRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-txhash] Returning from the cache: ", hash)
+					log.CustomLogger().Info("`QueryTxHashRequest` Returning from the cache", "hash", hash)
+
 					return
 				}
 			}
@@ -140,7 +157,7 @@ func QueryTxHashRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryTxHashHandle(hash, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionHash].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryTransactionHash].CacheEnabled)
 	}
 }
 
@@ -156,7 +173,7 @@ func encodeTransactionHandle(r *http.Request, request types.InterxRequest, rpcAd
 
 	err := config.EncodingCg.Amino.UnmarshalJSON(request.Params, &req)
 	if err != nil {
-		common.GetLogger().Error("[encode-transaction] Failed to decode tx request: ", err)
+		log.CustomLogger().Error("[EncodeTransactionHandle] Failed encode transaction", "error", err)
 		return common.ServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
@@ -179,18 +196,22 @@ func EncodeTransaction(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[encode-transaction] Entering transaction request encoding")
+		log.CustomLogger().Info("`EncodeTransaction` Starting encoding transaction request...")
 
 		if !common.RPCMethods["POST"][config.EncodeTransaction].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.EncodeTransaction].CachingEnabled {
+			if common.RPCMethods["POST"][config.EncodeTransaction].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `EncodeTransaction` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[encode-transaction] Returning from the cache")
+					log.CustomLogger().Info("`EncodeTransaction` Returning from the cache")
+
 					return
 				}
 			}
@@ -198,6 +219,6 @@ func EncodeTransaction(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = encodeTransactionHandle(r, request, rpcAddr)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.EncodeTransaction].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.EncodeTransaction].CacheEnabled)
 	}
 }

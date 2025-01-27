@@ -36,3 +36,7 @@ type SnapShotChecksumResponse struct {
 	Size     int64  `json:"size,omitempty"`
 	Checksum string `json:"checksum,omitempty"`
 }
+
+type FaucetResponse struct {
+	Hash string `json:"hash"`
+}

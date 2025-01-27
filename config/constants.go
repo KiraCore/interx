@@ -87,6 +87,9 @@ const (
 	Download              = "/download"
 	DataReferenceRegistry = "DRR"
 	DefaultInterxPort     = "11000"
+	DefaultGrpc           = "0.0.0.0:9090"
+	DefaultChainId        = "localnet-1"
+	DefaultGasLimit       = 20000
 
 	QueryRosettaNetworkList    = "/rosetta/network/list"
 	QueryRosettaNetworkOptions = "/rosetta/network/options"

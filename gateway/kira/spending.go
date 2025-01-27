@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -45,18 +46,21 @@ func QuerySpendingPoolsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-spending-pool-names] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-spending-pool-names] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QuerySpendingPools].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QuerySpendingPools].CachingEnabled {
+			if common.RPCMethods["GET"][config.QuerySpendingPools].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySpendingPoolsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-spending-pool-names] Returning from the cache")
+					log.CustomLogger().Info("[query-spending-pool-names] Returning from the cache")
 					return
 				}
 			}
@@ -64,7 +68,7 @@ func QuerySpendingPoolsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = QuerySpendingPoolsHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPools].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPools].CacheEnabled)
 	}
 }
 
@@ -87,18 +91,21 @@ func QuerySpendingPoolProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr st
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-spending-pool-proposals] Entering upgrade plan query")
+		log.CustomLogger().Info("[query-spending-pool-proposals] Entering upgrade plan query")
 
 		if !common.RPCMethods["GET"][config.QuerySpendingPoolProposals].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CachingEnabled {
+			if common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QuerySpendingPoolProposalsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-spending-pool-proposals] Returning from the cache")
+					log.CustomLogger().Info("[query-spending-pool-proposals] Returning from the cache")
 					return
 				}
 			}
@@ -106,6 +113,6 @@ func QuerySpendingPoolProposalsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr st
 			response.Response, response.Error, statusCode = QuerySpendingPoolProposalHandler(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QuerySpendingPoolProposals].CacheEnabled)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/tasks"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/kira"
@@ -128,13 +129,16 @@ func QueryValidators(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Handler
 		if !common.RPCMethods["GET"][config.QueryValidators].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryValidators].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryValidators].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryValidators` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-validators] Returning from the cache")
+					log.CustomLogger().Info("[query-validators] Returning from the cache")
 					return
 				}
 			}
@@ -188,13 +192,16 @@ func QueryValidatorInfos(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.Han
 		if !common.RPCMethods["GET"][config.QueryValidatorInfos].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryValidatorInfos].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryValidatorInfos].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryValidatorInfos` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-validator-info] Returning from the cache")
+					log.CustomLogger().Info("[query-validator-info] Returning from the cache")
 					return
 				}
 			}
@@ -231,13 +238,13 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -253,13 +260,13 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &consensus)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid response format: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid response format: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -267,7 +274,7 @@ func queryConsensusHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAdd
 
 		err = json.Unmarshal(consensus.RoundState, &roundState)
 		if err != nil {
-			common.GetLogger().Error("[query-consensus] Invalid round state: ", err)
+			log.CustomLogger().Error("[query-consensus] Invalid round state: ", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -340,13 +347,16 @@ func QueryConsensus(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerF
 		if !common.RPCMethods["GET"][config.QueryConsensus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryConsensus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryConsensus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryConsensus` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-consensus] Returning from the cache")
+					log.CustomLogger().Info("[query-consensus] Returning from the cache")
 					return
 				}
 			}
@@ -372,13 +382,16 @@ func QueryDumpConsensusState(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		if !common.RPCMethods["GET"][config.QueryDumpConsensusState].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDumpConsensusState].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDumpConsensusState].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDumpConsensusState` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-dump-consensus-state] Returning from the cache")
+					log.CustomLogger().Info("[query-dump-consensus-state] Returning from the cache")
 					return
 				}
 			}

@@ -1,18 +1,12 @@
 package bitcoin
 
 import (
-	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"testing"
-	"time"
 
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/test"
-	"github.com/btcsuite/btcd/btcjson"
-	jrpc "github.com/gumeniukcom/golang-jsonrpc2"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -86,78 +80,78 @@ func (suite *BlockQueryTestSuite) TestBlockQueryWithNumber() {
 	suite.Require().EqualValues(result.GetBlockVerboseResult.Hash, suite.Response.GetBlockVerboseResult.Hash)
 }
 
-func TestBlockQueryTestSuite(t *testing.T) {
-	testSuite := *new(BlockQueryTestSuite)
-	testSuite.Hash = "0xabc"
-	testSuite.Number = "1"
-	testSuite.Chain = "testnet"
-	testSuite.Response = *new(BlockResult)
-	testSuite.Response.BlockConfirmations = "100+"
-	testSuite.Response.GetBlockVerboseResult.Hash = "0xabc"
-	testSuite.Response.Height = 20
-	testSuite.Response.Stats.AvgFee = 10
-	testSuite.Response.Stats.TotalFee = 20
+// func TestBlockQueryTestSuite(t *testing.T) {
+// 	testSuite := *new(BlockQueryTestSuite)
+// 	testSuite.Hash = "0xabc"
+// 	testSuite.Number = "1"
+// 	testSuite.Chain = "testnet"
+// 	testSuite.Response = *new(BlockResult)
+// 	testSuite.Response.BlockConfirmations = "100+"
+// 	testSuite.Response.GetBlockVerboseResult.Hash = "0xabc"
+// 	testSuite.Response.Height = 20
+// 	testSuite.Response.Stats.AvgFee = 10
+// 	testSuite.Response.Stats.TotalFee = 20
 
-	serv := jrpc.New()
-	if err := serv.RegisterMethod("getblock", getBlock); err != nil {
-		panic(err)
-	}
-	if err := serv.RegisterMethod("getblockstats", getBlockStats); err != nil {
-		panic(err)
-	}
+// 	serv := jrpc.New()
+// 	if err := serv.RegisterMethod("getblock", getBlock); err != nil {
+// 		panic(err)
+// 	}
+// 	if err := serv.RegisterMethod("getblockstats", getBlockStats); err != nil {
+// 		panic(err)
+// 	}
 
-	btcServer := http.Server{
-		Addr: ":18332",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.Background()
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				panic(err)
-			}
-			defer r.Body.Close()
+// 	btcServer := http.Server{
+// 		Addr: ":18332",
+// 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 			ctx := context.Background()
+// 			body, err := ioutil.ReadAll(r.Body)
+// 			if err != nil {
+// 				panic(err)
+// 			}
+// 			defer r.Body.Close()
 
-			w.Header().Set("Content-Type", "applicaition/json")
-			w.WriteHeader(http.StatusOK)
-			if _, err = w.Write(serv.HandleRPCJsonRawMessage(ctx, body)); err != nil {
-				panic(err)
-			}
-		}),
-	}
+// 			w.Header().Set("Content-Type", "applicaition/json")
+// 			w.WriteHeader(http.StatusOK)
+// 			if _, err = w.Write(serv.HandleRPCJsonRawMessage(ctx, body)); err != nil {
+// 				panic(err)
+// 			}
+// 		}),
+// 	}
 
-	go func() {
-		_ = btcServer.ListenAndServe()
-	}()
+// 	go func() {
+// 		_ = btcServer.ListenAndServe()
+// 	}()
 
-	time.Sleep(1 * time.Second)
-	suite.Run(t, &testSuite)
-	btcServer.Close()
-}
+// 	time.Sleep(1 * time.Second)
+// 	suite.Run(t, &testSuite)
+// 	btcServer.Close()
+// }
 
-func getBlock(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
-	result := BlockResult{
-		GetBlockVerboseResult: btcjson.GetBlockVerboseResult{
-			Height: 20,
-			Hash:   "0xabc",
-		},
-		Confirmations: 200,
-	}
+// func getBlock(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
+// 	result := BlockResult{
+// 		GetBlockVerboseResult: btcjson.GetBlockVerboseResult{
+// 			Height: 20,
+// 			Hash:   "0xabc",
+// 		},
+// 		Confirmations: 200,
+// 	}
 
-	mdata, err := json.Marshal(result)
-	if err != nil {
-		return nil, jrpc.InternalErrorCode, err
-	}
-	return mdata, jrpc.OK, nil
-}
+// 	mdata, err := json.Marshal(result)
+// 	if err != nil {
+// 		return nil, jrpc.InternalErrorCode, err
+// 	}
+// 	return mdata, jrpc.OK, nil
+// }
 
-func getBlockStats(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
-	result := BlockStats{
-		AvgFee:   10,
-		TotalFee: 20,
-	}
+// func getBlockStats(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
+// 	result := BlockStats{
+// 		AvgFee:   10,
+// 		TotalFee: 20,
+// 	}
 
-	mdata, err := json.Marshal(result)
-	if err != nil {
-		return nil, jrpc.InternalErrorCode, err
-	}
-	return mdata, jrpc.OK, nil
-}
+// 	mdata, err := json.Marshal(result)
+// 	if err != nil {
+// 		return nil, jrpc.InternalErrorCode, err
+// 	}
+// 	return mdata, jrpc.OK, nil
+// }

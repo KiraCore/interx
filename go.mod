@@ -3,6 +3,7 @@ module github.com/KiraCore/interx
 go 1.19
 
 require (
+	cosmossdk.io/log v1.2.1
 	cosmossdk.io/math v1.2.0
 	github.com/KeisukeYamashita/go-jsonrpc v1.0.1
 	github.com/KiraCore/sekai v0.3.46-0.20240514123010-1b8573dfe96c
@@ -21,6 +22,7 @@ require (
 	github.com/inhies/go-bytesize v0.0.0-20200716184324-4fe85e9b81b2
 	github.com/rakyll/statik v0.1.7
 	github.com/rs/cors v1.8.2
+	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible
 	github.com/sonyarouje/simdb v0.0.0-20181202125413-c2488dfc374a
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.0.2
@@ -136,7 +138,6 @@ require (
 	github.com/rs/zerolog v1.30.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.6.1 // indirect

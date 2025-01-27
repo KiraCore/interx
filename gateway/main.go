@@ -11,6 +11,7 @@ import (
 	"github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/functions"
 	"github.com/KiraCore/interx/insecure"
+	"github.com/KiraCore/interx/log"
 	cosmosAuth "github.com/KiraCore/interx/proto-gen/cosmos/auth/v1beta1"
 	cosmosBank "github.com/KiraCore/interx/proto-gen/cosmos/bank/v1beta1"
 	kiraGov "github.com/KiraCore/interx/proto-gen/kira/gov"
@@ -28,7 +29,6 @@ import (
 	"github.com/rakyll/statik/fs"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
-	grpclog "google.golang.org/grpc/grpclog"
 )
 
 // getOpenAPIHandler serves an OpenAPI UI.
@@ -126,7 +126,7 @@ func GetGrpcServeMux(grpcAddr string) (*runtime.ServeMux, error) {
 }
 
 // Run runs the gRPC-Gateway, dialling the provided address.
-func Run(configFilePath string, log grpclog.LoggerV2) error {
+func Run(configFilePath string) error {
 	config.LoadConfig(configFilePath)
 	functions.RegisterInterxFunctions()
 	functionmeta.RegisterStdMsgs()
@@ -175,10 +175,10 @@ func Run(configFilePath string, log grpclog.LoggerV2) error {
 			Certificates: []tls.Certificate{insecure.Cert},
 		}
 
-		log.Info("Serving gRPC-Gateway and OpenAPI Documentation on https://", gatewayAddr)
+		log.CustomLogger().Info("Serving gRPC-Gateway and OpenAPI Documentation on https://")
 		return fmt.Errorf("serving gRPC-Gateway server: %w", gwServer.ListenAndServeTLS("", ""))
 	}
 
-	log.Info("Serving gRPC-Gateway and OpenAPI Documentation on http://", gatewayAddr)
+	log.CustomLogger().Info("Serving gRPC-Gateway and OpenAPI Documentation on http://")
 	return fmt.Errorf("serving gRPC-Gateway server: %w", gwServer.ListenAndServe())
 }

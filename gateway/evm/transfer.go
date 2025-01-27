@@ -13,7 +13,7 @@ import (
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
 	jsonrpc2 "github.com/KeisukeYamashita/go-jsonrpc"
-
+	interxLog "github.com/KiraCore/interx/log"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -156,18 +156,21 @@ func QueryEVMTransferRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-transfer] Entering transactions execute: ", chain)
+		interxLog.CustomLogger().Info("[query-evm-transfer] Entering transactions execute: ", chain)
 
 		if !common.RPCMethods["GET"][config.QueryEVMTransfer].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMTransfer].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMTransfer].CacheEnabled {
+
+				interxLog.CustomLogger().Info("Starting search cache for `QueryEVMTransferRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-transfer] Returning from the cache: ", chain)
+					interxLog.CustomLogger().Info("[query-evm-transfer] Returning from the cache: ", chain)
 					return
 				}
 			}
@@ -175,6 +178,6 @@ func QueryEVMTransferRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMTransferRequestHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransfer].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMTransfer].CacheEnabled)
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
@@ -104,18 +105,26 @@ func RegisterEVMAccountsRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-accounts] Entering transactions execute: ", chain)
+		log.CustomLogger().Info("`RegisterEVMAccountsRequest` Starting EVM Account request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryEVMAccounts].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMAccounts].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMAccounts].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `RegisterEVMAccountsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-accounts] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`RegisterEVMAccountsRequest` Returning from the cache...",
+						"chain", chain,
+					)
+
 					return
 				}
 			}
@@ -123,6 +132,6 @@ func RegisterEVMAccountsRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMAccountsRequestHandle(r, chain, address)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMAccounts].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMAccounts].CacheEnabled)
 	}
 }

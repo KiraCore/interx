@@ -27,13 +27,13 @@ type ProxyResponseError struct {
 	Message string `json:"message"`
 }
 
-// InterxResponse is a struct to be used for response caching
+// InterxResponse is a struct to be used for response cache
 type InterxResponse struct {
-	Response             ProxyResponse `json:"response"`
-	Status               int           `json:"status"`
-	CacheTime            time.Time     `json:"cache_time"`
-	CachingDuration      int64         `json:"caching_duration"`
-	CachingBlockDuration int64         `json:"caching_block_duration"`
+	Response           ProxyResponse `json:"response"`
+	Status             int           `json:"status"`
+	CacheTime          time.Time     `json:"cache_time"`
+	CacheDuration      int64         `json:"cache_duration"`
+	CacheBlockDuration int64         `json:"cache_block_duration"`
 }
 
 // Used to parse response from sekai gRPC ("/kira/gov/data/{key}")
@@ -46,13 +46,13 @@ type DataReferenceEntry struct {
 
 // RPCMethod is a struct to be used for rpc_methods API
 type RPCMethod struct {
-	Description          string  `json:"description"`
-	Enabled              bool    `json:"enabled"`
-	RateLimit            float64 `json:"rate_limit,omitempty"`
-	AuthRateLimit        float64 `json:"auth_rate_limit,omitempty"`
-	CachingEnabled       bool    `json:"caching_enabled"`
-	CachingDuration      int64   `json:"caching_duration"`
-	CachingBlockDuration int64   `json:"caching_block_duration"`
+	Description        string  `json:"description"`
+	Enabled            bool    `json:"enabled"`
+	RateLimit          float64 `json:"rate_limit,omitempty"`
+	AuthRateLimit      float64 `json:"auth_rate_limit,omitempty"`
+	CacheEnabled       bool    `json:"cache_enabled"`
+	CacheDuration      int64   `json:"cache_duration"`
+	CacheBlockDuration int64   `json:"cache_block_duration"`
 }
 
 // RPCResponse is a struct of RPC response

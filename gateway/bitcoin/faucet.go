@@ -7,6 +7,7 @@ import (
 	jsonrpc2 "github.com/KeisukeYamashita/go-jsonrpc"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 )
 
@@ -72,7 +73,9 @@ func BitcoinFaucetRequest(rpcAddr string) http.HandlerFunc {
 		queries := r.URL.Query()
 		claimAddr := queries["claim"]
 
-		common.GetLogger().Info("[bitcoin-faucet] Entering faucet request: ", chain)
+		log.CustomLogger().Info(" Starting BitcoinFaucetRequest request...",
+			"chain", chain,
+		)
 
 		if len(claimAddr) != 0 {
 			response.Response, response.Error, statusCode = bitcoinFaucetHandle(r, chain, claimAddr[0])

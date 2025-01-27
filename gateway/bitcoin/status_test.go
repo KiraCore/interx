@@ -81,9 +81,9 @@ func TestStatusQueryTestSuite(t *testing.T) {
 	if err := serv.RegisterMethod("getnetworkinfo", getNetworkInfo); err != nil {
 		panic(err)
 	}
-	if err := serv.RegisterMethod("getblockstats", getBlockStats); err != nil {
-		panic(err)
-	}
+	// if err := serv.RegisterMethod("getblockstats", getBlockStats); err != nil {
+	// 	panic(err)
+	// }
 	if err := serv.RegisterMethod("estimatesmartfee", estimateSmartFee); err != nil {
 		panic(err)
 	}

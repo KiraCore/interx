@@ -4,7 +4,12 @@ import (
 	"time"
 
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/sonyarouje/simdb/db"
+)
+
+var (
+	faucetDb *db.Driver
 )
 
 // FaucetClaim is a struct for facuet claim.
@@ -21,16 +26,33 @@ func (c FaucetClaim) ID() (jsonField string, value interface{}) {
 }
 
 func LoadFaucetDbDriver() {
+
+	log.CustomLogger().Info("`LoadFaucetDbDriver` Starting load faucet db driver...",
+		"base db cache directory", config.GetDbCacheDir(),
+		"path", config.GetDbCacheDir()+"/faucet",
+	)
+
 	DisableStdout()
 	driver, _ := db.New(config.GetDbCacheDir() + "/faucet")
 	EnableStdout()
 
 	faucetDb = driver
+
+	log.CustomLogger().Info("`LoadFaucetDbDriver` faucetDb is fetched",
+		"faucetDb", driver,
+	)
 }
 
 func isClaimExist(address string) bool {
+
+	log.CustomLogger().Info("Starting `isClaimExist` request...",
+		"address", address,
+		"faucetDb", faucetDb,
+	)
+
 	if faucetDb == nil {
-		panic("cache dir not set")
+		log.CustomLogger().Error("[isClaimExist] Db is null.")
+		panic("[isClaimExist] db not set")
 	}
 
 	data := FaucetClaim{}
@@ -38,11 +60,18 @@ func isClaimExist(address string) bool {
 	DisableStdout()
 	err := faucetDb.Open(FaucetClaim{}).Where("address", "=", address).First().AsEntity(&data)
 	EnableStdout()
+
+	log.CustomLogger().Info("Finished `isClaimExist` request.",
+		"find", err == nil,
+	)
 
 	return err == nil
 }
 
 func getClaim(address string) time.Time {
+
+	log.CustomLogger().Info("Starting 'getClaim' request...")
+
 	if faucetDb == nil {
 		panic("cache dir not set")
 	}
@@ -51,18 +80,26 @@ func getClaim(address string) time.Time {
 
 	DisableStdout()
 	err := faucetDb.Open(FaucetClaim{}).Where("address", "=", address).First().AsEntity(&data)
+
 	EnableStdout()
 
 	if err != nil {
+		log.CustomLogger().Error(err.Error())
 		panic(err)
 	}
+
+	log.CustomLogger().Info("Finished 'getClaim' request.")
 
 	return data.Claim
 }
 
 // GetClaimTimeLeft is a function to get left time for next claim
 func GetClaimTimeLeft(address string) int64 {
+
+	log.CustomLogger().Info("Starting 'GetClaimTimeLeft' request...")
+
 	if faucetDb == nil {
+		log.CustomLogger().Error("[GetClaimTimeLeft] faucet Db is null.")
 		panic("cache dir not set")
 	}
 
@@ -76,13 +113,22 @@ func GetClaimTimeLeft(address string) int64 {
 		return 0
 	}
 
+	log.CustomLogger().Info("Finished 'GetClaimTimeLeft' request.")
+
 	return config.Config.Faucet.TimeLimit - diff
 }
 
 // AddNewClaim is a function to add current claim time
 func AddNewClaim(address string, claim time.Time) {
+
+	log.CustomLogger().Info("Starting `AddNewClaim` request...",
+		"faucetDb", faucetDb,
+		"address", address,
+	)
+
 	if faucetDb == nil {
-		panic("cache dir not set")
+		log.CustomLogger().Error("[AddNewClaim] faucet Db is null.")
+		panic("[AddNewClaim] faucet cache dir not set")
 	}
 
 	data := FaucetClaim{
@@ -92,12 +138,19 @@ func AddNewClaim(address string, claim time.Time) {
 
 	exists := isClaimExist(address)
 
+	log.CustomLogger().Info("`AddNewClaim` result for the searching for the claim",
+		"exists", exists,
+	)
+
 	if exists {
 		DisableStdout()
 		err := faucetDb.Open(FaucetClaim{}).Update(data)
 		EnableStdout()
 
 		if err != nil {
+			log.CustomLogger().Error("[AddNewClaim] failed to update facucet db",
+				"error", err.Error(),
+			)
 			panic(err)
 		}
 	} else {
@@ -106,11 +159,12 @@ func AddNewClaim(address string, claim time.Time) {
 		EnableStdout()
 
 		if err != nil {
+			log.CustomLogger().Error("[AddNewClaim] failed to insert to facucet db",
+				"error", err.Error(),
+			)
 			panic(err)
 		}
 	}
-}
 
-var (
-	faucetDb *db.Driver
-)
+	log.CustomLogger().Info("Finished 'AddNewClaim' request. Claim is updated")
+}

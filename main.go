@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/gateway"
+	"github.com/KiraCore/interx/log"
 	_ "github.com/KiraCore/interx/statik"
 	"github.com/tyler-smith/go-bip39"
-	"google.golang.org/grpc/grpclog"
 )
 
 func printUsage() {
@@ -35,11 +35,14 @@ func printUsage() {
 }
 
 func main() {
+	homeDir, _ := os.UserHomeDir()
+
+	// Define flag sets
 	initCommand := flag.NewFlagSet("init", flag.ExitOnError)
 	startCommand := flag.NewFlagSet("start", flag.ExitOnError)
+	enableLogs := startCommand.Bool("verbose", false, "Enable detailed logging.")
 	versionCommand := flag.NewFlagSet("version", flag.ExitOnError)
 
-	homeDir, _ := os.UserHomeDir()
 	initHomePtr := initCommand.String("home", homeDir+"/.interxd", "The interx configuration path.")
 	initServeHTTPS := initCommand.Bool("serve_https", false, "http or https.")
 	initGrpcPtr := initCommand.String("grpc", "dns:///0.0.0.0:9090", "The grpc endpoint of the sekaid.")
@@ -62,7 +65,7 @@ func main() {
 
 	initCacheDirPtr := initCommand.String("cache_dir", "", "The interx cache directory path.")
 	initMaxCacheSize := initCommand.String("max_cache_size", "2GB", "The maximum cache size.")
-	initCachingDuration := initCommand.Int64("caching_duration", 5, "The caching clear duration in seconds.")
+	initCacheDuration := initCommand.Int64("cache_duration", 5, "The caching clear duration in seconds.")
 	initMaxDownloadSize := initCommand.String("download_file_size_limitation", "10MB", "The maximum download file size.")
 
 	initFaucetMnemonicPtr := initCommand.String("faucet_mnemonic", "", "The interx faucet mnemonic file path or seeds.")
@@ -98,12 +101,23 @@ func main() {
 		// os.Args[2:] will be all arguments starting after the subcommand at os.Args[1]
 		switch os.Args[1] {
 		case "init":
-			err := initCommand.Parse(os.Args[2:])
+
+			err := log.InitializeLogger(true)
 			if err != nil {
+				log.CustomLogger().Error("Failed to initialize logs.")
+				panic(err)
+			}
+
+			log.CustomLogger().Info("Initializing server with 'interxd init' command.")
+
+			err = initCommand.Parse(os.Args[2:])
+			if err != nil {
+				log.CustomLogger().Error("Failed to initialize server with 'interxd init' command.")
 				panic(err)
 			}
 
 			if initCommand.Parsed() {
+
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
 				faucetMnemonic := *initFaucetMnemonicPtr
@@ -111,7 +125,7 @@ func main() {
 					faucetMnemonic = *initSigningMnemonicPtr
 				}
 
-				err := os.MkdirAll(*initHomePtr, os.ModePerm)
+				err := os.MkdirAll(*initHomePtr, os.ModePerm) // create root
 				if err != nil {
 					fmt.Printf("Not available to create folder: %s\n", *initHomePtr)
 				}
@@ -142,7 +156,7 @@ func main() {
 					*initHaltedAvgBlockTimes,
 					cacheDir,
 					*initMaxCacheSize,
-					*initCachingDuration,
+					*initCacheDuration,
 					*initMaxDownloadSize,
 					faucetMnemonic,
 					*initFaucetTimeLimit,
@@ -159,42 +173,78 @@ func main() {
 					*initSnapShotInterval,
 				)
 
-				fmt.Printf("Created interx configuration file: %s\n", *initHomePtr+"/config.json")
+				log.CustomLogger().Info("Created interx configuration file.", "Config File Path", *initHomePtr+"/config.json")
 				return
 			}
 		case "start":
+
+			log.CustomLogger().Info("Starting server with 'interxd start' command.")
+
 			err := startCommand.Parse(os.Args[2:])
 			if err != nil {
+				log.CustomLogger().Error("Failed to start INTERX server.")
 				panic(err)
 			}
 
 			if startCommand.Parsed() {
+
+				if *enableLogs {
+					err := log.InitializeLogger(true)
+					if err != nil {
+						log.CustomLogger().Error("Failed to initialize logs.")
+						panic(err)
+					}
+					defer log.RecoverFromPanic() // Ensure we recover from any panic
+
+					// Monitor system resources
+					go log.Monitor(25*time.Second, true)
+
+					log.CustomLogger().Info("Detailed logging is enabled.")
+				} else {
+					err := log.InitializeLogger(false)
+					if err != nil {
+						log.CustomLogger().Error("Failed to initialize logs.")
+						panic(err)
+					}
+				}
+
+				// Example: Call a function to start your application
+				log.CustomLogger().Info("Starting the server...")
+
 				// Check which subcommand was Parsed using the FlagSet.Parsed() function. Handle each case accordingly.
 				// FlagSet.Parse() will evaluate to false if no flags were parsed (i.e. the user did not provide any flags)
 				configFilePath := *startHomePtr + "/config.json"
-				fmt.Println("configFilePath", configFilePath)
+				log.CustomLogger().Info("Config Path", configFilePath)
 
-				// Adds gRPC internal logs. This is quite verbose, so adjust as desired!
-				log := common.GetLogger()
-				grpclog.SetLoggerV2(log)
+				err := gateway.Run(configFilePath)
+				log.CustomLogger().Error("failed to run the gateway", err)
 
-				err := gateway.Run(configFilePath, log)
-
-				log.Fatalln(err)
 				return
 			}
 		case "version":
-			err := versionCommand.Parse(os.Args[2:])
+
+			err := log.InitializeLogger(true)
 			if err != nil {
+				log.CustomLogger().Error("Failed to initialize logs.")
+				panic(err)
+			}
+
+			log.CustomLogger().Info("Starting server with 'interxd version' command.")
+
+			err = versionCommand.Parse(os.Args[2:])
+			if err != nil {
+				log.CustomLogger().Error("Failed to find INTERX version.")
 				panic(err)
 			}
 
 			if versionCommand.Parsed() {
-				fmt.Println(config.InterxVersion)
+				log.CustomLogger().Info("Successfully find Interx version",
+					"InterxVersion", config.InterxVersion,
+				)
 				return
 			}
 		default:
-			fmt.Println("init or start command is available.")
+			log.CustomLogger().Error("Server did not initialized and started.")
 			os.Exit(1)
 		}
 	}

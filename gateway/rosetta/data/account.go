@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/rosetta"
 	"github.com/KiraCore/interx/types/rosetta/dataapi"
@@ -25,7 +26,7 @@ func queryAccountBalanceHandler(r *http.Request, request types.InterxRequest, rp
 
 	err := json.Unmarshal(request.Params, &req)
 	if err != nil {
-		common.GetLogger().Error("[rosetta-query-accountbalance] Failed to decode the request: ", err)
+		log.CustomLogger().Error("[rosetta-query-accountbalance] Failed to decode the request: ", err)
 		return common.RosettaServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
@@ -62,18 +63,21 @@ func QueryAccountBalanceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[rosetta-query-accountbalance] Entering account balance query")
+		log.CustomLogger().Info("[rosetta-query-accountbalance] Entering account balance query")
 
 		if !common.RPCMethods["POST"][config.QueryRosettaAccountBalance].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAccountBalanceRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[rosetta-query-accountbalance] Returning from the cache")
+					log.CustomLogger().Info("[rosetta-query-accountbalance] Returning from the cache")
 					return
 				}
 			}
@@ -81,6 +85,6 @@ func QueryAccountBalanceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = queryAccountBalanceHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaAccountBalance].CacheEnabled)
 	}
 }
