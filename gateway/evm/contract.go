@@ -13,6 +13,7 @@ import (
 	jsonrpc2 "github.com/KeisukeYamashita/go-jsonrpc"
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/gorilla/mux"
 
@@ -208,18 +209,25 @@ func QueryReadContractRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-read-contract] Entering read smart contract: ", chain)
+		log.CustomLogger().Info("`QueryReadContractRequest` Starting reading contract request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryReadContract].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryReadContract].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryReadContract].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryReadContractRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-read-contract] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`QueryReadContractRequest` Returning from the cache",
+						"chain", chain,
+					)
 					return
 				}
 			}
@@ -227,7 +235,7 @@ func QueryReadContractRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryReadSmartContractHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryReadContract].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryReadContract].CacheEnabled)
 	}
 }
 
@@ -299,7 +307,7 @@ func WriteContractCall(nodeInfo config.EVMNodeConfig, from string, contract stri
 	transactionCall.GasPrice = gasPrice
 	transactionCall.Value = "0x" + hex.EncodeToString([]byte(value))
 	transactionCall.Data = data
-	common.GetLogger().Info(transactionCall)
+	log.CustomLogger().Info("transaction", transactionCall)
 
 	result, err = client.Call("eth_estimateGas", transactionCall, "latest")
 	if err != nil {
@@ -414,18 +422,21 @@ func QueryWriteContractRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-write-contract] Entering write smart contract: ", chain)
+		log.CustomLogger().Info("[query-evm-write-contract] Entering write smart contract: ", chain)
 
 		if !common.RPCMethods["GET"][config.QueryWriteContract].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryWriteContract].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryWriteContract].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryWriteContractRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-write-contract] Returning from the cache: ", chain)
+					log.CustomLogger().Info("[query-evm-write-contract] Returning from the cache: ", chain)
 					return
 				}
 			}
@@ -433,6 +444,6 @@ func QueryWriteContractRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryWriteSmartContractHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryWriteContract].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryWriteContract].CacheEnabled)
 	}
 }

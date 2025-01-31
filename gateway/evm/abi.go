@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	// "github.com/powerman/rpc-codec/jsonrpc2"
 )
@@ -29,7 +30,6 @@ func queryAbiHandle(r *http.Request, chain string, contract string) (interface{}
 	}
 
 	abi := new(interface{})
-	common.GetLogger().Info(result.(map[string]interface{})["result"])
 	err = json.Unmarshal([]byte(result.(map[string]interface{})["result"].(string)), abi)
 	if err != nil {
 		return common.ServeError(0, "", "failed to decode result", http.StatusInternalServerError)
@@ -53,18 +53,26 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-abi] Entering abi query: ", chain)
+		log.CustomLogger().Info("`QueryAbiRequests` Starting Abi request...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryABI].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryABI].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryABI].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryAbiRequests` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-abi] Returning from the cache: ", chain)
+					log.CustomLogger().Info("`QueryAbiRequests` Returning from the cache",
+						"chain", chain,
+					)
+
 					return
 				}
 			}
@@ -72,6 +80,6 @@ func QueryAbiRequests(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryAbiHandle(r, chain, contract)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryABI].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryABI].CacheEnabled)
 	}
 }

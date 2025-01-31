@@ -7,6 +7,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/KiraCore/interx/types/rosetta"
 	"github.com/KiraCore/interx/types/rosetta/dataapi"
@@ -30,7 +31,7 @@ func queryNetworkListHandler(r *http.Request, request types.InterxRequest, rpcAd
 
 	err := json.Unmarshal(request.Params, &req)
 	if err != nil {
-		common.GetLogger().Error("[rosetta-query-networklist] Failed to decode the request: ", err)
+		log.CustomLogger().Error("[rosetta-query-networklist] Failed to decode the request: ", err)
 		return common.RosettaServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
@@ -48,13 +49,13 @@ func queryNetworkListHandler(r *http.Request, request types.InterxRequest, rpcAd
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[rosetta-query-networklist] Invalid response format", err)
+			log.CustomLogger().Error("[rosetta-query-networklist] Invalid response format", err)
 			return common.RosettaServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[rosetta-query-networklist] Invalid response format", err)
+			log.CustomLogger().Error("[rosetta-query-networklist] Invalid response format", err)
 			return common.RosettaServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -77,18 +78,21 @@ func QueryNetworkListRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[rosetta-query-networklist] Entering network list query")
+		log.CustomLogger().Info("[rosetta-query-networklist] Entering network list query")
 
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkList].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkListRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[rosetta-query-networklist] Returning from the cache")
+					log.CustomLogger().Info("[rosetta-query-networklist] Returning from the cache")
 					return
 				}
 			}
@@ -96,11 +100,11 @@ func QueryNetworkListRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) http
 			response.Response, response.Error, statusCode = queryNetworkListHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }
 
-func queryNetworkOptionsHandler(r *http.Request, request types.InterxRequest, rpcAddr string, gwCosmosmux *runtime.ServeMux) (interface{}, interface{}, int) {
+func queryNetworkOptionsHandler(_ *http.Request, _ types.InterxRequest, rpcAddr string, gwCosmosmux *runtime.ServeMux) (interface{}, interface{}, int) {
 	var response dataapi.NetworkOptionsResponse
 
 	response.Version = rosetta.Version{
@@ -118,18 +122,21 @@ func QueryNetworkOptionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[rosetta-query-networkoptions] Entering network list query")
+		log.CustomLogger().Info("[rosetta-query-networkoptions] Entering network list query")
 
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkOptions].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkOptionsRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[rosetta-query-networkoptions] Returning from the cache")
+					log.CustomLogger().Info("[rosetta-query-networkoptions] Returning from the cache")
 					return
 				}
 			}
@@ -137,7 +144,7 @@ func QueryNetworkOptionsRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) h
 			response.Response, response.Error, statusCode = queryNetworkOptionsHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }
 
@@ -146,7 +153,7 @@ func queryNetworkStatusHandler(r *http.Request, request types.InterxRequest, rpc
 
 	err := json.Unmarshal(request.Params, &req)
 	if err != nil {
-		common.GetLogger().Error("[rosetta-query-networkstatus] Failed to decode the request: ", err)
+		log.CustomLogger().Error("[rosetta-query-networkstatus] Failed to decode the request: ", err)
 		return common.RosettaServeError(0, "failed to unmarshal", err.Error(), http.StatusBadRequest)
 	}
 
@@ -176,13 +183,13 @@ func queryNetworkStatusHandler(r *http.Request, request types.InterxRequest, rpc
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[rosetta-query-networkstatus] Invalid response format", err)
+			log.CustomLogger().Error("[rosetta-query-networkstatus] Invalid response format", err)
 			return common.RosettaServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[rosetta-query-networkstatus] Invalid response format", err)
+			log.CustomLogger().Error("[rosetta-query-networkstatus] Invalid response format", err)
 			return common.RosettaServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -224,18 +231,21 @@ func QueryNetworkStatusRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[rosetta-query-networkstatus] Entering network list query")
+		log.CustomLogger().Info("[rosetta-query-networkstatus] Entering network list query")
 
 		if !common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].CachingEnabled {
+			if common.RPCMethods["POST"][config.QueryRosettaNetworkStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[rosetta-query-networkstatus] Returning from the cache")
+					log.CustomLogger().Info("[rosetta-query-networkstatus] Returning from the cache")
 					return
 				}
 			}
@@ -243,6 +253,6 @@ func QueryNetworkStatusRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = queryNetworkStatusHandler(r, request, rpcAddr, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["POST"][config.QueryRosettaNetworkList].CacheEnabled)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/KiraCore/interx/log"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -16,16 +17,21 @@ func getPostMethods() []string {
 	}
 }
 
+var Cache_Duration int64
+var Cache_Block_Duration int64
+
 func getRPCSettings() RPCConfig {
+
+	log.CustomLogger().Info("Starting `getRPCSettings` RPC setting from the config.")
 	config := RPCConfig{}
 
 	defaultRPCSetting := RPCSetting{
-		Disable:              false,
-		RateLimit:            0,
-		AuthRateLimit:        0,
-		CachingDisable:       false,
-		CachingDuration:      30,
-		CachingBlockDuration: 5,
+		Disable:            false,
+		RateLimit:          0,
+		AuthRateLimit:      0,
+		CacheDisable:       false,
+		CacheDuration:      30,
+		CacheBlockDuration: 5,
 	}
 
 	config.API = make(map[string]map[string]RPCSetting)
@@ -33,12 +39,11 @@ func getRPCSettings() RPCConfig {
 	config.API["POST"] = make(map[string]RPCSetting)
 
 	// endpoints that can change within 1 block time
-	defaultRPCSetting.CachingDuration = -1
-	defaultRPCSetting.CachingBlockDuration = 1
+	defaultRPCSetting.CacheDuration = -1
+	defaultRPCSetting.CacheBlockDuration = 1
 	config.API["GET"][QueryAccounts] = defaultRPCSetting
 	config.API["GET"][QueryTotalSupply] = defaultRPCSetting
 	config.API["GET"][QueryBalances] = defaultRPCSetting
-	config.API["GET"][QueryAccounts] = defaultRPCSetting
 	config.API["GET"][QueryDataReferenceKeys] = defaultRPCSetting
 	config.API["GET"][QueryDataReference] = defaultRPCSetting
 	config.API["GET"][QueryKiraStatus] = defaultRPCSetting
@@ -51,11 +56,9 @@ func getRPCSettings() RPCConfig {
 	config.API["GET"][QueryPermissionsByAddress] = defaultRPCSetting
 	config.API["GET"][QueryProposals] = defaultRPCSetting
 	config.API["GET"][QueryProposal] = defaultRPCSetting
-	config.API["GET"][QueryKiraTokensAliases] = defaultRPCSetting
 	config.API["GET"][QueryKiraTokensRates] = defaultRPCSetting
 	config.API["GET"][QueryVoters] = defaultRPCSetting
 	config.API["GET"][QueryVotes] = defaultRPCSetting
-	config.API["GET"][QueryKiraTokensAliases] = defaultRPCSetting
 	config.API["GET"][QueryKiraTokensRates] = defaultRPCSetting
 	config.API["GET"][QueryNetworkProperties] = defaultRPCSetting
 	config.API["GET"][QueryExecutionFee] = defaultRPCSetting
@@ -81,27 +84,38 @@ func getRPCSettings() RPCConfig {
 	config.API["GET"][QueryUBIRecords] = defaultRPCSetting
 
 	// endpoints that never change
-	defaultRPCSetting.CachingDuration = -1
-	defaultRPCSetting.CachingBlockDuration = -1
-	config.API["GET"][QueryTransactionHash] = defaultRPCSetting
-	config.API["GET"][QueryBlocks] = defaultRPCSetting
-	config.API["GET"][QueryBlockByHeightOrHash] = defaultRPCSetting
-	config.API["GET"][QueryTransactionResult] = defaultRPCSetting
+	neverChangeSettings := defaultRPCSetting
+	neverChangeSettings.CacheDuration = -1
+	neverChangeSettings.CacheBlockDuration = -1
+	config.API["GET"][QueryTransactionHash] = neverChangeSettings
+	config.API["GET"][QueryBlocks] = neverChangeSettings
+	config.API["GET"][QueryBlockByHeightOrHash] = neverChangeSettings
+	config.API["GET"][QueryTransactionResult] = neverChangeSettings
 
 	// endpoints that change constantly
-	defaultRPCSetting.CachingDuration = 1
-	defaultRPCSetting.CachingBlockDuration = -1
-	config.API["GET"][QueryConsensus] = defaultRPCSetting
-	config.API["GET"][QueryPrivP2PList] = defaultRPCSetting
-	config.API["GET"][QueryPubP2PList] = defaultRPCSetting
-	config.API["GET"][QueryInterxList] = defaultRPCSetting
-	config.API["GET"][QuerySnapList] = defaultRPCSetting
+	constantChangeSettings := defaultRPCSetting
+	constantChangeSettings.CacheDuration = 1
+	constantChangeSettings.CacheBlockDuration = -1
+	config.API["GET"][QueryConsensus] = constantChangeSettings
+	config.API["GET"][QueryPrivP2PList] = constantChangeSettings
+	config.API["GET"][QueryPubP2PList] = constantChangeSettings
+	config.API["GET"][QueryInterxList] = constantChangeSettings
+	config.API["GET"][QuerySnapList] = constantChangeSettings
 
-	config.API["GET"][QueryEVMStatus] = defaultRPCSetting
+	config.API["GET"][QueryEVMStatus] = constantChangeSettings
+
+	Cache_Duration = defaultRPCSetting.CacheDuration
+	Cache_Block_Duration = defaultRPCSetting.CacheBlockDuration
 
 	for _, item := range getPostMethods() {
 		config.API["POST"][item] = defaultRPCSetting
 	}
+
+	log.CustomLogger().Info("Finish `getRPCSettings` RPC setting from the config.",
+		"defaultRPCSetting", defaultRPCSetting,
+		"neverChangeSettings", neverChangeSettings,
+		"constantChangeSettings", constantChangeSettings,
+	)
 
 	return config
 }
@@ -137,7 +151,7 @@ func defaultConfig() InterxConfigFromFile {
 
 	configFromFile.Cache.CacheDir = "cache"
 	configFromFile.Cache.MaxCacheSize = "2GB"
-	configFromFile.Cache.CachingDuration = 5
+	configFromFile.Cache.CacheDuration = 5
 	configFromFile.Cache.DownloadFileSizeLimitation = "10MB"
 
 	configFromFile.Faucet.MnemonicFile = configFromFile.MnemonicFile
@@ -217,7 +231,7 @@ func InitConfig(
 	haltedAvgBlockTimes int64,
 	cacheDir string,
 	maxCacheSize string,
-	cachingDuration int64,
+	cacheDuration int64,
 	maxDownloadSize string,
 	faucetMnemonic string,
 	faucetTimeLimit int64,
@@ -262,7 +276,7 @@ func InitConfig(
 
 	configFromFile.Cache.CacheDir = cacheDir
 	configFromFile.Cache.MaxCacheSize = maxCacheSize
-	configFromFile.Cache.CachingDuration = cachingDuration
+	configFromFile.Cache.CacheDuration = cacheDuration
 	configFromFile.Cache.DownloadFileSizeLimitation = maxDownloadSize
 
 	configFromFile.Faucet.MnemonicFile = faucetMnemonic
@@ -295,11 +309,18 @@ func InitConfig(
 
 	bytes, err := json.MarshalIndent(&configFromFile, "", "  ")
 	if err != nil {
+		log.CustomLogger().Error("[InitConfig] Failed to marshal config.",
+			"error", err,
+		)
 		panic(err)
 	}
 
 	err = ioutil.WriteFile(configFilePath, bytes, 0644)
 	if err != nil {
+		log.CustomLogger().Error("[InitConfig] Failed to write to file.",
+			"config_File_Path", configFilePath,
+			"error", err,
+		)
 		panic(err)
 	}
 }

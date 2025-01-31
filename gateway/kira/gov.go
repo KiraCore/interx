@@ -11,6 +11,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	database "github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -66,18 +67,21 @@ func QueryDataReferenceKeysRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-reference-keys] Entering data reference keys query")
+		log.CustomLogger().Info("[query-reference-keys] Entering data reference keys query")
 
 		if !common.RPCMethods["GET"][config.QueryDataReferenceKeys].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDataReferenceKeys].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDataReferenceKeys].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDataReferenceKeysRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-reference-keys] Returning from the cache")
+					log.CustomLogger().Info("[query-reference-keys] Returning from the cache")
 					return
 				}
 			}
@@ -85,7 +89,7 @@ func QueryDataReferenceKeysRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = queryDataReferenceKeysHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReferenceKeys].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReferenceKeys].CacheEnabled)
 	}
 }
 
@@ -101,13 +105,13 @@ func queryDataReferenceHandle(r *http.Request, gwCosmosmux *runtime.ServeMux, ke
 
 		byteData, err := json.Marshal(success)
 		if err != nil {
-			common.GetLogger().Error("[query-reference] Invalid response format", err)
+			log.CustomLogger().Error("[query-reference] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
 		err = json.Unmarshal(byteData, &result)
 		if err != nil {
-			common.GetLogger().Error("[query-reference] Invalid response format", err)
+			log.CustomLogger().Error("[query-reference] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -130,18 +134,21 @@ func QueryDataReferenceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-reference] Entering data reference query by key: ", key)
+		log.CustomLogger().Info("[query-reference] Entering data reference query by key: ", key)
 
 		if !common.RPCMethods["GET"][config.QueryDataReference].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryDataReference].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryDataReference].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryDataReferenceRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-reference] Returning from the cache")
+					log.CustomLogger().Info("[query-reference] Returning from the cache")
 					return
 				}
 			}
@@ -149,7 +156,7 @@ func QueryDataReferenceRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = queryDataReferenceHandle(r, gwCosmosmux, key)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReference].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryDataReference].CacheEnabled)
 	}
 }
 
@@ -159,7 +166,7 @@ func QueryNetworkPropertiesHandle(r *http.Request, gwCosmosmux *runtime.ServeMux
 	if success != nil {
 		result, err := common.QueryNetworkPropertiesFromGrpcResult(success)
 		if err != nil {
-			common.GetLogger().Error("[query-network-properties] Invalid response format", err)
+			log.CustomLogger().Error("[query-network-properties] Invalid response format", err)
 			return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 		}
 
@@ -175,18 +182,21 @@ func QueryNetworkPropertiesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-network-properties] Entering network properties query")
+		log.CustomLogger().Info("[query-network-properties] Entering network properties query")
 
 		if !common.RPCMethods["GET"][config.QueryNetworkProperties].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryNetworkProperties].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryNetworkProperties].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryNetworkPropertiesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-network-properties] Returning from the cache")
+					log.CustomLogger().Info("[query-network-properties] Returning from the cache")
 					return
 				}
 			}
@@ -194,7 +204,7 @@ func QueryNetworkPropertiesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string
 			response.Response, response.Error, statusCode = QueryNetworkPropertiesHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNetworkProperties].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryNetworkProperties].CacheEnabled)
 	}
 }
 
@@ -216,18 +226,21 @@ func QueryExecutionFeeRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) htt
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-execution-fee] Entering execution fee query")
+		log.CustomLogger().Info("[query-execution-fee] Entering execution fee query")
 
 		if !common.RPCMethods["GET"][config.QueryExecutionFee].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryExecutionFee].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryExecutionFee].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryExecutionFeeRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-execution-fee] Returning from the cache")
+					log.CustomLogger().Info("[query-execution-fee] Returning from the cache")
 					return
 				}
 			}
@@ -235,7 +248,7 @@ func QueryExecutionFeeRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) htt
 			response.Response, response.Error, statusCode = QueryExecutionFeeHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFee].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFee].CacheEnabled)
 	}
 }
 
@@ -251,18 +264,21 @@ func QueryExecutionFeesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-execution-fees] Entering execution fees query")
+		log.CustomLogger().Info("[query-execution-fees] Entering execution fees query")
 
 		if !common.RPCMethods["GET"][config.QueryExecutionFees].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryExecutionFees].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryExecutionFees].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryExecutionFeesRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-execution-fees] Returning from the cache")
+					log.CustomLogger().Info("[query-execution-fees] Returning from the cache")
 					return
 				}
 			}
@@ -270,6 +286,6 @@ func QueryExecutionFeesRequest(gwCosmosmux *runtime.ServeMux, rpcAddr string) ht
 			response.Response, response.Error, statusCode = QueryExecutionFeesHandle(r, gwCosmosmux)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFees].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryExecutionFees].CacheEnabled)
 	}
 }

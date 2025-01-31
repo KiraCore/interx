@@ -7,6 +7,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
@@ -180,18 +181,21 @@ func QueryEVMStatusRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-evm-status] Entering status query: ", chain)
+		log.CustomLogger().Info("[query-evm-status] Entering status query: ", chain)
 
 		if !common.RPCMethods["GET"][config.QueryEVMStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryEVMStatus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryEVMStatus].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryEVMStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-evm-status] Returning from the cache: ", chain)
+					log.CustomLogger().Info("[query-evm-status] Returning from the cache: ", chain)
 					return
 				}
 			}
@@ -199,6 +203,6 @@ func QueryEVMStatusRequest(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = queryEVMStatusHandle(r, chain)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryEVMStatus].CacheEnabled)
 	}
 }

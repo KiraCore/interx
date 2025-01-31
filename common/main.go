@@ -1,13 +1,11 @@
 package common
 
 import (
-	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
-	"google.golang.org/grpc/grpclog"
 )
 
 // RPCMethods is a variable for rpc methods
@@ -18,32 +16,25 @@ func AddRPCMethod(method string, url string, description string, canCache bool) 
 	newMethod := types.RPCMethod{}
 	newMethod.Description = description
 	newMethod.Enabled = true
-	newMethod.CachingEnabled = true
+	newMethod.CacheEnabled = true
 
 	if conf, ok := config.Config.RPCMethods.API[method][url]; ok {
 		newMethod.Enabled = !conf.Disable
-		newMethod.CachingEnabled = !conf.CachingDisable
+		newMethod.CacheEnabled = !conf.CacheDisable
 		newMethod.RateLimit = conf.RateLimit
 		newMethod.AuthRateLimit = conf.AuthRateLimit
-		newMethod.CachingDuration = conf.CachingDuration
-		newMethod.CachingBlockDuration = conf.CachingBlockDuration
+		newMethod.CacheDuration = conf.CacheDuration
+		newMethod.CacheBlockDuration = conf.CacheBlockDuration
 	}
 
 	if !canCache {
-		newMethod.CachingEnabled = false
+		newMethod.CacheEnabled = false
 	}
 
 	if _, ok := RPCMethods[method]; !ok {
 		RPCMethods[method] = map[string]types.RPCMethod{}
 	}
 	RPCMethods[method][url] = newMethod
-}
-
-var logger = grpclog.NewLoggerV2(os.Stdout, ioutil.Discard, ioutil.Discard)
-
-// GetLogger is a function to get logger
-func GetLogger() grpclog.LoggerV2 {
-	return logger
 }
 
 // NodeStatus is a struct to be used for node status
@@ -54,27 +45,71 @@ var NodeStatus struct {
 }
 
 func IsCacheExpired(result types.InterxResponse) bool {
+	log.CustomLogger().Info("Starting `IsCacheExpired` function...",
+		"cache_block_duration", result.CacheBlockDuration,
+		"cache_duration", result.CacheDuration,
+		"response_block", result.Response.Block,
+		"node_block", NodeStatus.Block,
+		"cache_time", result.CacheTime,
+	)
+
+	// Check if the cache is expired based on block duration
 	isBlockExpire := false
-	if result.CachingBlockDuration == 0 {
+	switch {
+	case result.CacheBlockDuration == 0:
+		log.CustomLogger().Info("`CacheBlockDuration` is 0. Block-based cache expiration detected.")
 		isBlockExpire = true
-	} else if result.CachingBlockDuration == -1 {
+	case result.CacheBlockDuration == -1:
+		log.CustomLogger().Info("`CacheBlockDuration` is -1. Block-based cache has not expire.")
 		isBlockExpire = false
-	} else if result.Response.Block+result.CachingBlockDuration > NodeStatus.Block {
-		isBlockExpire = false
-	} else {
+	case result.Response.Block+result.CacheBlockDuration <= NodeStatus.Block:
+		log.CustomLogger().Info("`CacheBlockDuration` Block-based cache has expired.",
+			"response_block", result.Response.Block,
+			"cache_block_duration", result.CacheBlockDuration,
+			"current_block", NodeStatus.Block,
+		)
 		isBlockExpire = true
+	default:
+		log.CustomLogger().Info("`CacheBlockDuration` Block-based cache has not expired.",
+			"response_block", result.Response.Block,
+			"cache_block_duration", result.CacheBlockDuration,
+			"current_block", NodeStatus.Block,
+		)
+		isBlockExpire = false
 	}
 
+	// Check if the cache is expired based on timestamp duration
 	isTimestampExpire := false
-	if result.CachingDuration == 0 {
+	switch {
+	case result.CacheDuration == 0:
+		log.CustomLogger().Info("`CacheDuration` is 0. Timestamp-based cache expiration detected.")
 		isTimestampExpire = true
-	} else if result.CachingDuration == -1 {
+	case result.CacheDuration == -1:
+		log.CustomLogger().Info("`CacheDuration` is -1. Timestamp-based cache has not expire.")
 		isTimestampExpire = false
-	} else if result.CacheTime.Add(time.Duration(result.CachingDuration) * time.Second).After(time.Now().UTC()) {
-		isTimestampExpire = false
-	} else {
+	case result.CacheTime.Add(time.Duration(result.CacheDuration) * time.Second).Before(time.Now().UTC()):
+		log.CustomLogger().Info("`CacheDuration` Timestamp-based cache has expired.",
+			"cache_time", result.CacheTime,
+			"cache_duration_seconds", result.CacheDuration,
+			"current_time", time.Now().UTC(),
+		)
 		isTimestampExpire = true
+	default:
+		log.CustomLogger().Info("`CacheDuration` Timestamp-based cache has not expired.",
+			"cache_time", result.CacheTime,
+			"cache_duration_seconds", result.CacheDuration,
+			"current_time", time.Now().UTC(),
+		)
+		isTimestampExpire = false
 	}
 
-	return isBlockExpire || isTimestampExpire
+	// Cache is expired if either block or timestamp condition is met
+	isExpired := isBlockExpire || isTimestampExpire
+	log.CustomLogger().Info("Completed `IsCacheExpired` function.",
+		"is_block_expired", isBlockExpire,
+		"is_timestamp_expired", isTimestampExpire,
+		"is_expired", isExpired,
+	)
+
+	return isExpired
 }

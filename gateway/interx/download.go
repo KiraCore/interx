@@ -6,6 +6,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -22,7 +23,7 @@ func DownloadReference() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filename := strings.TrimPrefix(r.URL.Path, config.Download+"/")
 
-		common.GetLogger().Info("[download] Entering reference download: ", filename)
+		log.CustomLogger().Info("[download] Entering reference download: ", filename)
 
 		if len(filename) != 0 {
 			http.ServeFile(w, r, config.GetReferenceCacheDir()+"/"+filename)

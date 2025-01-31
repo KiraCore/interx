@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	common "github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	database "github.com/KiraCore/interx/database"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 )
 
 // RefMeta is a struct to be used for reference metadata
@@ -55,7 +55,9 @@ func saveReference(url string, path string) error {
 			return err
 		}
 
+		// Acquire mutex
 		global.Mutex.Lock()
+		defer global.Mutex.Unlock() // Ensure unlock even on error
 
 		if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
 			err1 := os.MkdirAll(filepath.Dir(path), 0700)
@@ -66,18 +68,15 @@ func saveReference(url string, path string) error {
 
 		err = ioutil.WriteFile(path, bodyBytes, 0644)
 		if err != nil {
-			global.Mutex.Unlock()
 			return err
 		}
-
-		global.Mutex.Unlock()
 	}
 
 	return nil
 }
 
 // DataReferenceCheck is a function to check cache data for data references.
-func DataReferenceCheck(isLog bool) {
+func DataReferenceCheck() {
 	for {
 		references, err := database.GetAllReferences()
 		if err == nil {
@@ -102,11 +101,9 @@ func DataReferenceCheck(isLog bool) {
 					continue
 				}
 
-				if isLog {
-					common.GetLogger().Info("[cache] Data reference updated")
-					common.GetLogger().Info("[cache] Key = ", v.Key)
-					common.GetLogger().Info("[cache] Ref = ", v.URL)
-				}
+				log.CustomLogger().Info("[cache] Data reference updated")
+				log.CustomLogger().Info("[cache] Key = ", v.Key)
+				log.CustomLogger().Info("[cache] Ref = ", v.URL)
 
 				database.AddReference(v.Key, v.URL, ref.ContentLength, ref.LastModified, v.FilePath)
 			}

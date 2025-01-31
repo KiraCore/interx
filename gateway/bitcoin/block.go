@@ -7,6 +7,7 @@ import (
 
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 
 	// "github.com/powerman/rpc-codec/jsonrpc2"
@@ -133,18 +134,25 @@ func QueryBitcoinBlockRequest(rpcAddr string) http.HandlerFunc {
 		response := common.GetResponseFormat(request, rpcAddr)
 		statusCode := http.StatusOK
 
-		common.GetLogger().Info("[query-bitcoin-block] Entering block query: ", chain)
+		log.CustomLogger().Info("Starting QueryBitcoinBlockRequest ...",
+			"chain", chain,
+		)
 
 		if !common.RPCMethods["GET"][config.QueryBitcoinBlock].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryBitcoinBlock].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryBitcoinBlock].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryBitcoinBlockRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-bitcoin-block] Returning from the cache: ", chain)
+					log.CustomLogger().Info("Returning Bitcoin Block from the cache",
+						"chain", chain,
+					)
 					return
 				}
 			}
@@ -157,6 +165,6 @@ func QueryBitcoinBlockRequest(rpcAddr string) http.HandlerFunc {
 		if isSupportedChain {
 			enableCache = response.Response.(BlockResult).BlockConfirmations == strconv.Itoa(int(conf.BTC_CONFIRMATIONS))+"+"
 		}
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinBlock].CachingEnabled && enableCache)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryBitcoinBlock].CacheEnabled && enableCache)
 	}
 }

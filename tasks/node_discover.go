@@ -16,6 +16,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/global"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/ed25519"
@@ -231,7 +232,7 @@ func getBlock(rpcAddr string, height string) (*struct {
 	Time    string `json:"time"`
 }, error) {
 	url := fmt.Sprintf("%s/block?height=%s", rpcAddr, height)
-	common.GetLogger().Info("getBlock", url)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -257,7 +258,7 @@ func getBlock(rpcAddr string, height string) (*struct {
 	})
 	err = json.NewDecoder(resp.Body).Decode(result)
 	if err != nil {
-		common.GetLogger().Error("[node-status] Unexpected response: ", url)
+		log.CustomLogger().Error("[node-status] Unexpected response: ", url)
 		return nil, err
 	}
 
@@ -317,7 +318,7 @@ func getBlockFromInterx(rpcAddr string, height string) (*struct {
 	Time    string `json:"time"`
 }, error) {
 	url := fmt.Sprintf("%s/api/block/%s", rpcAddr, height)
-	common.GetLogger().Info("getBlockFromInterx", url)
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -343,7 +344,7 @@ func getBlockFromInterx(rpcAddr string, height string) (*struct {
 	})
 	err = json.NewDecoder(resp.Body).Decode(result)
 	if err != nil {
-		common.GetLogger().Error("[node-status] Unexpected response: ", url)
+		log.CustomLogger().Error("[node-status] Unexpected response: ", url)
 		return nil, err
 	}
 
@@ -385,26 +386,26 @@ func getGeoData(ipAddr string) GeoData {
 	geoApiEndpoint := "http://ip-api.com/json/" + ipAddr
 	res, err := http.Get(geoApiEndpoint)
 	if err != nil {
-		common.GetLogger().Error("failed to query geo info", err)
+		log.CustomLogger().Error("failed to query geo info", err)
 		return geodata
 	}
 	defer res.Body.Close()
 
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
-		common.GetLogger().Error("failed to read response body", err)
+		log.CustomLogger().Error("failed to read response body", err)
 		return geodata
 	}
 
 	err = json.Unmarshal(resBody, &geodata)
 	if err != nil {
-		common.GetLogger().Error("failed to unmarshal geodata", err)
+		log.CustomLogger().Error("failed to unmarshal geodata", err)
 		return geodata
 	}
 	return geodata
 }
 
-func NodeDiscover(rpcAddr string, isLog bool) {
+func NodeDiscover(rpcAddr string) {
 	initPrivateIps()
 
 	idOfPubList := make(map[string]int)
@@ -466,10 +467,6 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 
 			ipAddr := uniqueIPAddresses[index]
 			index++
-
-			if isLog {
-				common.GetLogger().Info("[node-discovery] ", ipAddr)
-			}
 
 			kiraStatus, err := QueryStatus(ipAddr)
 			if err != nil {
@@ -687,10 +684,6 @@ func NodeDiscover(rpcAddr string, isLog bool) {
 		SnapNodeListResponse.Scanning = false
 		global.Mutex.Unlock()
 
-		if isLog {
-			common.GetLogger().Info("[node-discovery] finished!")
-		}
-
 		time.Sleep(10 * time.Second)
 	}
 }
@@ -747,7 +740,7 @@ func getHostname(listenAddr string) (string, error) {
 	if err == nil {
 		return u.Hostname(), nil
 	}
-	common.GetLogger().Error("[node-discovery] unexpected listen addr: ", listenAddr)
+	log.CustomLogger().Error("[node-discovery] unexpected listen addr: ", listenAddr)
 	return "", err
 }
 

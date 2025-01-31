@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	sekaiapp "github.com/KiraCore/sekai/app"
 	sekaiappparams "github.com/KiraCore/sekai/app/params"
@@ -43,6 +44,9 @@ func mnemonicFromFile(filename string) string {
 	mnemonic, err := ioutil.ReadFile(filename)
 
 	if err != nil {
+		log.CustomLogger().Error("[mnemonicFromFile] Failed to read from file.",
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -82,20 +86,39 @@ func serveGRPC(r *http.Request, gwCosmosmux *runtime.ServeMux) (interface{}, int
 
 // LoadAddressAndDenom is a function to load addresses and migrate config using custom bech32 and denom prefixes
 func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, rpcAddr string, gatewayAddr string) {
+
+	log.CustomLogger().Info("Starting 'LoadAddressAndDenom' request...")
+
 	request, _ := http.NewRequest("GET", "http://"+gatewayAddr+"/kira/gov/custom_prefixes", nil)
 	response, failure, _ := serveGRPC(request, gwCosmosmux)
 
+	log.CustomLogger().Info("Proccessed serve GRPC for `LoadAddressAndDenom`.",
+		"configFilePath", configFilePath,
+		"gatewayAddr", gatewayAddr,
+		"failure", failure,
+	)
+
 	if response == nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to serve GPRC.",
+			"failure", failure,
+		)
 		panic(failure)
 	}
 
 	byteData, err := json.Marshal(response)
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to marshal response.",
+			"error", err,
+		)
 		panic(err)
 	}
+
 	result := map[string]string{}
 	err = json.Unmarshal(byteData, &result)
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to unmarshal response data.",
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -110,9 +133,13 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 	sekaiappparams.ConsNodePubKeyPrefix = bech32Prefix + "valconspub"
 
 	sekaiappparams.SetConfig()
+
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		fmt.Println("Invalid configuration: {}", err)
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to read configuration file.",
+			"configFilePath", configFilePath,
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -120,24 +147,33 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 
 	err = json.Unmarshal([]byte(file), &configFromFile)
 	if err != nil {
-		fmt.Println("Invalid configuration: {}", err)
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to unmarshal configuration file.",
+			"configFilePath", configFilePath,
+			"error", err,
+		)
 		panic(err)
 	}
 
 	//=============== interx address ===============
 	Config.Mnemonic = LoadMnemonic(configFromFile.MnemonicFile)
 	if !bip39.IsMnemonicValid(Config.Mnemonic) {
-		fmt.Println("Invalid Interx Mnemonic: ", Config.Mnemonic)
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to load mnemonic.")
 		panic("Invalid Interx Mnemonic")
 	}
 
 	seed, err := bip39.NewSeedWithErrorChecking(Config.Mnemonic, "")
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to validate seed.",
+			"error", err,
+		)
 		panic(err)
 	}
 	master, ch := hd.ComputeMastersFromSeed(seed)
 	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to derive form address path.",
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -183,17 +219,19 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 	}
 
 	if !bip39.IsMnemonicValid(Config.Faucet.Mnemonic) {
-		fmt.Println("Invalid Faucet Mnemonic: ", Config.Faucet.Mnemonic)
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to validate faucet mnemonic.")
 		panic("Invalid Faucet Mnemonic")
 	}
 
 	seed, err = bip39.NewSeedWithErrorChecking(Config.Faucet.Mnemonic, "")
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to validate new seed from mnemonic.")
 		panic(err)
 	}
 	master, ch = hd.ComputeMastersFromSeed(seed)
 	priv, err = hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to derive private key from the path.")
 		panic(err)
 	}
 
@@ -214,11 +252,13 @@ func LoadAddressAndDenom(configFilePath string, gwCosmosmux *runtime.ServeMux, r
 	// save denom changes to config
 	bytes, err := json.MarshalIndent(&configFromFile, "", "  ")
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to marshal config file.")
 		panic(err)
 	}
 
 	err = ioutil.WriteFile(configFilePath, bytes, 0644)
 	if err != nil {
+		log.CustomLogger().Error("[LoadAddressAndDenom] Failed to write config file to the file.")
 		panic(err)
 	}
 }
@@ -229,7 +269,10 @@ func LoadConfig(configFilePath string) {
 
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		fmt.Println("Invalid configuration: {}", err)
+		log.CustomLogger().Error("[LoadConfig] Failed to load interx configurations from a given file.",
+			"config_file_path", configFilePath,
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -237,7 +280,9 @@ func LoadConfig(configFilePath string) {
 
 	err = json.Unmarshal([]byte(file), &configFromFile)
 	if err != nil {
-		fmt.Println("Invalid configuration: {}", err)
+		log.CustomLogger().Error("[LoadConfig] Failed to unmarshal interx configurations file.",
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -258,6 +303,9 @@ func LoadConfig(configFilePath string) {
 	Config.AddrBooks = strings.Split(configFromFile.AddrBooks, ",")
 	Config.NodeKey, err = p2p.LoadOrGenNodeKey(configFromFile.NodeKey)
 	if err != nil {
+		log.CustomLogger().Error("[LoadConfig] Failed to load node key fro interx configurations file.",
+			"error", err,
+		)
 		panic(err)
 	}
 
@@ -273,7 +321,7 @@ func LoadConfig(configFilePath string) {
 
 	Config.Cache.CacheDir = configFromFile.Cache.CacheDir
 	Config.Cache.MaxCacheSize = parseSizeString(configFromFile.Cache.MaxCacheSize)
-	Config.Cache.CachingDuration = configFromFile.Cache.CachingDuration
+	Config.Cache.CacheDuration = configFromFile.Cache.CacheDuration
 	Config.Cache.DownloadFileSizeLimitation = parseSizeString(configFromFile.Cache.DownloadFileSizeLimitation)
 
 	// Display cache configurations
@@ -282,7 +330,7 @@ func LoadConfig(configFilePath string) {
 
 	fmt.Println("Interx Cache CacheDir                  : ", Config.Cache.CacheDir)
 	fmt.Println("Interx Cache MaxCacheSize              : ", Config.Cache.MaxCacheSize)
-	fmt.Println("Interx Cache CachingDuration           : ", Config.Cache.CachingDuration)
+	fmt.Println("Interx Cache CachingDuration           : ", Config.Cache.CacheDuration)
 	fmt.Println("Interx Cache DownloadFileSizeLimitation: ", Config.Cache.DownloadFileSizeLimitation)
 
 	// RPC Configuration
@@ -330,6 +378,8 @@ func LoadConfig(configFilePath string) {
 	Config.Bitcoin = configFromFile.Bitcoin
 
 	Config.SnapshotInterval = configFromFile.SnapshotInterval
+
+	log.CustomLogger().Info("Finished 'LoadConfig' request.")
 }
 
 // GenPrivKey is a function to generate a privKey
@@ -353,6 +403,9 @@ func GetDbCacheDir() string {
 }
 
 func LoadAddressBooks() []types.AddrBookJSON {
+
+	log.CustomLogger().Info("Starting 'LoadAddressBooks' request...")
+
 	addrBooks := make([]types.AddrBookJSON, 0)
 	for _, addrFile := range Config.AddrBooks {
 		file, _ := ioutil.ReadFile(addrFile)
@@ -362,16 +415,24 @@ func LoadAddressBooks() []types.AddrBookJSON {
 		err := json.Unmarshal([]byte(file), &book)
 
 		if err != nil {
-			fmt.Println("Failed to load addrBook: ", addrFile)
+			log.CustomLogger().Error(" [LoadAddressBooks] Failed to load addrBook.",
+				"error", err,
+				"addrFile", addrFile,
+			)
 		}
 
 		addrBooks = append(addrBooks, book)
 	}
 
+	log.CustomLogger().Info("Finished 'LoadAddressBooks' request.")
+
 	return addrBooks
 }
 
 func LoadUniqueIPAddresses() []string {
+
+	log.CustomLogger().Info("Starting 'LoadUniqueIPAddresses' request...")
+
 	ipAddresses := make([]string, 0)
 
 	flag := make(map[string]bool)
@@ -383,7 +444,10 @@ func LoadUniqueIPAddresses() []string {
 		err := json.Unmarshal([]byte(file), &book)
 
 		if err != nil {
-			fmt.Println("Failed to load addrBook: ", addrFile)
+			log.CustomLogger().Error(" [LoadUniqueIPAddresses] Failed to load addrBook.",
+				"error", err,
+				"addrFile", addrFile,
+			)
 		}
 
 		for _, addr := range book.Addrs {
@@ -393,6 +457,8 @@ func LoadUniqueIPAddresses() []string {
 			flag[addr.Addr.IP] = true
 		}
 	}
+
+	log.CustomLogger().Info("Finished 'LoadUniqueIPAddresses' request.")
 
 	return ipAddresses
 }

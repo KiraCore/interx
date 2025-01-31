@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
+	"github.com/KiraCore/interx/log"
 )
 
 var (
@@ -18,18 +18,17 @@ var (
 	SnapshotModTime           time.Time
 )
 
-func calcChecksum(isLog bool) {
+func calcChecksum() {
 	SnapshotChecksumAvailable = false
 	SnapshotLength = 0
 
-	common.GetLogger().Info("[cache] calculating snapshot checksum: ")
+	log.CustomLogger().Info("Starting `calcChecksum` calculating request...")
 
 	f, err := os.Open(config.SnapshotPath())
 	if err != nil {
-		if isLog {
-			common.GetLogger().Error("[cache] can't read snapshot file: ", err)
-		}
-
+		log.CustomLogger().Error("[CalcChecksum] Failed open snapshot file",
+			"error", err,
+		)
 		return
 	}
 
@@ -45,9 +44,9 @@ func calcChecksum(isLog bool) {
 		bytesRead, err := f.Read(buf)
 		if err != nil {
 			if err != io.EOF {
-				if isLog {
-					common.GetLogger().Error("[cache] failed to read snapshot: ", err)
-				}
+				log.CustomLogger().Error("[CalcChecksum] failed to read snapshot from the file",
+					"error", err,
+				)
 				return
 			}
 
@@ -64,19 +63,23 @@ func calcChecksum(isLog bool) {
 	SnapshotChecksumAvailable = true
 	SnapshotChecksum = hex.EncodeToString(h.Sum(nil))
 	SnapshotLength = totalRead
-	common.GetLogger().Info("[cache] snapshot checksum: ", SnapshotChecksum)
+	log.CustomLogger().Info("[CalcChecksum] encoding to the string",
+		"SnapshotChecksum", SnapshotChecksum,
+	)
 }
 
 // CalcSnapshotChecksum is a function for syncing sekaid status.
-func CalcSnapshotChecksum(isLog bool) {
+func CalcSnapshotChecksum() {
 	available := 0
 	for {
 		time.Sleep(time.Duration(config.Config.SnapshotInterval) * time.Millisecond)
 		file, err := os.Stat(config.SnapshotPath())
 
 		if err != nil {
-			if available != 1 && isLog {
-				common.GetLogger().Error("[cache] can't read snapshot file: ", err)
+			if available != 1 {
+				log.CustomLogger().Error("[CalcSnapshotChecksum] Failed to describe the file. File not available.",
+					"error", err,
+				)
 				available = 1
 			}
 
@@ -91,6 +94,6 @@ func CalcSnapshotChecksum(isLog bool) {
 
 		SnapshotModTime = file.ModTime()
 
-		calcChecksum(isLog)
+		calcChecksum()
 	}
 }

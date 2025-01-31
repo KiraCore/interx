@@ -36,3 +36,10 @@ type SnapShotChecksumResponse struct {
 	Size     int64  `json:"size,omitempty"`
 	Checksum string `json:"checksum,omitempty"`
 }
+
+// Creating structure for DiskStatus
+type DiskStatus struct {
+	All  uint64 `json:"All"`
+	Used uint64 `json:"Used"`
+	Free uint64 `json:"Free"`
+}

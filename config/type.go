@@ -20,12 +20,12 @@ type FaucetConfig struct {
 
 // RPCSetting is a struct to be used for endpoint setting
 type RPCSetting struct {
-	Disable              bool    `json:"disable"`
-	RateLimit            float64 `json:"rate_limit"`
-	AuthRateLimit        float64 `json:"auth_rate_limit"`
-	CachingDisable       bool    `json:"caching_disable"`
-	CachingDuration      int64   `json:"caching_duration"`
-	CachingBlockDuration int64   `json:"caching_block_duration"`
+	Disable            bool    `json:"disable"`
+	RateLimit          float64 `json:"rate_limit"`
+	AuthRateLimit      float64 `json:"auth_rate_limit"`
+	CacheDisable       bool    `json:"cache_disable"`
+	CacheDuration      int64   `json:"cache_duration"`
+	CacheBlockDuration int64   `json:"cache_block_duration"`
 }
 
 // RPCConfig is a struct to be used for PRC configuration
@@ -42,7 +42,7 @@ type BlockConfig struct {
 type CacheConfig struct {
 	CacheDir                   string `json:"cache_dir"`
 	MaxCacheSize               int64  `json:"max_cache_size"`
-	CachingDuration            int64  `json:"caching_duration"`
+	CacheDuration              int64  `json:"cache_duration"`
 	DownloadFileSizeLimitation int64  `json:"download_file_size_limitation"`
 }
 
@@ -129,7 +129,7 @@ type InterxConfigFromFile struct {
 	Cache         struct {
 		CacheDir                   string `json:"cache_dir"`
 		MaxCacheSize               string `json:"max_cache_size"`
-		CachingDuration            int64  `json:"caching_duration"`
+		CacheDuration              int64  `json:"cache_duration"`
 		DownloadFileSizeLimitation string `json:"download_file_size_limitation"`
 	} `json:"cache"`
 	Faucet struct {

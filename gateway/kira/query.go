@@ -6,6 +6,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	functions "github.com/KiraCore/interx/functions"
+	"github.com/KiraCore/interx/log"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -19,9 +20,8 @@ func RegisterKiraQueryRoutes(r *mux.Router, gwCosmosmux *runtime.ServeMux, rpcAd
 	common.AddRPCMethod("GET", config.QueryKiraStatus, "This is an API to query kira status.", true)
 }
 
-func queryKiraFunctionsHandle(rpcAddr string) (interface{}, interface{}, int) {
+func queryKiraFunctionsHandle(_ string) (interface{}, interface{}, int) {
 	functions := functions.GetKiraFunctions()
-
 	return functions, nil, http.StatusOK
 }
 
@@ -31,9 +31,7 @@ func QueryKiraFunctions(rpcAddr string) http.HandlerFunc {
 		var statusCode int
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
-
 		response.Response, response.Error, statusCode = queryKiraFunctionsHandle(rpcAddr)
-
 		common.WrapResponse(w, request, *response, statusCode, false)
 	}
 }
@@ -45,25 +43,27 @@ func QueryKiraStatusRequest(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-kira-status] Entering status query")
+		log.CustomLogger().Info("Starting `QueryKiraStatusRequest` request...")
 
 		if !common.RPCMethods["GET"][config.QueryKiraStatus].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryKiraStatus].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryKiraStatus].CacheEnabled {
+				log.CustomLogger().Info("Starting search cache for `QueryKiraStatusRequest` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
-
-					common.GetLogger().Info("[query-kira-status] Returning from the cache")
+					log.CustomLogger().Info("`QueryKiraStatusRequest` Returning cached response.")
 					return
 				}
 			}
-
 			response.Response, response.Error, statusCode = common.MakeTendermintRPCRequest(rpcAddr, "/status", "")
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraStatus].CachingEnabled)
+		log.CustomLogger().Info("Finished `QueryKiraStatusRequest` request")
+
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryKiraStatus].CacheEnabled)
 	}
 }

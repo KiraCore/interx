@@ -133,7 +133,7 @@ func TestBlockQueryTestSuite(t *testing.T) {
 	btcServer.Close()
 }
 
-func getBlock(ctx context.Context, data json.RawMessage) (json.RawMessage, int, error) {
+func getBlock(_ context.Context, _ json.RawMessage) (json.RawMessage, int, error) {
 	result := BlockResult{
 		GetBlockVerboseResult: btcjson.GetBlockVerboseResult{
 			Height: 20,

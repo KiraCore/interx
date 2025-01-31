@@ -15,6 +15,7 @@ import (
 	"github.com/KiraCore/interx/common"
 	"github.com/KiraCore/interx/config"
 	"github.com/KiraCore/interx/database"
+	"github.com/KiraCore/interx/log"
 	"github.com/KiraCore/interx/types"
 	kiratypes "github.com/KiraCore/sekai/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -47,17 +48,33 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 	var limit = 100
 	var limitPages = 100
 
+	log.CustomLogger().Info("Starting 'GetTransactionsWithSync' request...",
+		"rpc_address", rpcAddr,
+		"address", address,
+		"is_outbound", isOutbound,
+	)
+
 	if address == "" {
+		log.CustomLogger().Info("Address is empty, returning empty ResultTxSearch.")
 		return &tmTypes.ResultTxSearch{}, nil
 	}
 
 	lastBlock := database.GetLastBlockFetched(address, isOutbound)
+	log.CustomLogger().Info("Fetched last block request `GetLastBlockFetched`",
+		"last_block", lastBlock,
+		"address", address,
+	)
+
 	totalResult := tmTypes.ResultTxSearch{
 		Txs:        []*tmTypes.ResultTx{},
 		TotalCount: 0,
 	}
 
 	for page < limitPages {
+		log.CustomLogger().Info("Processing page of transactions...",
+			"page", page,
+			"limit", limit,
+		)
 		var events = make([]string, 0, 5)
 		if isOutbound {
 			events = append(events, fmt.Sprintf("message.sender='%s'", address))
@@ -68,11 +85,16 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 
 		// search transactions
 		endpoint := fmt.Sprintf("%s/tx_search?query=\"%s\"&page=%d&per_page=%d&order_by=\"desc\"", rpcAddr, strings.Join(events, "%20AND%20"), page, limit)
-		common.GetLogger().Info("[query-transaction] Entering transaction search: ", endpoint)
+		log.CustomLogger().Info("Constructed endpoint for transaction query.",
+			"endpoint", endpoint,
+		)
 
 		resp, err := http.Get(endpoint)
 		if err != nil {
-			common.GetLogger().Error("[query-transaction] Unable to connect to ", endpoint)
+			log.CustomLogger().Error("[GetTransactionsWithSync][http.Get] Failed to connect to endpoint.",
+				"endpoint", endpoint,
+				"error", err,
+			)
 			return nil, err
 		}
 		defer resp.Body.Close()
@@ -82,23 +104,39 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 		response := new(tmJsonRPCTypes.RPCResponse)
 
 		if err := json.Unmarshal(respBody, response); err != nil {
-			common.GetLogger().Error("[query-transaction] Unable to decode response: ", err)
+			log.CustomLogger().Error("[GetTransactionsWithSync] Failed to unmarshal RPC response.",
+				"error", err,
+				"response_body", string(respBody),
+			)
 			break
 		}
 
 		if response.Error != nil {
+			log.CustomLogger().Error("[GetTransactionsWithSync] RPC response contains an error.",
+				"rpc_error", response.Error,
+			)
 			break
 		}
 
 		result := new(tmTypes.ResultTxSearch)
 		if err := tmjson.Unmarshal(response.Result, result); err != nil {
-			common.GetLogger().Error("[query-transaction] Failed to unmarshal result:", err)
+			log.CustomLogger().Error("[GetTransactionsWithSync][Unmarshal] Failed to unmarshal transaction search result.",
+				"error", err,
+			)
 			break
 		}
 
 		if result.TotalCount == 0 {
+			log.CustomLogger().Info("No more transactions found, exiting loop.",
+				"page", page,
+			)
 			break
 		}
+
+		log.CustomLogger().Info("Transactions retrieved for current page.",
+			"transaction_count", len(result.Txs),
+			"page", page,
+		)
 
 		totalResult.Txs = append(totalResult.Txs, result.Txs...)
 
@@ -108,10 +146,18 @@ func GetTransactionsWithSync(rpcAddr string, address string, isOutbound bool) (*
 		page++
 	}
 	totalResult.TotalCount = len(totalResult.Txs)
+	log.CustomLogger().Info("Total transactions fetched.",
+		"total_count", totalResult.TotalCount,
+	)
+
 	err := database.SaveTransactions(address, totalResult, isOutbound)
 	if err != nil {
-		common.GetLogger().Error("[query-transaction] Failed to save cache result:", err)
+		log.CustomLogger().Error("[GetTransactionsWithSync][SaveTransactions] Failed to save transactions to database.",
+			"error", err,
+		)
 	}
+
+	log.CustomLogger().Info("Finished 'GetTransactionsWithSync' request.")
 
 	return database.GetTransactions(address, isOutbound)
 }
@@ -163,7 +209,7 @@ func GetFilteredTransactions(rpcAddr string, address string, txtypes []string, d
 		// Filter by time
 		txTime, err := common.GetBlockTime(rpcAddr, cachedTx.Height)
 		if err != nil {
-			common.GetLogger().Error("[query-transactions] Block not found: ", cachedTx.Height)
+			log.CustomLogger().Error("[query-transactions] Block not found: ", cachedTx.Height)
 			continue
 		}
 
@@ -174,7 +220,7 @@ func GetFilteredTransactions(rpcAddr string, address string, txtypes []string, d
 		// Filter by msg
 		tx, err := config.EncodingCg.TxConfig.TxDecoder()(cachedTx.Tx)
 		if err != nil {
-			common.GetLogger().Error("[query-transactions] Failed to decode transaction: ", err)
+			log.CustomLogger().Error("[query-transactions] Failed to decode transaction: ", err)
 			continue
 		}
 
@@ -274,11 +320,11 @@ func SearchTxHashHandle(rpcAddr string, sender string, recipient string, txType 
 	if page == 0 {
 		endpoint = fmt.Sprintf("%s/tx_search?query=\"%s\"&per_page=%d&order_by=\"desc\"", rpcAddr, strings.Join(events, "%20AND%20"), limit)
 	}
-	common.GetLogger().Info("[query-transaction] Entering transaction search: ", endpoint)
+	log.CustomLogger().Info("[query-transaction] Entering transaction search: ", endpoint)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		common.GetLogger().Error("[query-transaction] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[query-transaction] Unable to connect to ", endpoint)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -288,18 +334,18 @@ func SearchTxHashHandle(rpcAddr string, sender string, recipient string, txType 
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		common.GetLogger().Error("[query-transaction] Unable to decode response: ", err)
+		log.CustomLogger().Error("[query-transaction] Unable to decode response: ", err)
 		return nil, err
 	}
 
 	if response.Error != nil {
-		common.GetLogger().Error("[query-transaction] Error response:", response.Error.Message)
+		log.CustomLogger().Error("[query-transaction] Error response:", response.Error.Message)
 		return nil, errors.New(response.Error.Message)
 	}
 
 	result := new(tmTypes.ResultTxSearch)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		common.GetLogger().Error("[query-transaction] Failed to unmarshal result:", err)
+		log.CustomLogger().Error("[query-transaction] Failed to unmarshal result:", err)
 		return nil, fmt.Errorf("error unmarshalling result: %w", err)
 	}
 
@@ -309,11 +355,11 @@ func SearchTxHashHandle(rpcAddr string, sender string, recipient string, txType 
 // Get block height for tx hash from cache or tendermint
 func getBlockHeight(rpcAddr string, hash string) (int64, error) {
 	endpoint := fmt.Sprintf("%s/tx?hash=%s", rpcAddr, hash)
-	common.GetLogger().Info("[query-block] Entering block query: ", endpoint)
+	log.CustomLogger().Info("[query-block] Entering block query: ", endpoint)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		common.GetLogger().Error("[query-block] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[query-block] Unable to connect to ", endpoint)
 		return 0, err
 	}
 	defer resp.Body.Close()
@@ -322,17 +368,17 @@ func getBlockHeight(rpcAddr string, hash string) (int64, error) {
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		common.GetLogger().Error("[query-block] Unable to decode response: ", err)
+		log.CustomLogger().Error("[query-block] Unable to decode response: ", err)
 		return 0, err
 	}
 	if response.Error != nil {
-		common.GetLogger().Error("[query-block] Error response:", response.Error.Message)
+		log.CustomLogger().Error("[query-block] Error response:", response.Error.Message)
 		return 0, errors.New(response.Error.Message)
 	}
 
 	result := new(tmTypes.ResultTx)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		common.GetLogger().Error("[query-block] Failed to unmarshal result:", err)
+		log.CustomLogger().Error("[query-block] Failed to unmarshal result:", err)
 		return 0, fmt.Errorf("error unmarshalling result: %w", err)
 	}
 
@@ -342,7 +388,7 @@ func getBlockHeight(rpcAddr string, hash string) (int64, error) {
 func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}, interface{}, int) {
 	err := r.ParseForm()
 	if err != nil {
-		common.GetLogger().Error("[query-transactions] Failed to parse query parameters:", err)
+		log.CustomLogger().Error("[query-transactions] Failed to parse query parameters:", err)
 		return common.ServeError(0, "failed to parse query parameters", err.Error(), http.StatusBadRequest)
 	}
 
@@ -372,7 +418,7 @@ func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}
 	//------------ Address ------------
 	account = r.FormValue("address")
 	if account == "" {
-		common.GetLogger().Error("[query-transactions] 'address' is not set")
+		log.CustomLogger().Error("[query-transactions] 'address' is not set")
 		return common.ServeError(0, "'address' is not set", "", http.StatusBadRequest)
 	}
 
@@ -408,7 +454,7 @@ func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}
 			layout := "01/02/2006 3:04:05 PM"
 			t, err1 := time.Parse(layout, dateStStr+" 12:00:00 AM")
 			if err1 != nil {
-				common.GetLogger().Error("[query-transactions] Failed to parse parameter 'dateStart': ", err1)
+				log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'dateStart': ", err1)
 				return common.ServeError(0, "failed to parse parameter 'dateStart'", err.Error(), http.StatusBadRequest)
 			}
 
@@ -421,7 +467,7 @@ func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}
 			layout := "01/02/2006 3:04:05 PM"
 			t, err1 := time.Parse(layout, dateEdStr+" 12:00:00 AM")
 			if err1 != nil {
-				common.GetLogger().Error("[query-transactions] Failed to parse parameter 'dateEnd': ", err1)
+				log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'dateEnd': ", err1)
 				return common.ServeError(0, "failed to parse parameter 'dateEnd'", err.Error(), http.StatusBadRequest)
 			}
 
@@ -432,18 +478,18 @@ func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}
 	//------------ Pagination ------------
 	if pageSizeStr := r.FormValue("page_size"); pageSizeStr != "" {
 		if pageSize, err = strconv.Atoi(pageSizeStr); err != nil {
-			common.GetLogger().Error("[query-transactions] Failed to parse parameter 'page_size': ", err)
+			log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'page_size': ", err)
 			return common.ServeError(0, "failed to parse parameter 'page_size'", err.Error(), http.StatusBadRequest)
 		}
 		if pageSize < 1 || pageSize > 100 {
-			common.GetLogger().Error("[query-transactions] Invalid 'page_size' range: ", pageSize)
+			log.CustomLogger().Error("[query-transactions] Invalid 'page_size' range: ", pageSize)
 			return common.ServeError(0, "'page_size' should be 1 ~ 100", "", http.StatusBadRequest)
 		}
 	}
 
 	if pageStr := r.FormValue("page"); pageStr != "" {
 		if page, err = strconv.Atoi(pageStr); err != nil {
-			common.GetLogger().Error("[query-transactions] Failed to parse parameter 'page': ", err)
+			log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'page': ", err)
 			return common.ServeError(0, "failed to parse parameter 'page'", err.Error(), http.StatusBadRequest)
 		}
 	}
@@ -460,19 +506,19 @@ func QueryBlockTransactionsHandler(rpcAddr string, r *http.Request) (interface{}
 	} else {
 		if limitStr := r.FormValue("limit"); limitStr != "" {
 			if limit, err = strconv.Atoi(limitStr); err != nil {
-				common.GetLogger().Error("[query-transactions] Failed to parse parameter 'limit': ", err)
+				log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'limit': ", err)
 				return common.ServeError(0, "failed to parse parameter 'limit'", err.Error(), http.StatusBadRequest)
 			}
 
 			if limit < 1 || limit > 100 {
-				common.GetLogger().Error("[query-transactions] Invalid 'limit' range: ", limit)
+				log.CustomLogger().Error("[query-transactions] Invalid 'limit' range: ", limit)
 				return common.ServeError(0, "'limit' should be 1 ~ 100", "", http.StatusBadRequest)
 			}
 		}
 
 		if offsetStr := r.FormValue("offset"); offsetStr != "" {
 			if offset, err = strconv.Atoi(offsetStr); err != nil {
-				common.GetLogger().Error("[query-transactions] Failed to parse parameter 'offset': ", err)
+				log.CustomLogger().Error("[query-transactions] Failed to parse parameter 'offset': ", err)
 				return common.ServeError(0, "failed to parse parameter 'offset'", err.Error(), http.StatusBadRequest)
 			}
 		}
@@ -524,18 +570,21 @@ func QueryTransactions(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Info("[query-transactions] Entering transactions query")
+		log.CustomLogger().Info("[query-transactions] Entering transactions query")
 
 		if !common.RPCMethods["GET"][config.QueryTransactions].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
 		} else {
-			if common.RPCMethods["GET"][config.QueryTransactions].CachingEnabled {
+			if common.RPCMethods["GET"][config.QueryTransactions].CacheEnabled {
+
+				log.CustomLogger().Info("Starting search cache for `QueryTransactions` request...")
+
 				found, cacheResponse, cacheError, cacheStatus := common.SearchCache(request, response)
 				if found {
 					response.Response, response.Error, statusCode = cacheResponse, cacheError, cacheStatus
 					common.WrapResponse(w, request, *response, statusCode, false)
 
-					common.GetLogger().Info("[query-transactions] Returning from the cache")
+					log.CustomLogger().Info("[query-transactions] Returning from the cache")
 					return
 				}
 			}
@@ -543,17 +592,17 @@ func QueryTransactions(rpcAddr string) http.HandlerFunc {
 			response.Response, response.Error, statusCode = QueryBlockTransactionsHandler(rpcAddr, r)
 		}
 
-		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CachingEnabled)
+		common.WrapResponse(w, request, *response, statusCode, common.RPCMethods["GET"][config.QueryStatus].CacheEnabled)
 	}
 }
 
 func searchUnconfirmed(rpcAddr string, limit string) (*tmTypes.ResultUnconfirmedTxs, error) {
 	endpoint := fmt.Sprintf("%s/unconfirmed_txs?limit=%s", rpcAddr, limit)
-	common.GetLogger().Info("[query-unconfirmed-txs] Entering transaction search: ", endpoint)
+	log.CustomLogger().Info("[query-unconfirmed-txs] Entering transaction search: ", endpoint)
 
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		common.GetLogger().Error("[query-unconfirmed-txs] Unable to connect to ", endpoint)
+		log.CustomLogger().Error("[query-unconfirmed-txs] Unable to connect to ", endpoint)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -563,18 +612,18 @@ func searchUnconfirmed(rpcAddr string, limit string) (*tmTypes.ResultUnconfirmed
 	response := new(tmJsonRPCTypes.RPCResponse)
 
 	if err := json.Unmarshal(respBody, response); err != nil {
-		common.GetLogger().Error("[query-unconfirmed-txs] Unable to decode response: ", err)
+		log.CustomLogger().Error("[query-unconfirmed-txs] Unable to decode response: ", err)
 		return nil, err
 	}
 
 	if response.Error != nil {
-		common.GetLogger().Error("[query-unconfirmed-txs] Error response:", response.Error.Message)
+		log.CustomLogger().Error("[query-unconfirmed-txs] Error response:", response.Error.Message)
 		return nil, errors.New(response.Error.Message)
 	}
 
 	result := new(tmTypes.ResultUnconfirmedTxs)
 	if err := tmjson.Unmarshal(response.Result, result); err != nil {
-		common.GetLogger().Error("[query-unconfirmed-txs] Failed to unmarshal result:", err)
+		log.CustomLogger().Error("[query-unconfirmed-txs] Failed to unmarshal result:", err)
 		return nil, fmt.Errorf("error unmarshalling result: %w", err)
 	}
 
@@ -585,7 +634,7 @@ func queryUnconfirmedTransactionsHandler(rpcAddr string, r *http.Request) (inter
 	limit := r.FormValue("limit")
 	result, err := searchUnconfirmed(rpcAddr, limit)
 	if err != nil {
-		common.GetLogger().Error("[query-unconfirmed-txs] Failed to query unconfirmed txs: %w ", err)
+		log.CustomLogger().Error("[query-unconfirmed-txs] Failed to query unconfirmed txs: %w ", err)
 		return common.ServeError(0, "", err.Error(), http.StatusInternalServerError)
 	}
 
@@ -604,14 +653,14 @@ func queryUnconfirmedTransactionsHandler(rpcAddr string, r *http.Request) (inter
 	for _, tx := range result.Txs {
 		decodedTx, err := config.EncodingCg.TxConfig.TxDecoder()(tx)
 		if err != nil {
-			common.GetLogger().Error("[post-unconfirmed-txs] Failed to decode transaction: ", err)
+			log.CustomLogger().Error("[post-unconfirmed-txs] Failed to decode transaction: ", err)
 			return common.ServeError(0, "failed to decode signed TX", err.Error(), http.StatusBadRequest)
 		}
 
 		txResult, ok := decodedTx.(signing.Tx)
 		if !ok {
-			common.GetLogger().Error("[post-unconfirmed-txs] Failed to decode transaction")
-			return common.ServeError(0, "failed to decode signed TX", err.Error(), http.StatusBadRequest)
+			log.CustomLogger().Error("[post-unconfirmed-txs] Failed to decode transaction")
+			return common.ServeError(0, "failed to decode signed TX", "", http.StatusBadRequest)
 		}
 
 		signature, _ := txResult.GetSignaturesV2()
@@ -644,7 +693,7 @@ func QueryUnconfirmedTxs(rpcAddr string) http.HandlerFunc {
 		request := common.GetInterxRequest(r)
 		response := common.GetResponseFormat(request, rpcAddr)
 
-		common.GetLogger().Error("[query-unconfirmed-txs] Entering query")
+		log.CustomLogger().Error("[query-unconfirmed-txs] Entering query")
 
 		if !common.RPCMethods["GET"][config.QueryUnconfirmedTxs].Enabled {
 			response.Response, response.Error, statusCode = common.ServeError(0, "", "API disabled", http.StatusForbidden)
