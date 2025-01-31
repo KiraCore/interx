@@ -88,11 +88,37 @@ func (suite *ValidatorsTestSuite) SetupTest() {
 	}
 }
 
-// func (suite *ValidatorsTestSuite) TestDumpConsensusStateHandler() {
-// 	response, _, statusCode := queryDumpConsensusStateHandler(nil, nil, test.TENDERMINT_RPC)
-// 	suite.Require().EqualValues(response, "test")
-// 	suite.Require().EqualValues(statusCode, http.StatusOK)
-// }
+func (suite *ValidatorsTestSuite) TestDumpConsensusStateHandler() {
+	// Call the handler function
+	response, _, statusCode := queryDumpConsensusStateHandler(nil, nil, test.TENDERMINT_RPC)
+
+	// Assert the status code is OK (200)
+	suite.Require().EqualValues(statusCode, http.StatusOK)
+
+	// Ensure that the response is of type map[string]interface{}
+	suite.Require().IsType(map[string]interface{}{}, response) // Assert that response is a map
+
+	// Type assertion to convert 'response' to map[string]interface{}
+	responseMap, ok := response.(map[string]interface{})
+	suite.Require().True(ok, "response is not of type map[string]interface{}")
+
+	// Assert that specific fields exist within the map (adjust as needed)
+	suite.Require().Contains(responseMap, "round_state")
+
+	// Extract "round_state" as a map
+	roundState, ok := responseMap["round_state"].(map[string]interface{})
+	suite.Require().True(ok, "round_state is not of type map[string]interface{}")
+
+	// Assert the expected values inside the "round_state" map
+	suite.Require().Contains(roundState, "commit_round")
+
+	// Type assert commit_round to float64 and compare it
+	commitRound, ok := roundState["commit_round"].(float64)
+	suite.Require().True(ok, "commit_round is not of type float64")
+
+	// Assert that the value of commit_round is -1
+	suite.Require().Equal(commitRound, float64(-1)) // Comparing as float64 now
+}
 
 func (suite *ValidatorsTestSuite) TestValidatorInfosQuery() {
 	r := httptest.NewRequest("GET", test.INTERX_RPC, nil)

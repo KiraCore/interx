@@ -368,7 +368,7 @@ func QueryConsensus(gwCosmosmux *runtime.ServeMux, rpcAddr string) http.HandlerF
 	}
 }
 
-func queryDumpConsensusStateHandler(r *http.Request, gwCosmosmux *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
+func queryDumpConsensusStateHandler(_ *http.Request, _ *runtime.ServeMux, rpcAddr string) (interface{}, interface{}, int) {
 	return common.MakeTendermintRPCRequest(rpcAddr, "/dump_consensus_state", "")
 }
 

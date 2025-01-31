@@ -202,7 +202,7 @@ sed -i="" 's/message IdentityRecord {/message IdentityRecord \{\n  option (gogop
 sed -i="" 's/ \[(cosmos_proto.accepts_interface) = \"AccountI\"\]//g' ./proto/cosmos/auth/v1beta1/query.proto || ( echoErr "ERROR: Failed to sed file: '$fil'" && exit 1 )
 
 ### This part is required to override some cosmos protos
-cp -rfv ./proto-override/cosmos/auth/v1beta1/auth.proto ./proto/cosmos/auth/v1beta1
+# cp -rfv ./proto-override/cosmos/auth/v1beta1/auth.proto ./proto/cosmos/auth/v1beta1
 ###
 
 echoInfo "Generating protobuf files..."
