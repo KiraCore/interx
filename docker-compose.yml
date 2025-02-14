@@ -1,0 +1,6 @@
+include:
+  - ./manager/docker-compose.yml
+  - ./worker/docker-compose.yml
+
+networks:
+  interx:
