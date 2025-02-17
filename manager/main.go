@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	svc := service.NewService("saiCosmosIndexer")
+	svc := service.NewService("saiInterxManager")
 	is := internal.InternalService{Context: svc.Context}
 
 	svc.RegisterConfig("config.yml")

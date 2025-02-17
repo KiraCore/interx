@@ -7,9 +7,9 @@ require (
 	github.com/cosmos/cosmos-sdk v0.47.7
 	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12
-	github.com/saiset-co/sai-service-crud-plus v0.0.0-20240126102508-5bab343d26fe
-	github.com/saiset-co/saiService v1.0.1
+	github.com/saiset-co/sai-service v1.0.5
 	github.com/spf13/cast v1.5.0
+	go.uber.org/zap v1.26.0
 )
 
 require (
@@ -118,7 +118,6 @@ require (
 	github.com/zondax/ledger-go v0.14.3 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb // indirect
 	golang.org/x/net v0.20.0 // indirect

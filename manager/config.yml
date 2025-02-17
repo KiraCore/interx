@@ -1,0 +1,24 @@
+common:
+  http:
+    enabled: true
+    port: 8080
+  ws:
+    enabled: false
+    port: 8881
+
+storage:
+  token: "tokentest"
+  url: "http://worker-sai-storage:8880"
+
+ethereum:
+  url: "http://worker-sai-ethereum-interaction:8882"
+  token: "a@@#lsa$fd8f"
+  retries: 1
+  retry_delay: 10
+  rate_limit: 10
+cosmos:
+  url: "http://worker-sai-cosmos-interaction:8884"
+  token: "a@@#lsa$fd8f"
+  retries: 1
+  retry_delay: 10
+  rate_limit: 10

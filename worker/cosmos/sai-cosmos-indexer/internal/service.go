@@ -10,10 +10,10 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	saiService "github.com/saiset-co/sai-service/service"
 	"github.com/saiset-co/sai-storage-mongo/external/adapter"
 	"github.com/saiset-co/saiCosmosIndexer/internal/model"
 	"github.com/saiset-co/saiCosmosIndexer/utils"
-	"github.com/saiset-co/saiService"
 	"github.com/spf13/cast"
 )
 

@@ -9,6 +9,6 @@ common:
     enabled: false
     port: 9001
   log_mode: "debug"
-token: "lafijsiadnm/a@@#lsa$fd8f"
+token: "a@@#lsa$fd8f"
 specific:
   eth_server: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"

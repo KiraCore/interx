@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	saiService "github.com/saiset-co/sai-service/service"
 	"github.com/saiset-co/saiCosmosInteraction/internal/model"
 	"github.com/saiset-co/saiCosmosInteraction/utils"
-	"github.com/saiset-co/saiService"
 )
 
 func (is *InternalService) NewHandler() saiService.Handler {
@@ -33,7 +33,7 @@ func (is *InternalService) makeTx(data, meta interface{}) (interface{}, int, err
 	}
 
 	if !tokenIsValid {
-		return "", http.StatusInternalServerError, errors.New("token doe not valid")
+		return "", http.StatusInternalServerError, errors.New("token does not valid")
 	}
 
 	body, err := is.validateBody(data)

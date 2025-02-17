@@ -20,6 +20,7 @@ services:
       - "8882:8882"
     volumes:
       - ./ethereum/sai-ethereum-contract-interaction/config.yml:/srv/config.yml
+      - ./ethereum/sai-ethereum-contract-interaction/contracts.json:/srv/contracts.json
     networks:
       - interx-worker
 
@@ -42,6 +43,7 @@ services:
       - "8884:8884"
     volumes:
       - ./cosmos/sai-cosmos-interaction/config.yml:/srv/config.yml
+      - ./cosmos/sai-cosmos-interaction/kira19g3ueqj45wv0pqngeu0hcysjksns76r2nrz63u:/srv/kira19g3ueqj45wv0pqngeu0hcysjksns76r2nrz63u
     networks:
       - interx-worker
 
