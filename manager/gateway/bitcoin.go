@@ -10,21 +10,21 @@ import (
 	"github.com/saiset-co/sai-interx-manager/types"
 )
 
-type CosmosGateway struct {
+type BitcoinGateway struct {
 	*BaseGateway
 	url string
 }
 
-var _ types.Gateway = (*CosmosGateway)(nil)
+var _ types.Gateway = (*BitcoinGateway)(nil)
 
-func NewCosmosGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) *CosmosGateway {
-	return &CosmosGateway{
+func NewBitcoinGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) *BitcoinGateway {
+	return &BitcoinGateway{
 		BaseGateway: NewBaseGateway(retryAttempts, retryDelay, rateLimit),
 		url:         url,
 	}
 }
 
-func (g *CosmosGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
+func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
 	var req struct {
 		Method   string      `json:"method"`
 		Data     interface{} `json:"data"`

@@ -17,7 +17,7 @@ type StorageGateway struct {
 	storage types.Storage
 }
 
-var _ types.Gateway = (*StorageGateway)(nil) // Verify interface implementation
+var _ types.Gateway = (*StorageGateway)(nil)
 
 func NewStorageGateway(storage types.Storage, retryAttempts int, retryDelay time.Duration, rateLimit int) *StorageGateway {
 	return &StorageGateway{

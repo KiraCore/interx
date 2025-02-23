@@ -15,7 +15,7 @@ type EthereumGateway struct {
 	url string
 }
 
-var _ types.Gateway = (*EthereumGateway)(nil) // Verify interface implementation
+var _ types.Gateway = (*EthereumGateway)(nil)
 
 func NewEthereumGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) *EthereumGateway {
 	return &EthereumGateway{

@@ -40,6 +40,13 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 			time.Duration(cast.ToInt64(f.context.GetConfig("cosmos.retry_delay", 10))),
 			cast.ToInt(f.context.GetConfig("cosmos.rate_limit", 10)),
 		), nil
+	case "bitcoin":
+		return NewBitcoinGateway(
+			cast.ToString(f.context.GetConfig("bitcoin.url", "")),
+			cast.ToInt(f.context.GetConfig("bitcoin.retries", 1)),
+			time.Duration(cast.ToInt64(f.context.GetConfig("bitcoin.retry_delay", 10))),
+			cast.ToInt(f.context.GetConfig("bitcoin.rate_limit", 10)),
+		), nil
 	case "storage":
 		return NewStorageGateway(
 			f.storage,

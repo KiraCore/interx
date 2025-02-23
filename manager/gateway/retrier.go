@@ -29,7 +29,7 @@ func (r *Retrier) Do(fn RetryFunc) (interface{}, error) {
 			return result, nil
 		}
 
-		if i < r.attempts-1 { // Don't sleep after the last attempt
+		if i < r.attempts-1 {
 			time.Sleep(r.delay)
 		}
 	}
