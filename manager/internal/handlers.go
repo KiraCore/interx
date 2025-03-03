@@ -2,14 +2,35 @@ package internal
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 
 	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-interx-manager/p2p"
 	"github.com/saiset-co/sai-service/service"
+
+	"go.uber.org/zap"
 )
 
 func (is *InternalService) NewHandler() service.Handler {
 	return service.Handler{
+		"metrics": service.HandlerElement{
+			Name:        "metrics",
+			Description: "metrics",
+			Function: func(data, meta interface{}) (interface{}, int, error) {
+				metrics := is.server.MetricsCollector().GetAllNodesMetrics()
+				nodeId := is.server.PeerManager().GetPeerId()
+				return struct {
+					NodeSentReport p2p.NodeID
+					Metrics        map[p2p.NodeID]p2p.NodeMetrics
+				}{
+					NodeSentReport: nodeId,
+					Metrics:        metrics,
+				}, 200, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+			},
+		},
 		"ethereum": service.HandlerElement{
 			Name:        "EthereumAPI",
 			Description: "Proxy api endpoint for an ethereum network",

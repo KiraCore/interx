@@ -1,24 +1,23 @@
 package internal
 
 import (
+	"time"
+
+	"github.com/spf13/cast"
+
 	"github.com/saiset-co/sai-interx-manager/gateway"
-	"github.com/saiset-co/sai-interx-manager/p2p/balancer"
-	"github.com/saiset-co/sai-interx-manager/p2p/core"
-	"github.com/saiset-co/sai-interx-manager/p2p/metrics"
-	"github.com/saiset-co/sai-interx-manager/p2p/network"
+	"github.com/saiset-co/sai-interx-manager/p2p"
+	"github.com/saiset-co/sai-interx-manager/p2p/config"
+	"github.com/saiset-co/sai-interx-manager/p2p/net"
 	"github.com/saiset-co/sai-interx-manager/types"
 	"github.com/saiset-co/sai-service/service"
-	"github.com/spf13/cast"
-	"time"
 )
 
 type InternalService struct {
 	Context        *service.Context
 	gatewayFactory types.GatewayFactory
 	storage        types.Storage
-	server         *network.Server
-	balancer       *balancer.LoadBalancer
-	metrics        *metrics.Collector
+	server         p2p.Network
 }
 
 func (is *InternalService) Init() {
@@ -29,35 +28,26 @@ func (is *InternalService) Init() {
 
 	is.gatewayFactory = gateway.NewGatewayFactory(is.Context, is.storage)
 
-	nodeId := core.NodeID(cast.ToString(is.Context.GetConfig("node_id", "")))
+	nodeID := cast.ToString(is.Context.GetConfig("p2p.id", ""))
+	windowSize := cast.ToInt(is.Context.GetConfig("balancer.window_size", 60))
+	threshold := cast.ToFloat64(is.Context.GetConfig("balancer.threshold", 0.2))
 
-	weights := metrics.Weights{
-		CPU:     cast.ToFloat64(is.Context.GetConfig("metrics.weights.cpu", 0.3)),
-		RPS:     cast.ToFloat64(is.Context.GetConfig("metrics.weights.rps", 0.2)),
-		Memory:  cast.ToFloat64(is.Context.GetConfig("metrics.weights.memory", 0.3)),
-		Latency: cast.ToFloat64(is.Context.GetConfig("metrics.weights.latency", 0.2)),
-	}
-
-	collector := metrics.NewCollector(
-		nodeId,
-		weights,
-		time.Duration(cast.ToInt(is.Context.GetConfig("metrics.weights.latency", 10))),
+	networkConfig := config.NewNetworkConfig(
+		config.WithNodeID(p2p.NodeID(nodeID)),
+		config.WithListenAddress(cast.ToString(is.Context.GetConfig("p2p.address", "0.0.0.0:9000"))),
+		config.WithMaxPeers(cast.ToInt(is.Context.GetConfig("p2p.max_peers", 3))),
+		config.WithHTTPPort(cast.ToInt(is.Context.GetConfig("common.http.port", 8080))),
+		config.WithMetricsWindowSize(time.Duration(windowSize)*time.Second),
+		config.WithLoadBalancerThreshold(threshold),
+		config.WithInitialPeers(cast.ToStringSlice(is.Context.GetConfig("p2p.peers", []string{}))),
 	)
 
-	p2pServerConfig := network.ServerConfig{
-		NodeID:   nodeId,
-		Address:  cast.ToString(is.Context.GetConfig("listen_address", "")),
-		MaxPeers: cast.ToInt(is.Context.GetConfig("max_peers", "")),
-		Metrics:  collector,
+	server, err := net.NewNetwork(is.Context.Context, networkConfig)
+	if err != nil {
+		panic(err)
 	}
 
-	is.server = network.NewServer(is.Context.Context, p2pServerConfig)
-
-	is.balancer = balancer.New(
-		nodeId,
-		collector,
-		cast.ToFloat64(is.Context.GetConfig("load_balancer.threshold", 0.2)),
-	)
+	is.server = server
 }
 
 func (is *InternalService) Process() {

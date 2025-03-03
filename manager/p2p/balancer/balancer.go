@@ -1,104 +1,130 @@
 package balancer
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 
-	"github.com/saiset-co/sai-interx-manager/p2p/core"
+	saiService "github.com/saiset-co/sai-service/service"
+	"go.uber.org/zap"
+
+	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-interx-manager/p2p"
 	"github.com/saiset-co/sai-interx-manager/p2p/metrics"
+	"github.com/saiset-co/sai-interx-manager/p2p/utils"
+	"github.com/saiset-co/sai-interx-manager/types"
 )
 
 type LoadBalancer struct {
-	nodeID     core.NodeID
-	metrics    *metrics.Collector
-	threshold  float64
-	proxyCache map[core.NodeID]*httputil.ReverseProxy
+	nodeID    p2p.NodeID
+	metrics   metrics.Collector
+	threshold float64
 }
 
-func New(nodeID core.NodeID, metrics *metrics.Collector, threshold float64) *LoadBalancer {
+func NewLoadBalancer(nodeID p2p.NodeID, metrics metrics.Collector, threshold float64) *LoadBalancer {
 	return &LoadBalancer{
-		nodeID:     nodeID,
-		metrics:    metrics,
-		threshold:  threshold,
-		proxyCache: make(map[core.NodeID]*httputil.ReverseProxy),
+		nodeID:    nodeID,
+		metrics:   metrics,
+		threshold: threshold,
 	}
 }
 
-func (lb *LoadBalancer) Middleware(next http.Handler) http.Handler {
-	return lb.metrics.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Header.Get("X-From-Peer") == "true" {
-			next.ServeHTTP(w, r)
-			return
+func (lb *LoadBalancer) CreateLoadBalancerMiddleware(method string) func(next saiService.HandlerFunc, data interface{}, metadata interface{}) (interface{}, int, error) {
+	return func(next saiService.HandlerFunc, data interface{}, metadata interface{}) (interface{}, int, error) {
+		metadataMap, ok := metadata.(map[string]interface{})
+		if ok && metadataMap["X-From-Peer"] == true {
+			return next(data, metadata)
 		}
 
-		shouldHandle, targetNodeID := lb.shouldHandleRequest()
+		shouldHandle, targetNodeID := lb.ShouldHandleRequest()
 		if !shouldHandle {
-			if err := lb.proxyRequest(w, r, targetNodeID); err != nil {
-				http.Error(w, "Failed to delegate request", http.StatusInternalServerError)
-				return
+			metadataMap["X-From-Peer"] = true
+			metadataMap["X-Original-Node"] = lb.nodeID
+
+			request := types.SaiRequest{
+				Method:   method,
+				Data:     data,
+				Metadata: metadataMap,
 			}
-			return
+
+			jsonData, err := json.Marshal(request)
+			if err != nil {
+				return nil, http.StatusInternalServerError, errors.New("failed to marshal request data")
+			}
+
+			response, err := lb.ProxyRequest(jsonData, targetNodeID)
+			if err != nil {
+				logger.Logger.Error("loadBalancerMiddleware: error proxying request", zap.Error(err))
+				return nil, http.StatusInternalServerError, errors.New("failed to delegate request")
+			}
+
+			defer response.Body.Close()
+
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				logger.Logger.Error("failed to read proxied response", zap.Error(err))
+				return nil, http.StatusInternalServerError, errors.New("failed to read proxied response")
+			}
+
+			var result interface{}
+			err = json.Unmarshal(body, &result)
+			if err != nil {
+				logger.Logger.Error("failed to proxied proxied response", zap.Error(err))
+				return nil, http.StatusInternalServerError, errors.New("failed to parse proxied response")
+			}
+
+			return result, response.StatusCode, nil
 		}
 
-		next.ServeHTTP(w, r)
-	}))
+		return next(data, metadata)
+	}
 }
 
-func (lb *LoadBalancer) shouldHandleRequest() (bool, core.NodeID) {
+func (lb *LoadBalancer) ShouldHandleRequest() (bool, p2p.NodeID) {
 	localScore := lb.metrics.CalculateScore(lb.nodeID)
-	bestScore := localScore
-	bestNodeID := lb.nodeID
+	var scores = map[string]float64{}
 
 	for nodeID := range lb.metrics.GetAllNodes() {
-		if nodeID == lb.nodeID {
-			continue
-		}
-
-		score := lb.metrics.CalculateScore(nodeID)
-		scoreDiff := bestScore.Total - score.Total
-
-		if scoreDiff > lb.threshold {
-			bestScore = score
-			bestNodeID = nodeID
-		}
+		scores[string(nodeID)] = lb.metrics.CalculateScore(nodeID).Total
 	}
 
-	return bestNodeID == lb.nodeID, bestNodeID
+	bestNodeID, bestScore, err := utils.MapFloatMinValue(scores)
+	if err != nil || localScore.Total+lb.threshold <= bestScore {
+		bestNodeID = string(lb.nodeID)
+	}
+
+	return p2p.NodeID(bestNodeID) == lb.nodeID, p2p.NodeID(bestNodeID)
 }
 
-func (lb *LoadBalancer) proxyRequest(w http.ResponseWriter, r *http.Request, targetNodeID core.NodeID) error {
-	proxy, err := lb.getProxy(targetNodeID)
-	if err != nil {
-		return err
-	}
-
-	r.Header.Set("X-From-Peer", "true")
-	r.Header.Set("X-Original-Node", string(lb.nodeID))
-
-	proxy.ServeHTTP(w, r)
-	return nil
-}
-
-func (lb *LoadBalancer) getProxy(nodeID core.NodeID) (*httputil.ReverseProxy, error) {
-	if proxy, exists := lb.proxyCache[nodeID]; exists {
-		return proxy, nil
-	}
-
-	nodeInfo, exists := lb.metrics.GetNodeInfo(nodeID)
+func (lb *LoadBalancer) ProxyRequest(jsonData []byte, targetNodeID p2p.NodeID) (*http.Response, error) {
+	nodeInfo, exists := lb.metrics.GetNodeInfo(targetNodeID)
 	if !exists {
-		return nil, fmt.Errorf("node %s not found", nodeID)
+		err := fmt.Errorf("node %s not found", targetNodeID)
+		logger.Logger.Error("ProxyRequest", zap.Error(err))
+		return nil, err
 	}
 
-	targetURL, err := url.Parse(fmt.Sprintf("http://%s", nodeInfo.Address))
+	address, _, err := net.SplitHostPort(nodeInfo.Address)
+	if err != nil {
+		logger.Logger.Error("ProxyRequest", zap.Error(err))
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d", address, nodeInfo.HttpPort), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(targetURL)
-	lb.proxyCache[nodeID] = proxy
+	client := http.Client{}
+	response, err := client.Do(req)
+	if err != nil {
+		logger.Logger.Error("ProxyRequest", zap.Error(err))
+		return nil, err
+	}
 
-	return proxy, nil
+	return response, nil
 }

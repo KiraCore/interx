@@ -2,47 +2,46 @@ package metrics
 
 import (
 	"math"
-	"net/http"
 	"sync"
 	"time"
 
-	"github.com/saiset-co/sai-interx-manager/p2p/core"
+	saiService "github.com/saiset-co/sai-service/service"
+
+	"github.com/saiset-co/sai-interx-manager/p2p"
+	"github.com/saiset-co/sai-interx-manager/p2p/types"
 	"github.com/saiset-co/sai-interx-manager/p2p/utils"
 )
 
-type Collector struct {
-	nodeID         core.NodeID
+type CollectorImpl struct {
+	nodeID         p2p.NodeID
+	address        string
+	httPort        int
 	mutex          sync.RWMutex
-	requests       map[string]*core.Request
-	metrics        map[core.NodeID]NodeMetrics
-	latencies      map[core.NodeID]float64
-	requestHistory []requestStat
-	weights        Weights
+	requests       map[string]Request
+	metrics        map[p2p.NodeID]p2p.NodeMetrics
+	latencies      map[p2p.NodeID]float64
+	requestHistory []RequestStat
+	weights        p2p.Weights
 	startTime      time.Time
 	windowSize     time.Duration
 }
 
-type requestStat struct {
-	Path      string
-	Duration  float64
-	IsError   bool
-	Timestamp time.Time
-}
-
-func NewCollector(nodeID core.NodeID, weights Weights, windowSize time.Duration) *Collector {
-	return &Collector{
+func NewCollector(nodeID p2p.NodeID, address string, httpPort int, weights p2p.Weights, windowSize time.Duration) *CollectorImpl {
+	return &CollectorImpl{
 		nodeID:         nodeID,
-		requests:       make(map[string]*core.Request),
-		metrics:        make(map[core.NodeID]NodeMetrics),
-		latencies:      make(map[core.NodeID]float64),
-		requestHistory: make([]requestStat, 0),
+		address:        address,
+		httPort:        httpPort,
+		requests:       make(map[string]Request),
+		metrics:        make(map[p2p.NodeID]p2p.NodeMetrics),
+		latencies:      make(map[p2p.NodeID]float64),
+		requestHistory: make([]RequestStat, 0),
 		weights:        weights,
 		startTime:      time.Now(),
 		windowSize:     windowSize,
 	}
 }
 
-func (c *Collector) CollectLocalMetrics() NodeMetrics {
+func (c *CollectorImpl) CollectLocalMetrics() p2p.NodeMetrics {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -76,8 +75,10 @@ func (c *Collector) CollectLocalMetrics() NodeMetrics {
 		avgLatency = totalLatency / float64(validStats)
 	}
 
-	return NodeMetrics{
+	c.metrics[c.nodeID] = p2p.NodeMetrics{
 		NodeID:         c.nodeID,
+		Address:        c.address,
+		HttpPort:       c.httPort,
 		CPUUsage:       utils.GetCPUUsage(),
 		MemoryUsage:    utils.GetMemoryUsage(),
 		RequestsPerSec: rps,
@@ -86,9 +87,11 @@ func (c *Collector) CollectLocalMetrics() NodeMetrics {
 		ErrorRate:      errorRate,
 		Timestamp:      time.Now(),
 	}
+
+	return c.metrics[c.nodeID]
 }
 
-func (c *Collector) UpdateNodeMetrics(metrics NodeMetrics, latency float64) {
+func (c *CollectorImpl) UpdateNodeMetrics(metrics p2p.NodeMetrics, latency float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -97,13 +100,13 @@ func (c *Collector) UpdateNodeMetrics(metrics NodeMetrics, latency float64) {
 	c.cleanup()
 }
 
-func (c *Collector) CalculateScore(nodeID core.NodeID) Score {
+func (c *CollectorImpl) CalculateScore(nodeID p2p.NodeID) p2p.Score {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
 	metrics, exists := c.metrics[nodeID]
 	if !exists {
-		return Score{Total: 1.0}
+		return p2p.Score{Total: 1.0}
 	}
 
 	cpuScore := metrics.CPUUsage / 100.0
@@ -116,7 +119,7 @@ func (c *Collector) CalculateScore(nodeID core.NodeID) Score {
 		rpsScore*c.weights.RPS +
 		latencyScore*c.weights.Latency
 
-	return Score{
+	return p2p.Score{
 		CPUScore:     cpuScore,
 		MemoryScore:  memScore,
 		RPSScore:     rpsScore,
@@ -125,13 +128,13 @@ func (c *Collector) CalculateScore(nodeID core.NodeID) Score {
 	}
 }
 
-func (c *Collector) StartRequest(req *core.Request) {
+func (c *CollectorImpl) StartRequest(req *Request) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.requests[req.ID] = req
+	c.requests[req.ID] = *req
 }
 
-func (c *Collector) FinishRequest(reqID string, isError bool) {
+func (c *CollectorImpl) FinishRequest(reqID string, isError bool) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -140,8 +143,9 @@ func (c *Collector) FinishRequest(reqID string, isError bool) {
 		req.EndTime = &endTime
 		duration := endTime.Sub(req.StartTime).Seconds()
 
-		c.requestHistory = append(c.requestHistory, requestStat{
-			Path:      req.Path,
+		c.requestHistory = append(c.requestHistory, RequestStat{
+			Data:      req.Data,
+			Metadata:  req.Metadata,
 			Duration:  duration,
 			IsError:   isError,
 			Timestamp: endTime,
@@ -152,10 +156,71 @@ func (c *Collector) FinishRequest(reqID string, isError bool) {
 	}
 }
 
-func (c *Collector) cleanup() {
+func (c *CollectorImpl) GetAllNodesMetrics() map[p2p.NodeID]p2p.NodeMetrics {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	return c.metrics
+}
+
+func (c *CollectorImpl) GetAllNodes() map[p2p.NodeID]struct{} {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	nodes := make(map[p2p.NodeID]struct{})
+	for nodeID := range c.metrics {
+		nodes[nodeID] = struct{}{}
+	}
+	return nodes
+}
+
+func (c *CollectorImpl) GetNodeInfo(nodeID p2p.NodeID) (types.PeerInfo, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	metrics, exists := c.metrics[nodeID]
+	if !exists {
+		return types.PeerInfo{}, false
+	}
+
+	return types.PeerInfo{
+		NodeID:    nodeID,
+		Address:   metrics.Address,
+		HttpPort:  metrics.HttpPort,
+		Connected: true,
+	}, true
+}
+
+func (c *CollectorImpl) CreateMetricsMiddleware(method string) func(next saiService.HandlerFunc, data interface{}, metadata interface{}) (interface{}, int, error) {
+	return func(next saiService.HandlerFunc, data interface{}, metadata interface{}) (interface{}, int, error) {
+		metadataMap, ok := metadata.(map[string]interface{})
+		if ok && metadataMap["X-From-Peer"] == "true" {
+			return next(data, metadata)
+		}
+
+		req := &Request{
+			ID:        utils.GenerateID(),
+			StartTime: time.Now(),
+			Method:    method,
+			Data:      data,
+			Metadata:  metadata,
+			FromPeer:  metadataMap["X-From-Peer"] == "true",
+		}
+
+		c.StartRequest(req)
+
+		resp, code, err := next(data, metadata)
+
+		c.FinishRequest(req.ID, code >= 400)
+
+		return resp, code, err
+	}
+}
+
+func (c *CollectorImpl) cleanup() {
 	cutoff := time.Now().Add(-c.windowSize)
 
-	newHistory := make([]requestStat, 0)
+	newHistory := make([]RequestStat, 0)
 	for _, stat := range c.requestHistory {
 		if stat.Timestamp.After(cutoff) {
 			newHistory = append(newHistory, stat)
@@ -169,61 +234,4 @@ func (c *Collector) cleanup() {
 			delete(c.latencies, nodeID)
 		}
 	}
-}
-
-func (c *Collector) GetAllNodes() map[core.NodeID]struct{} {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	nodes := make(map[core.NodeID]struct{})
-	for nodeID := range c.metrics {
-		nodes[nodeID] = struct{}{}
-	}
-	return nodes
-}
-
-func (c *Collector) GetNodeInfo(nodeID core.NodeID) (*core.PeerInfo, bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	metrics, exists := c.metrics[nodeID]
-	if !exists {
-		return nil, false
-	}
-
-	return &core.PeerInfo{
-		NodeID:    nodeID,
-		Address:   metrics.Address,
-		Connected: true,
-	}, true
-}
-
-func (c *Collector) Address(nodeID core.NodeID) (string, bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	metrics, exists := c.metrics[nodeID]
-	if !exists {
-		return "", false
-	}
-	return metrics.Address, true
-}
-
-func (c *Collector) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req := &core.Request{
-			ID:        utils.GenerateID(),
-			StartTime: time.Now(),
-			Method:    r.Method,
-			Path:      r.URL.Path,
-			FromPeer:  r.Header.Get("X-From-Peer") == "true",
-		}
-
-		c.StartRequest(req)
-
-		rw := utils.NewResponseWriter(w)
-		next.ServeHTTP(rw, r)
-
-		c.FinishRequest(req.ID, rw.StatusCode >= 400)
-	})
 }

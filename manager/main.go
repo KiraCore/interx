@@ -15,7 +15,7 @@ func main() {
 
 	logger.Logger = svc.Logger
 
-	svc.RegisterInitTask(is.Init)
+	is.Init()
 
 	svc.RegisterTasks([]func(){
 		is.Process,

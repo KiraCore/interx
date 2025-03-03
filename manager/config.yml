@@ -22,3 +22,13 @@ cosmos:
   retries: 1
   retry_delay: 10
   rate_limit: 10
+
+p2p:
+  id: "1"
+  address: "127.0.0.1:9000"
+  peers: ["127.0.0.1:9001"]
+  max_peers: 2
+
+balancer:
+  window_size: 60
+  threshold: 0.2

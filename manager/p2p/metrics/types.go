@@ -3,32 +3,38 @@ package metrics
 import (
 	"time"
 
-	"github.com/saiset-co/sai-interx-manager/p2p/core"
+	saiService "github.com/saiset-co/sai-service/service"
+
+	"github.com/saiset-co/sai-interx-manager/p2p"
+	"github.com/saiset-co/sai-interx-manager/p2p/types"
 )
 
-type NodeMetrics struct {
-	NodeID         core.NodeID `json:"node_id"`
-	Address        string      `json:"address"`
-	CPUUsage       float64     `json:"cpu_usage"`
-	MemoryUsage    float64     `json:"memory_usage"`
-	RequestsPerSec float64     `json:"requests_per_sec"`
-	AverageLatency float64     `json:"average_latency"`
-	ActiveRequests int         `json:"active_requests"`
-	ErrorRate      float64     `json:"error_rate"`
-	Timestamp      time.Time   `json:"timestamp"`
+type RequestStat struct {
+	Data      interface{}
+	Metadata  interface{}
+	Duration  float64
+	IsError   bool
+	Timestamp time.Time
 }
 
-type Score struct {
-	CPUScore     float64
-	MemoryScore  float64
-	RPSScore     float64
-	LatencyScore float64
-	Total        float64
+type Request struct {
+	ID        string
+	StartTime time.Time
+	EndTime   *time.Time
+	Method    string
+	Data      interface{}
+	Metadata  interface{}
+	FromPeer  bool
 }
 
-type Weights struct {
-	CPU     float64
-	Memory  float64
-	RPS     float64
-	Latency float64
+type Collector interface {
+	GetAllNodesMetrics() map[p2p.NodeID]p2p.NodeMetrics
+	CollectLocalMetrics() p2p.NodeMetrics
+	UpdateNodeMetrics(metrics p2p.NodeMetrics, latency float64)
+	CalculateScore(nodeID p2p.NodeID) p2p.Score
+	StartRequest(req *Request)
+	FinishRequest(reqID string, isError bool)
+	GetAllNodes() map[p2p.NodeID]struct{}
+	GetNodeInfo(nodeID p2p.NodeID) (types.PeerInfo, bool)
+	CreateMetricsMiddleware(method string) func(next saiService.HandlerFunc, data interface{}, metadata interface{}) (interface{}, int, error)
 }
