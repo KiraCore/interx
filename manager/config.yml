@@ -17,6 +17,7 @@ ethereum:
   retry_delay: 10
   rate_limit: 10
 cosmos:
+  node: "http://157.180.16.117:1317"
   url: "http://worker-sai-cosmos-interaction:8884"
   token: "a@@#lsa$fd8f"
   retries: 1
@@ -26,7 +27,7 @@ cosmos:
 p2p:
   id: "1"
   address: "127.0.0.1:9000"
-  peers: ["127.0.0.1:9001"]
+  peers: []
   max_peers: 2
 
 balancer:

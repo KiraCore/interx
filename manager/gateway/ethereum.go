@@ -26,11 +26,9 @@ func NewEthereumGateway(url string, retryAttempts int, retryDelay time.Duration,
 
 func (g *EthereumGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
 	var req struct {
-		Method   string      `json:"method"`
-		Data     interface{} `json:"data"`
-		Metadata struct {
-			Token string `json:"token"`
-		} `json:"metadata"`
+		Method  string      `json:"method"`
+		Path    string      `json:"path"`
+		Payload interface{} `json:"payload"`
 	}
 
 	if err := json.Unmarshal(data, &req); err != nil {
@@ -43,6 +41,6 @@ func (g *EthereumGateway) Handle(ctx context.Context, data []byte) (interface{},
 			logger.Logger.Error("EthereumGateway - Handle", zap.Error(err))
 			return nil, err
 		}
-		return g.makeRequest(ctx, g.url, req)
+		return g.makeSaiRequest(ctx, g.url, req)
 	})
 }

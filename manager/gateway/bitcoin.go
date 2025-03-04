@@ -43,6 +43,6 @@ func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, 
 			logger.Logger.Error("CosmosGateway - Handle", zap.Error(err))
 			return nil, err
 		}
-		return g.makeRequest(ctx, g.url, req)
+		return g.makeSaiRequest(ctx, g.url, req)
 	})
 }

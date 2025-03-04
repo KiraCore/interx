@@ -36,6 +36,7 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 	case "cosmos":
 		return NewCosmosGateway(
 			cast.ToString(f.context.GetConfig("cosmos.url", "")),
+			cast.ToString(f.context.GetConfig("cosmos.node", "")),
 			cast.ToInt(f.context.GetConfig("cosmos.retries", 1)),
 			time.Duration(cast.ToInt64(f.context.GetConfig("cosmos.retry_delay", 10))),
 			cast.ToInt(f.context.GetConfig("cosmos.rate_limit", 10)),

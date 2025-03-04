@@ -3,18 +3,18 @@ package internal
 import (
 	"encoding/json"
 
+	"go.uber.org/zap"
+
 	"github.com/saiset-co/sai-interx-manager/logger"
 	"github.com/saiset-co/sai-interx-manager/p2p"
 	"github.com/saiset-co/sai-service/service"
-
-	"go.uber.org/zap"
 )
 
 func (is *InternalService) NewHandler() service.Handler {
 	return service.Handler{
 		"metrics": service.HandlerElement{
-			Name:        "metrics",
-			Description: "metrics",
+			Name:        "Metrics",
+			Description: "Test endpoint for the balancer",
 			Function: func(data, meta interface{}) (interface{}, int, error) {
 				metrics := is.server.MetricsCollector().GetAllNodesMetrics()
 				nodeId := is.server.PeerManager().GetPeerId()
@@ -53,7 +53,11 @@ func (is *InternalService) NewHandler() service.Handler {
 					return nil, 500, err
 				}
 
-				return result, 0, nil
+				return result, 200, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"cosmos": service.HandlerElement{
@@ -78,32 +82,44 @@ func (is *InternalService) NewHandler() service.Handler {
 					return nil, 500, err
 				}
 
-				return result, 0, nil
+				return result, 200, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
-		"storage": service.HandlerElement{
-			Name:        "StorageAPI",
-			Description: "Proxy api endpoint for the storage",
+		"rosetta": service.HandlerElement{
+			Name:        "RosettaAPI",
+			Description: "Proxy api endpoint for Rosetta",
 			Function: func(data, meta interface{}) (interface{}, int, error) {
-				gateway, err := is.gatewayFactory.CreateGateway("storage")
-				if err != nil {
-					logger.Logger.Error("CStorageAPI", zap.Error(err))
-					return nil, 500, err
-				}
-
-				dataBytes, err := json.Marshal(data)
-				if err != nil {
-					logger.Logger.Error("StorageAPI", zap.Error(err))
-					return nil, 500, err
-				}
-
-				result, err := gateway.Handle(is.Context.Context, dataBytes)
-				if err != nil {
-					logger.Logger.Error("EthereumAPI", zap.Error(err))
-					return nil, 500, err
-				}
-
-				return result, 0, nil
+				return nil, 500, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+			},
+		},
+		"bitcoin": service.HandlerElement{
+			Name:        "RosettaAPI",
+			Description: "Proxy api endpoint for Rosetta",
+			Function: func(data, meta interface{}) (interface{}, int, error) {
+				return nil, 500, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+			},
+		},
+		"default": service.HandlerElement{
+			Name:        "DefaultAPI",
+			Description: "Proxy default api endpoints",
+			Function: func(data, meta interface{}) (interface{}, int, error) {
+				return nil, 0, nil
+			},
+			Middlewares: []service.Middleware{
+				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 	}
