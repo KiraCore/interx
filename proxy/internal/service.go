@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -81,11 +80,12 @@ func (is *InternalService) handleHttpConnections(w http.ResponseWriter, r *http.
 		}
 	}
 
+	method := determineMethod(r.URL.Path)
 	request := types.SaiRequest{
-		Method: determineMethod(r.URL.Path),
+		Method: method,
 		Data: types.SaiData{
 			Method:  r.Method,
-			Path:    r.URL.Path,
+			Path:    strings.Replace(r.URL.Path, "/"+method, "", -1),
 			Payload: requestData,
 		},
 	}
@@ -119,7 +119,7 @@ func (is *InternalService) SendProxyRequest(r types.SaiRequest) ([]byte, error) 
 }
 
 func determineMethod(path string) string {
-	if strings.HasPrefix(path, "/api/kira/") {
+	if strings.HasPrefix(path, "/kira/") {
 		return "cosmos"
 	}
 
@@ -127,11 +127,11 @@ func determineMethod(path string) string {
 		return "rosetta"
 	}
 
-	if strings.HasPrefix(path, "/api/bitcoin/") {
+	if strings.HasPrefix(path, "/bitcoin/") {
 		return "bitcoin"
 	}
 
-	if matched, _ := regexp.MatchString(`^/api/(?!kira|bitcoin)[^/]+/.*`, path); matched {
+	if strings.HasPrefix(path, "/ethereum/") {
 		return "ethereum"
 	}
 
