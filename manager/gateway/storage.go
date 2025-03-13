@@ -19,11 +19,11 @@ type StorageGateway struct {
 
 var _ types.Gateway = (*StorageGateway)(nil)
 
-func NewStorageGateway(storage types.Storage, retryAttempts int, retryDelay time.Duration, rateLimit int) *StorageGateway {
+func NewStorageGateway(storage types.Storage, retryAttempts int, retryDelay time.Duration, rateLimit int) (*StorageGateway, error) {
 	return &StorageGateway{
 		BaseGateway: NewBaseGateway(retryAttempts, retryDelay, rateLimit),
 		storage:     storage,
-	}
+	}, nil
 }
 
 func (g *StorageGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
@@ -72,4 +72,8 @@ func (g *StorageGateway) Handle(ctx context.Context, data []byte) (interface{}, 
 
 		return nil, err
 	})
+}
+
+func (g *StorageGateway) Close() {
+
 }

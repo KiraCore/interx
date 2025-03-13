@@ -14,19 +14,21 @@ import (
 )
 
 type InternalService struct {
-	Context        *service.Context
-	gatewayFactory types.GatewayFactory
-	storage        types.Storage
-	server         p2p.Network
+	Context         *service.Context
+	cosmosGateway   types.Gateway
+	ethereumGateway types.Gateway
+	storageGateway  types.Gateway
+	storage         types.Storage
+	p2pServer       p2p.Network
 }
 
 func (is *InternalService) Init() {
+	var err error
+
 	is.storage = types.NewStorage(
 		cast.ToString(is.Context.GetConfig("storage.url", "")),
 		cast.ToString(is.Context.GetConfig("storage.token", "")),
 	)
-
-	is.gatewayFactory = gateway.NewGatewayFactory(is.Context, is.storage)
 
 	nodeID := cast.ToString(is.Context.GetConfig("p2p.id", ""))
 	windowSize := cast.ToInt(is.Context.GetConfig("balancer.window_size", 60))
@@ -42,16 +44,34 @@ func (is *InternalService) Init() {
 		config.WithInitialPeers(cast.ToStringSlice(is.Context.GetConfig("p2p.peers", []string{}))),
 	)
 
-	server, err := net.NewNetwork(is.Context.Context, networkConfig)
+	is.p2pServer, err = net.NewNetwork(is.Context.Context, networkConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	is.server = server
+	gatewayFactory := gateway.NewGatewayFactory(is.Context, is.storage)
+
+	is.cosmosGateway, err = gatewayFactory.CreateGateway("cosmos")
+	if err != nil {
+		panic(err)
+	}
+	is.ethereumGateway, err = gatewayFactory.CreateGateway("ethereum")
+	if err != nil {
+		panic(err)
+	}
+	is.storageGateway, err = gatewayFactory.CreateGateway("storage")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (is *InternalService) Process() {
-	if err := is.server.Start(); err != nil {
+	if err := is.p2pServer.Start(); err != nil {
+		is.p2pServer.Stop()
+		is.cosmosGateway.Close()
+		is.ethereumGateway.Close()
+		is.storageGateway.Close()
+
 		panic(err)
 	}
 }

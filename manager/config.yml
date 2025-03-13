@@ -7,18 +7,20 @@ common:
     port: 8881
 
 storage:
-  token: "tokentest"
+  token: "a@@#lsa$fd8f"
   url: "http://worker-sai-storage:8880"
-
 ethereum:
-  url: "http://worker-sai-ethereum-interaction:8882"
+  interaction: "http://worker-sai-ethereum-interaction:8882"
+  nodes:
+    chain1: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"
   token: "a@@#lsa$fd8f"
   retries: 1
   retry_delay: 10
   rate_limit: 10
 cosmos:
-  node: "http://157.180.16.117:1317"
-  url: "http://worker-sai-cosmos-interaction:8884"
+  node: "157.180.16.117:9090"
+  gw_timeout: 3
+  interaction: "http://worker-sai-cosmos-interaction:8884"
   token: "a@@#lsa$fd8f"
   retries: 1
   retry_delay: 10

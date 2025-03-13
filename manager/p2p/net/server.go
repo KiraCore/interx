@@ -840,12 +840,12 @@ func (pm *PeerManager) sendMetricsToPeers() {
 
 	metricsMsg := proto.NewMessage(proto.MessageTypeMetrics, localMetrics)
 
-	logger.Logger.Debug("PREPARING TO SEND METRICS",
-		zap.Any("Local Node ID", localMetrics.NodeID),
-		zap.Float64("Memory Usage", localMetrics.MemoryUsage),
-		zap.Time("Timestamp", localMetrics.Timestamp),
-		zap.String("Local Address", localMetrics.Address),
-	)
+	//logger.Logger.Debug("PREPARING TO SEND METRICS",
+	//	zap.Any("Local Node ID", localMetrics.NodeID),
+	//	zap.Float64("Memory Usage", localMetrics.MemoryUsage),
+	//	zap.Time("Timestamp", localMetrics.Timestamp),
+	//	zap.String("Local Address", localMetrics.Address),
+	//)
 
 	msgBytes, err := json.Marshal(metricsMsg)
 	if err != nil {
@@ -867,7 +867,7 @@ func (pm *PeerManager) sendMetricsToPeers() {
 	}
 	pm.mutex.RUnlock()
 
-	logger.Logger.Debug("ACTIVE PEERS FOR METRICS", zap.Int("count", len(activePeers)))
+	//logger.Logger.Debug("ACTIVE PEERS FOR METRICS", zap.Int("count", len(activePeers)))
 
 	if len(activePeers) == 0 {
 		return

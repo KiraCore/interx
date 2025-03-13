@@ -17,11 +17,11 @@ type BitcoinGateway struct {
 
 var _ types.Gateway = (*BitcoinGateway)(nil)
 
-func NewBitcoinGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) *BitcoinGateway {
+func NewBitcoinGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) (*BitcoinGateway, error) {
 	return &BitcoinGateway{
 		BaseGateway: NewBaseGateway(retryAttempts, retryDelay, rateLimit),
 		url:         url,
-	}
+	}, nil
 }
 
 func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
@@ -45,4 +45,8 @@ func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, 
 		}
 		return g.makeSaiRequest(ctx, g.url, req)
 	})
+}
+
+func (g *BitcoinGateway) Close() {
+
 }

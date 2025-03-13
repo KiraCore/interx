@@ -16,8 +16,8 @@ func (is *InternalService) NewHandler() service.Handler {
 			Name:        "Metrics",
 			Description: "Test endpoint for the balancer",
 			Function: func(data, meta interface{}) (interface{}, int, error) {
-				metrics := is.server.MetricsCollector().GetAllNodesMetrics()
-				nodeId := is.server.PeerManager().GetPeerId()
+				metrics := is.p2pServer.MetricsCollector().GetAllNodesMetrics()
+				nodeId := is.p2pServer.PeerManager().GetPeerId()
 				return struct {
 					NodeSentReport p2p.NodeID
 					Metrics        map[p2p.NodeID]p2p.NodeMetrics
@@ -27,27 +27,21 @@ func (is *InternalService) NewHandler() service.Handler {
 				}, 200, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"ethereum": service.HandlerElement{
 			Name:        "EthereumAPI",
 			Description: "Proxy api endpoint for an ethereum network",
 			Function: func(data, meta interface{}) (interface{}, int, error) {
-				gateway, err := is.gatewayFactory.CreateGateway("eth")
-				if err != nil {
-					logger.Logger.Error("DelEthereumAPI", zap.Error(err))
-					return nil, 500, err
-				}
-
 				dataBytes, err := json.Marshal(data)
 				if err != nil {
 					logger.Logger.Error("EthereumAPI", zap.Error(err))
 					return nil, 500, err
 				}
 
-				result, err := gateway.Handle(is.Context.Context, dataBytes)
+				result, err := is.ethereumGateway.Handle(is.Context.Context, dataBytes)
 				if err != nil {
 					logger.Logger.Error("EthereumAPI", zap.Error(err))
 					return nil, 500, err
@@ -56,27 +50,21 @@ func (is *InternalService) NewHandler() service.Handler {
 				return result, 200, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"cosmos": service.HandlerElement{
 			Name:        "CosmosAPI",
 			Description: "Proxy api endpoint for a cosmos network",
 			Function: func(data, meta interface{}) (interface{}, int, error) {
-				gateway, err := is.gatewayFactory.CreateGateway("cosmos")
-				if err != nil {
-					logger.Logger.Error("CosmosAPI", zap.Error(err))
-					return nil, 500, err
-				}
-
 				dataBytes, err := json.Marshal(data)
 				if err != nil {
 					logger.Logger.Error("CosmosAPI", zap.Error(err))
 					return nil, 500, err
 				}
 
-				result, err := gateway.Handle(is.Context.Context, dataBytes)
+				result, err := is.cosmosGateway.Handle(is.Context.Context, dataBytes)
 				if err != nil {
 					logger.Logger.Error("EthereumAPI", zap.Error(err))
 					return nil, 500, err
@@ -85,8 +73,8 @@ func (is *InternalService) NewHandler() service.Handler {
 				return result, 200, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"rosetta": service.HandlerElement{
@@ -96,8 +84,8 @@ func (is *InternalService) NewHandler() service.Handler {
 				return nil, 500, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"bitcoin": service.HandlerElement{
@@ -107,8 +95,8 @@ func (is *InternalService) NewHandler() service.Handler {
 				return nil, 500, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 		"default": service.HandlerElement{
@@ -118,8 +106,8 @@ func (is *InternalService) NewHandler() service.Handler {
 				return nil, 0, nil
 			},
 			Middlewares: []service.Middleware{
-				is.server.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.server.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
 			},
 		},
 	}

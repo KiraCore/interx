@@ -1,0 +1,45 @@
+syntax = "proto3";
+package kira.tokens;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+
+option go_package = "github.com/KiraCore/sekai/x/tokens/types";
+
+
+message ProposalUpsertTokenAlias {
+  option (cosmos_proto.implements_interface) = "Content";
+  option (gogoproto.equal) = true;
+
+  string symbol = 1;
+  string name = 2;
+  string icon = 3;
+  uint32 decimals = 4;
+  repeated string denoms = 5;
+  bool invalidated = 6;
+}
+
+message ProposalUpsertTokenRates {
+  option (cosmos_proto.implements_interface) = "Content";
+  option (gogoproto.equal) = true;
+
+  string denom = 1; // denomination target
+  string rate = 2 [
+    (gogoproto.moretags)   = "yaml:\"rate\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false
+  ]; // Exchange rate in terms of KEX token
+  bool fee_payments = 3; // Properties defining if it is enabled or disabled as fee payment methodß
+  string stake_cap = 4 [
+    (gogoproto.moretags) = "yaml:\"stake_cap\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable) = false
+  ]; // rewards cap, sum should be lower than 100%
+  string stake_min = 5 [
+    (gogoproto.moretags) = "yaml:\"stake_min\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
+    (gogoproto.nullable) = false
+  ];
+  bool stake_token = 6;
+  bool invalidated = 7;
+}
