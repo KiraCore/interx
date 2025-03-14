@@ -94,7 +94,7 @@ ethereum:
 
 cosmos:
   node: "http://157.180.16.117:1317"  # Cosmos node address for request proxying
-  url: "http://worker-sai-cosmos-interaction:8884"  # Docker container address (do not change)
+  interaction: "http://worker-sai-cosmos-interaction:8884"  # Docker container address (do not change)
   token: ""  # Access token for the Cosmos interaction service
   retries: 1  # Number of request retries
   retry_delay: 10  # Delay before retry (seconds)
