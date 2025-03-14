@@ -42,7 +42,11 @@ The Proxy service translates traditional HTTP requests into the Manager format. 
 
 **Example Cosmos|Kira request:**
 ```
-GET /kira/cosmos/bank/v1beta1/supply
+GET /cosmos/bank/v1beta1/supply
+```
+or
+```
+GET /kira/gov/all_roles
 ```
 **Example Ethereum request:**
 ```
