@@ -81,11 +81,17 @@ func (is *InternalService) handleHttpConnections(w http.ResponseWriter, r *http.
 	}
 
 	method := determineMethod(r.URL.Path)
+	path := r.URL.Path
+
+	if method == "ethereum" {
+		path = strings.Replace(path, "/"+method, "", -1)
+	}
+
 	request := types.SaiRequest{
 		Method: method,
 		Data: types.SaiData{
 			Method:  r.Method,
-			Path:    strings.Replace(r.URL.Path, "/"+method, "", -1),
+			Path:    path,
 			Payload: requestData,
 		},
 	}
@@ -120,6 +126,10 @@ func (is *InternalService) SendProxyRequest(r types.SaiRequest) ([]byte, error) 
 
 func determineMethod(path string) string {
 	if strings.HasPrefix(path, "/kira/") {
+		return "cosmos"
+	}
+
+	if strings.HasPrefix(path, "/cosmos/") {
 		return "cosmos"
 	}
 
