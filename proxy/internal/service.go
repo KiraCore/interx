@@ -81,7 +81,7 @@ func (is *InternalService) handleHttpConnections(w http.ResponseWriter, r *http.
 	}
 
 	method := determineMethod(r.URL.Path)
-	path := r.URL.Path
+	path := strings.Replace(r.URL.Path, "/api", "", -1)
 
 	if method == "ethereum" {
 		path = strings.Replace(path, "/"+method, "", -1)
