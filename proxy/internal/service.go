@@ -125,6 +125,8 @@ func (is *InternalService) SendProxyRequest(r types.SaiRequest) ([]byte, error) 
 }
 
 func determineMethod(path string) string {
+	path = strings.Replace(path, "/api", "", -1)
+
 	if strings.HasPrefix(path, "/rosetta/") {
 		return "rosetta"
 	}
