@@ -125,14 +125,6 @@ func (is *InternalService) SendProxyRequest(r types.SaiRequest) ([]byte, error) 
 }
 
 func determineMethod(path string) string {
-	if strings.HasPrefix(path, "/kira/") {
-		return "cosmos"
-	}
-
-	if strings.HasPrefix(path, "/cosmos/") {
-		return "cosmos"
-	}
-
 	if strings.HasPrefix(path, "/rosetta/") {
 		return "rosetta"
 	}
@@ -145,5 +137,5 @@ func determineMethod(path string) string {
 		return "ethereum"
 	}
 
-	return "default"
+	return "cosmos"
 }
