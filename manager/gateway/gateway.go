@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-service/service"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -13,13 +14,15 @@ import (
 )
 
 type BaseGateway struct {
+	context   *service.Context
 	client    *http.Client
 	rateLimit *RateLimiter
 	retry     *Retrier
 }
 
-func NewBaseGateway(retryAttempts int, retryDelay time.Duration, rateLimit int) *BaseGateway {
+func NewBaseGateway(ctx *service.Context, retryAttempts int, retryDelay time.Duration, rateLimit int) *BaseGateway {
 	return &BaseGateway{
+		context: ctx,
 		client: &http.Client{
 			Timeout: time.Second * 30,
 		},

@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"errors"
 	"github.com/saiset-co/sai-interx-manager/logger"
 	"go.uber.org/zap"
 	"time"
@@ -22,11 +21,14 @@ func NewRetrier(attempts int, delay time.Duration) *Retrier {
 }
 
 func (r *Retrier) Do(fn RetryFunc) (interface{}, error) {
+	var lastError error
+
 	for i := 0; i < r.attempts; i++ {
 		result, err := fn()
 		if err == nil {
-			logger.Logger.Error("Retrier - Do", zap.Error(err))
 			return result, nil
+		} else {
+			lastError = err
 		}
 
 		if i < r.attempts-1 {
@@ -34,8 +36,7 @@ func (r *Retrier) Do(fn RetryFunc) (interface{}, error) {
 		}
 	}
 
-	err := errors.New("all retry attempts failed")
-	logger.Logger.Error("Retrier - Do", zap.Error(err))
+	logger.Logger.Error("Retrier - all retry attempts failed", zap.Error(lastError))
 
-	return nil, err
+	return nil, lastError
 }

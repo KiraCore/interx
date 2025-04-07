@@ -1,11 +1,7 @@
 package types
 
-import (
-	"context"
-)
-
 type Gateway interface {
-	Handle(ctx context.Context, data []byte) (interface{}, error)
+	Handle(data []byte) (interface{}, error)
 	Close()
 }
 
@@ -16,4 +12,15 @@ type GatewayFactory interface {
 type PathMappings struct {
 	Pattern     string
 	Replacement string
+}
+
+type RPCResponse struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	ID      int         `json:"id"`
+	Result  interface{} `json:"result,omitempty"`
+	Error   struct {
+		Code    float64 `json:"code"`
+		Message string  `json:"message"`
+		Data    string  `json:"data"`
+	} `json:"error,omitempty"`
 }

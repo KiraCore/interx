@@ -8,6 +8,12 @@ type SaiRequest struct {
 	Metadata interface{} `json:"metadata"`
 }
 
+type InboundRequest struct {
+	Method  string                 `json:"method"`
+	Path    string                 `json:"path"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
 // SaiResponse represents a response from the Sai service
 type SaiResponse struct {
 	Success bool        `json:"success"`

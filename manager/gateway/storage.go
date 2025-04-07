@@ -1,10 +1,10 @@
 package gateway
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-service/service"
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
 	"time"
@@ -19,14 +19,14 @@ type StorageGateway struct {
 
 var _ types.Gateway = (*StorageGateway)(nil)
 
-func NewStorageGateway(storage types.Storage, retryAttempts int, retryDelay time.Duration, rateLimit int) (*StorageGateway, error) {
+func NewStorageGateway(ctx *service.Context, storage types.Storage, retryAttempts int, retryDelay time.Duration, rateLimit int) (*StorageGateway, error) {
 	return &StorageGateway{
-		BaseGateway: NewBaseGateway(retryAttempts, retryDelay, rateLimit),
+		BaseGateway: NewBaseGateway(ctx, retryAttempts, retryDelay, rateLimit),
 		storage:     storage,
 	}, nil
 }
 
-func (g *StorageGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
+func (g *StorageGateway) Handle(data []byte) (interface{}, error) {
 	var req struct {
 		Method string                 `json:"method"`
 		Params map[string]interface{} `json:"params"`
@@ -38,7 +38,7 @@ func (g *StorageGateway) Handle(ctx context.Context, data []byte) (interface{}, 
 	}
 
 	return g.retry.Do(func() (interface{}, error) {
-		if err := g.rateLimit.Wait(ctx); err != nil {
+		if err := g.rateLimit.Wait(g.context.Context); err != nil {
 			return nil, err
 		}
 		switch req.Method {

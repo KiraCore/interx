@@ -41,7 +41,7 @@ func (is *InternalService) NewHandler() service.Handler {
 					return nil, 500, err
 				}
 
-				result, err := is.ethereumGateway.Handle(is.Context.Context, dataBytes)
+				result, err := is.ethereumGateway.Handle(dataBytes)
 				if err != nil {
 					logger.Logger.Error("EthereumAPI", zap.Error(err))
 					return nil, 500, err
@@ -64,7 +64,7 @@ func (is *InternalService) NewHandler() service.Handler {
 					return nil, 500, err
 				}
 
-				result, err := is.cosmosGateway.Handle(is.Context.Context, dataBytes)
+				result, err := is.cosmosGateway.Handle(dataBytes)
 				if err != nil {
 					logger.Logger.Error("EthereumAPI", zap.Error(err))
 					return nil, 500, err
@@ -72,10 +72,10 @@ func (is *InternalService) NewHandler() service.Handler {
 
 				return result, 200, nil
 			},
-			Middlewares: []service.Middleware{
-				is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
-				is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
-			},
+			//Middlewares: []service.Middleware{
+			//	is.p2pServer.MetricsCollector().CreateMetricsMiddleware("metrics"),
+			//	is.p2pServer.LoadBalancer().CreateLoadBalancerMiddleware("metrics"),
+			//},
 		},
 		"rosetta": service.HandlerElement{
 			Name:        "RosettaAPI",

@@ -1,9 +1,9 @@
 package gateway
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-service/service"
 	"go.uber.org/zap"
 	"time"
 
@@ -17,14 +17,14 @@ type BitcoinGateway struct {
 
 var _ types.Gateway = (*BitcoinGateway)(nil)
 
-func NewBitcoinGateway(url string, retryAttempts int, retryDelay time.Duration, rateLimit int) (*BitcoinGateway, error) {
+func NewBitcoinGateway(ctx *service.Context, url string, retryAttempts int, retryDelay time.Duration, rateLimit int) (*BitcoinGateway, error) {
 	return &BitcoinGateway{
-		BaseGateway: NewBaseGateway(retryAttempts, retryDelay, rateLimit),
+		BaseGateway: NewBaseGateway(ctx, retryAttempts, retryDelay, rateLimit),
 		url:         url,
 	}, nil
 }
 
-func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, error) {
+func (g *BitcoinGateway) Handle(data []byte) (interface{}, error) {
 	var req struct {
 		Method   string      `json:"method"`
 		Data     interface{} `json:"data"`
@@ -39,11 +39,11 @@ func (g *BitcoinGateway) Handle(ctx context.Context, data []byte) (interface{}, 
 	}
 
 	return g.retry.Do(func() (interface{}, error) {
-		if err := g.rateLimit.Wait(ctx); err != nil {
+		if err := g.rateLimit.Wait(g.context.Context); err != nil {
 			logger.Logger.Error("CosmosGateway - Handle", zap.Error(err))
 			return nil, err
 		}
-		return g.makeSaiRequest(ctx, g.url, req)
+		return g.makeSaiRequest(g.context.Context, g.url, req)
 	})
 }
 

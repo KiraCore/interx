@@ -28,6 +28,7 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 	switch gatewayType {
 	case "ethereum":
 		return NewEthereumGateway(
+			f.context,
 			cast.ToStringMapString(f.context.GetConfig("ethereum.nodes", map[string]string{})),
 			f.storage,
 			cast.ToInt(f.context.GetConfig("ethereum.retries", 1)),
@@ -36,17 +37,18 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 		)
 	case "cosmos":
 		return NewCosmosGateway(
-			f.context.Context,
-			cast.ToString(f.context.GetConfig("cosmos.interaction", "")),
-			cast.ToString(f.context.GetConfig("cosmos.node", "")),
+			f.context,
+			cast.ToString(f.context.GetConfig("cosmos.node.tendermint", "")),
+			cast.ToString(f.context.GetConfig("cosmos.node.json_rpc", "")),
 			f.storage,
-			cast.ToInt(f.context.GetConfig("cosmos.gw_timeout", 1)),
+			cast.ToInt(f.context.GetConfig("cosmos.gw_timeout", 3)),
 			cast.ToInt(f.context.GetConfig("cosmos.retries", 1)),
 			time.Duration(cast.ToInt64(f.context.GetConfig("cosmos.retry_delay", 10))),
 			cast.ToInt(f.context.GetConfig("cosmos.rate_limit", 10)),
 		)
 	case "bitcoin":
 		return NewBitcoinGateway(
+			f.context,
 			cast.ToString(f.context.GetConfig("bitcoin.url", "")),
 			cast.ToInt(f.context.GetConfig("bitcoin.retries", 1)),
 			time.Duration(cast.ToInt64(f.context.GetConfig("bitcoin.retry_delay", 10))),
@@ -54,6 +56,7 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 		)
 	case "storage":
 		return NewStorageGateway(
+			f.context,
 			f.storage,
 			cast.ToInt(f.context.GetConfig("storage.retries", 1)),
 			time.Duration(cast.ToInt64(f.context.GetConfig("storage.retry_delay", 10))),
