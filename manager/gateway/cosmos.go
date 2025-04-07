@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	types2 "github.com/cometbft/cometbft/types"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -374,6 +375,7 @@ func (g *CosmosGateway) genesisChunked(chunk int) (*types.GenesisChunkedResponse
 
 func (g *CosmosGateway) genesis() (*types.GenesisInfo, error) {
 	gInfo := new(types.GenesisInfo)
+	gInfo.GenesisDoc = new(types2.GenesisDoc)
 
 	genesisData, err := g.genesisChunked(0)
 	if err != nil {
@@ -808,16 +810,18 @@ func (g *CosmosGateway) filterAndPaginateValidators(response *types.ValidatorsRe
 		}
 	}
 
-	if offset >= result.Pagination.Total {
+	if offset >= len(filteredValidators) {
 		result.Validators = []types.QueryValidator{}
 	} else {
 		endIndex := offset + limit
-		if endIndex > result.Pagination.Total {
-			endIndex = result.Pagination.Total
+		if endIndex > len(filteredValidators) {
+			endIndex = len(filteredValidators)
 		}
 
 		result.Validators = filteredValidators[offset:endIndex]
 	}
+
+	result.Pagination.Total = len(filteredValidators)
 
 	return result, nil
 }
