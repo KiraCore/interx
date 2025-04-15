@@ -21,6 +21,10 @@ cosmos:
   node:
     json_rpc: "157.180.16.117:9090"
     tendermint: "http://157.180.16.117:26657"
+  tx_modes:
+    sync: true
+    async: true
+    block: true
   gw_timeout: 10
   interaction: "http://worker-sai-cosmos-interaction:8884"
   token: "a@@#lsa$fd8f"

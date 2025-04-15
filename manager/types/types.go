@@ -100,6 +100,9 @@ type TokenRatesResponse struct {
 type ValidatorsResponse = struct {
 	Validators []QueryValidator `json:"validators,omitempty"`
 	Actors     []string         `json:"actors,omitempty"`
+	Pagination struct {
+		Total int `json:"total,string,omitempty"`
+	} `json:"pagination,omitempty"`
 }
 
 type ValidatorInfoResponse = struct {
