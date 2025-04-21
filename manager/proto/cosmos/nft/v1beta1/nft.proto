@@ -3,7 +3,7 @@ package cosmos.nft.v1beta1;
 
 import "google/protobuf/any.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/nft";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/nft";
 
 // Class defines the class of the nft type.
 message Class {

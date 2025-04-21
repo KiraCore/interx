@@ -10,7 +10,7 @@ import "amino/amino.proto";
 // Module is the config object of the group module.
 message Module {
   option (cosmos.app.v1alpha1.module) = {
-    go_import: "github.com/KiraCore/interx/proto-gen/cosmos/group"
+    go_import: "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/group"
   };
 
   // max_execution_period defines the max duration after a proposal's voting period ends that members can send a MsgExec

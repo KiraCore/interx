@@ -19,18 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Msg_UpsertTokenAlias_FullMethodName = "/kira.tokens.Msg/UpsertTokenAlias"
-	Msg_UpsertTokenRate_FullMethodName  = "/kira.tokens.Msg/UpsertTokenRate"
+	Msg_UpsertTokenInfo_FullMethodName = "/kira.tokens.Msg/UpsertTokenInfo"
+	Msg_EthereumTx_FullMethodName      = "/kira.tokens.Msg/EthereumTx"
 )
 
 // MsgClient is the client API for Msg service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MsgClient interface {
-	// UpsertTokenAlias defines a method to upsert token alias
-	UpsertTokenAlias(ctx context.Context, in *MsgUpsertTokenAlias, opts ...grpc.CallOption) (*MsgUpsertTokenAliasResponse, error)
-	// UpsertTokenRate defines a method to upsert token rate
-	UpsertTokenRate(ctx context.Context, in *MsgUpsertTokenRate, opts ...grpc.CallOption) (*MsgUpsertTokenRateResponse, error)
+	// UpsertTokenInfo defines a method to upsert token rate
+	UpsertTokenInfo(ctx context.Context, in *MsgUpsertTokenInfo, opts ...grpc.CallOption) (*MsgUpsertTokenInfoResponse, error)
+	// EthereumTx defines a method to send ethereum transaction
+	EthereumTx(ctx context.Context, in *MsgEthereumTx, opts ...grpc.CallOption) (*MsgEthereumTxResponse, error)
 }
 
 type msgClient struct {
@@ -41,18 +41,18 @@ func NewMsgClient(cc grpc.ClientConnInterface) MsgClient {
 	return &msgClient{cc}
 }
 
-func (c *msgClient) UpsertTokenAlias(ctx context.Context, in *MsgUpsertTokenAlias, opts ...grpc.CallOption) (*MsgUpsertTokenAliasResponse, error) {
-	out := new(MsgUpsertTokenAliasResponse)
-	err := c.cc.Invoke(ctx, Msg_UpsertTokenAlias_FullMethodName, in, out, opts...)
+func (c *msgClient) UpsertTokenInfo(ctx context.Context, in *MsgUpsertTokenInfo, opts ...grpc.CallOption) (*MsgUpsertTokenInfoResponse, error) {
+	out := new(MsgUpsertTokenInfoResponse)
+	err := c.cc.Invoke(ctx, Msg_UpsertTokenInfo_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) UpsertTokenRate(ctx context.Context, in *MsgUpsertTokenRate, opts ...grpc.CallOption) (*MsgUpsertTokenRateResponse, error) {
-	out := new(MsgUpsertTokenRateResponse)
-	err := c.cc.Invoke(ctx, Msg_UpsertTokenRate_FullMethodName, in, out, opts...)
+func (c *msgClient) EthereumTx(ctx context.Context, in *MsgEthereumTx, opts ...grpc.CallOption) (*MsgEthereumTxResponse, error) {
+	out := new(MsgEthereumTxResponse)
+	err := c.cc.Invoke(ctx, Msg_EthereumTx_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,10 +63,10 @@ func (c *msgClient) UpsertTokenRate(ctx context.Context, in *MsgUpsertTokenRate,
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility
 type MsgServer interface {
-	// UpsertTokenAlias defines a method to upsert token alias
-	UpsertTokenAlias(context.Context, *MsgUpsertTokenAlias) (*MsgUpsertTokenAliasResponse, error)
-	// UpsertTokenRate defines a method to upsert token rate
-	UpsertTokenRate(context.Context, *MsgUpsertTokenRate) (*MsgUpsertTokenRateResponse, error)
+	// UpsertTokenInfo defines a method to upsert token rate
+	UpsertTokenInfo(context.Context, *MsgUpsertTokenInfo) (*MsgUpsertTokenInfoResponse, error)
+	// EthereumTx defines a method to send ethereum transaction
+	EthereumTx(context.Context, *MsgEthereumTx) (*MsgEthereumTxResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -74,11 +74,11 @@ type MsgServer interface {
 type UnimplementedMsgServer struct {
 }
 
-func (UnimplementedMsgServer) UpsertTokenAlias(context.Context, *MsgUpsertTokenAlias) (*MsgUpsertTokenAliasResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpsertTokenAlias not implemented")
+func (UnimplementedMsgServer) UpsertTokenInfo(context.Context, *MsgUpsertTokenInfo) (*MsgUpsertTokenInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertTokenInfo not implemented")
 }
-func (UnimplementedMsgServer) UpsertTokenRate(context.Context, *MsgUpsertTokenRate) (*MsgUpsertTokenRateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpsertTokenRate not implemented")
+func (UnimplementedMsgServer) EthereumTx(context.Context, *MsgEthereumTx) (*MsgEthereumTxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EthereumTx not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 
@@ -93,38 +93,38 @@ func RegisterMsgServer(s grpc.ServiceRegistrar, srv MsgServer) {
 	s.RegisterService(&Msg_ServiceDesc, srv)
 }
 
-func _Msg_UpsertTokenAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgUpsertTokenAlias)
+func _Msg_UpsertTokenInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgUpsertTokenInfo)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).UpsertTokenAlias(ctx, in)
+		return srv.(MsgServer).UpsertTokenInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_UpsertTokenAlias_FullMethodName,
+		FullMethod: Msg_UpsertTokenInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).UpsertTokenAlias(ctx, req.(*MsgUpsertTokenAlias))
+		return srv.(MsgServer).UpsertTokenInfo(ctx, req.(*MsgUpsertTokenInfo))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_UpsertTokenRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgUpsertTokenRate)
+func _Msg_EthereumTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgEthereumTx)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).UpsertTokenRate(ctx, in)
+		return srv.(MsgServer).EthereumTx(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_UpsertTokenRate_FullMethodName,
+		FullMethod: Msg_EthereumTx_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).UpsertTokenRate(ctx, req.(*MsgUpsertTokenRate))
+		return srv.(MsgServer).EthereumTx(ctx, req.(*MsgEthereumTx))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -137,12 +137,12 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MsgServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "UpsertTokenAlias",
-			Handler:    _Msg_UpsertTokenAlias_Handler,
+			MethodName: "UpsertTokenInfo",
+			Handler:    _Msg_UpsertTokenInfo_Handler,
 		},
 		{
-			MethodName: "UpsertTokenRate",
-			Handler:    _Msg_UpsertTokenRate_Handler,
+			MethodName: "EthereumTx",
+			Handler:    _Msg_EthereumTx_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

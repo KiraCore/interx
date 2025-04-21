@@ -9,15 +9,10 @@ import (
 	"github.com/saiset-co/sai-interx-manager/types"
 )
 
-func QueryNetworkPropertiesFromGrpcResult(success interface{}) (*types.NetworkPropertiesResponse, error) {
+func QueryNetworkPropertiesFromGrpcResult(success []byte) (*types.NetworkPropertiesResponse, error) {
 	result := new(types.NetworkPropertiesResponse)
 
-	byteData, err := json.Marshal(success)
-	if err != nil {
-		logger.Logger.Error("[query-network-properties] Invalid response format", zap.Error(err))
-		return nil, err
-	}
-	err = json.Unmarshal(byteData, &result)
+	err := json.Unmarshal(success, &result)
 	if err != nil {
 		logger.Logger.Error("[query-network-properties] Invalid response format", zap.Error(err))
 		return nil, err

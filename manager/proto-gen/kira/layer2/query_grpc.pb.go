@@ -22,7 +22,6 @@ const (
 	Query_ExecutionRegistrar_FullMethodName = "/kira.layer2.Query/ExecutionRegistrar"
 	Query_AllDapps_FullMethodName           = "/kira.layer2.Query/AllDapps"
 	Query_TransferDapps_FullMethodName      = "/kira.layer2.Query/TransferDapps"
-	Query_GlobalTokens_FullMethodName       = "/kira.layer2.Query/GlobalTokens"
 )
 
 // QueryClient is the client API for Query service.
@@ -37,12 +36,6 @@ type QueryClient interface {
 	// query XAMs’ records by either account address, account index, xid or
 	// transaction hash in which cross-app transaction was added to the ABR.
 	TransferDapps(ctx context.Context, in *QueryTransferDappsRequest, opts ...grpc.CallOption) (*QueryTransferDappsResponse, error)
-	// query list of all token denoms on the network including those created in
-	// the genesis (ukex, samolean etc..) as well as those in the minting module,
-	// lp tokens, validator recovery tokens and so on. If the flag with specific
-	// name is specified provide a detailed information about the token including
-	// its current circulating supply etc.
-	GlobalTokens(ctx context.Context, in *QueryGlobalTokensRequest, opts ...grpc.CallOption) (*QueryGlobalTokensResponse, error)
 }
 
 type queryClient struct {
@@ -80,15 +73,6 @@ func (c *queryClient) TransferDapps(ctx context.Context, in *QueryTransferDappsR
 	return out, nil
 }
 
-func (c *queryClient) GlobalTokens(ctx context.Context, in *QueryGlobalTokensRequest, opts ...grpc.CallOption) (*QueryGlobalTokensResponse, error) {
-	out := new(QueryGlobalTokensResponse)
-	err := c.cc.Invoke(ctx, Query_GlobalTokens_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility
@@ -101,12 +85,6 @@ type QueryServer interface {
 	// query XAMs’ records by either account address, account index, xid or
 	// transaction hash in which cross-app transaction was added to the ABR.
 	TransferDapps(context.Context, *QueryTransferDappsRequest) (*QueryTransferDappsResponse, error)
-	// query list of all token denoms on the network including those created in
-	// the genesis (ukex, samolean etc..) as well as those in the minting module,
-	// lp tokens, validator recovery tokens and so on. If the flag with specific
-	// name is specified provide a detailed information about the token including
-	// its current circulating supply etc.
-	GlobalTokens(context.Context, *QueryGlobalTokensRequest) (*QueryGlobalTokensResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -122,9 +100,6 @@ func (UnimplementedQueryServer) AllDapps(context.Context, *QueryAllDappsRequest)
 }
 func (UnimplementedQueryServer) TransferDapps(context.Context, *QueryTransferDappsRequest) (*QueryTransferDappsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TransferDapps not implemented")
-}
-func (UnimplementedQueryServer) GlobalTokens(context.Context, *QueryGlobalTokensRequest) (*QueryGlobalTokensResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GlobalTokens not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 
@@ -193,24 +168,6 @@ func _Query_TransferDapps_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_GlobalTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryGlobalTokensRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).GlobalTokens(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_GlobalTokens_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GlobalTokens(ctx, req.(*QueryGlobalTokensRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -229,10 +186,6 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TransferDapps",
 			Handler:    _Query_TransferDapps_Handler,
-		},
-		{
-			MethodName: "GlobalTokens",
-			Handler:    _Query_GlobalTokens_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

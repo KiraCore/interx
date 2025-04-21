@@ -7,7 +7,7 @@ import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
 import "cosmos/auth/v1beta1/auth.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/auth/v1beta1";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/auth/v1beta1";
 
 // Msg defines the x/auth Msg service.
 service Msg {

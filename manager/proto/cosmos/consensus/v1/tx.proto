@@ -6,7 +6,7 @@ import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "tendermint/types/params.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/consensus/types";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/consensus/types";
 
 // Msg defines the bank Msg service.
 service Msg {

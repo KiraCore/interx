@@ -1,5 +1,11 @@
 package types
 
+type GRPCResponse struct {
+	Code    float64 `json:"code"`
+	Message string  `json:"message"`
+	Details []byte  `json:"details"`
+}
+
 type EVMStatus struct {
 	NodeInfo struct {
 		Network    uint64 `json:"network"`
@@ -107,6 +113,7 @@ type ValidatorsResponse = struct {
 
 type ValidatorInfoResponse = struct {
 	ValValidatorInfos []ValidatorSigningInfo `json:"info,omitempty"`
+	Validators        []QueryValidator       `json:"validators,omitempty"`
 }
 
 type AllValidators struct {

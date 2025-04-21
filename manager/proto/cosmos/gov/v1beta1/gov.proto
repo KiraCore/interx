@@ -9,7 +9,7 @@ import "google/protobuf/duration.proto";
 import "cosmos_proto/cosmos.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/gov/types/v1beta1";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/gov/types/v1beta1";
 
 option (gogoproto.goproto_stringer_all) = false;
 option (gogoproto.stringer_all)         = false;

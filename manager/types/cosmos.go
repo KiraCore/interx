@@ -3,6 +3,7 @@ package types
 import (
 	types2 "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"time"
 )
 
 type GenesisChunkedResponse struct {
@@ -63,9 +64,9 @@ type VerifyRecord struct {
 	Verifier           string   `json:"verifier,omitempty"`
 }
 
-type IdVerifyRequests struct {
-	VerifyRecords []VerifyRecord `json:"verifyRecords,omitempty"`
-	Pagination    interface{}    `json:"pagination,omitempty"`
+type IdVerifyResponse struct {
+	VerifyRecords []VerifyRecord `json:"verifyRecords"`
+	Pagination    interface{}    `json:"pagination"`
 }
 
 type NetworkProperties struct {
@@ -150,4 +151,200 @@ type Undelegation struct {
 
 type QueryUndelegationsResult struct {
 	Undelegations []Undelegation `json:"undelegations"`
+}
+
+type TxsResultResponse struct {
+	Transactions []TransactionResultResponse `json:"transactions"`
+	TotalCount   int                         `json:"total_count"`
+}
+
+type TransactionResultResponse struct {
+	Time      int64         `json:"time"`
+	Hash      string        `json:"hash"`
+	Status    string        `json:"status"`
+	Direction string        `json:"direction"`
+	Memo      string        `json:"memo"`
+	Fee       sdk.Coins     `json:"fee"`
+	Txs       []interface{} `json:"txs"`
+}
+
+type QueryTxsParams struct {
+	BlockId    string   `json:"blockId,omitempty"`
+	Address    string   `json:"address,omitempty"`
+	StartDate  int64    `json:"start_date,string,omitempty"`
+	EndDate    int64    `json:"end_date,string,omitempty"`
+	Directions []string `json:"directions,omitempty"`
+	Statuses   []string `json:"statuses,omitempty"`
+	Types      []string `json:"types,omitempty"`
+	Offset     int      `json:"offset,string,omitempty"`
+	Limit      int      `json:"limit,string,omitempty"`
+}
+
+type TxResponse struct {
+	Height    string `json:"height"`
+	TxHash    string `json:"txhash"`
+	Codespace string `json:"codespace"`
+	Code      uint32 `json:"code"`
+	Data      string `json:"data"`
+	RawLog    string `json:"raw_log"`
+	Logs      []struct {
+		Events []struct {
+			Type       string `json:"type"`
+			Attributes []struct {
+				Key   string `json:"key"`
+				Value string `json:"value"`
+			} `json:"attributes"`
+		} `json:"events"`
+	} `json:"logs"`
+	Info      string    `json:"info"`
+	GasWanted string    `json:"gas_wanted"`
+	GasUsed   string    `json:"gas_used"`
+	Tx        Tx        `json:"tx"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type MempoolResponse struct {
+	Txs []TxResponse `json:"txs"`
+}
+
+type Tx struct {
+	Body struct {
+		Messages []interface{} `json:"messages"`
+		Memo     string        `json:"memo"`
+	} `json:"body"`
+	AuthInfo struct {
+		SignerInfos []struct {
+			PublicKey struct {
+				Type string `json:"@type"`
+				Key  string `json:"key"`
+			} `json:"public_key"`
+			ModeInfo struct {
+				Single struct {
+					Mode string `json:"mode"`
+				} `json:"single"`
+			} `json:"mode_info"`
+			Sequence string `json:"sequence"`
+		} `json:"signer_infos"`
+		Fee struct {
+			Amount   sdk.Coins `json:"amount"`
+			GasLimit string    `json:"gas_limit"`
+			Payer    string    `json:"payer"`
+			Granter  string    `json:"granter"`
+		} `json:"fee"`
+	} `json:"auth_info"`
+	Signatures []string `json:"signatures"`
+}
+
+type ProposalsRequest struct {
+	Proposer   string   `json:"proposer,omitempty"`
+	DateStart  int      `json:"date_start,string,omitempty"`
+	DateEnd    int      `json:"date_end,string,omitempty"`
+	SortBy     string   `json:"sort_by,omitempty"`
+	Types      []string `json:"types,omitempty"`
+	Statuses   []string `json:"statuses,omitempty"`
+	Voter      string   `json:"voter,omitempty"`
+	Offset     int64    `json:"offset,string,omitempty"`
+	Limit      int64    `json:"limit,string,omitempty"`
+	CountTotal int64    `json:"count_total,string,omitempty"`
+}
+
+type Proposal struct {
+	ProposalID                 string      `json:"proposalId"`
+	Title                      string      `json:"title"`
+	Description                string      `json:"description"`
+	Content                    interface{} `json:"content"`
+	SubmitTime                 string      `json:"submitTime"`
+	VotingEndTime              string      `json:"votingEndTime"`
+	EnactmentEndTime           string      `json:"enactmentEndTime"`
+	MinVotingEndBlockHeight    string      `json:"minVotingEndBlockHeight"`
+	MinEnactmentEndBlockHeight string      `json:"minEnactmentEndBlockHeight"`
+	ExecResult                 string      `json:"execResult"`
+	Result                     string      `json:"result"`
+	VotersCount                int         `json:"voters_count"`
+	VotesCount                 int         `json:"votes_count"`
+	Quorum                     string      `json:"quorum"`
+	Metadata                   string      `json:"meta_data"`
+	Hash                       string      `json:"transaction_hash,omitempty"`
+	Timestamp                  int         `json:"timestamp,omitempty"`
+	BlockHeight                int         `json:"block_height,omitempty"`
+	Type                       string      `json:"type,omitempty"`
+	Proposer                   string      `json:"proposer,omitempty"`
+}
+
+type Pagination struct {
+	NextKey string `json:"next_key"`
+	Total   int    `json:"total,string"`
+}
+
+type ProposalsResponse = struct {
+	Proposals  []Proposal `json:"proposals"`
+	Pagination Pagination `json:"pagination"`
+}
+
+type TokenAlias struct {
+	Denom             string `json:"denom"`
+	TokenType         string `json:"tokenType"`
+	FeeRate           string `json:"feeRate"`
+	FeeEnabled        bool   `json:"feeEnabled"`
+	Supply            string `json:"supply"`
+	SupplyCap         string `json:"supplyCap"`
+	StakeCap          string `json:"stakeCap"`
+	StakeMin          string `json:"stakeMin"`
+	StakeEnabled      bool   `json:"stakeEnabled"`
+	Inactive          bool   `json:"inactive"`
+	Symbol            string `json:"symbol"`
+	Name              string `json:"name"`
+	Icon              string `json:"icon"`
+	Decimals          int    `json:"decimals"`
+	Description       string `json:"description"`
+	Website           string `json:"website"`
+	Social            string `json:"social"`
+	Holders           string `json:"holders"`
+	MintingFee        string `json:"mintingFee"`
+	Owner             string `json:"owner"`
+	OwnerEditDisabled bool   `json:"ownerEditDisabled"`
+	NftMetadata       string `json:"nftMetadata"`
+	NftHash           string `json:"nftHash"`
+}
+
+type TokenAliasesData struct {
+	Data TokenAlias `json:"data"`
+}
+
+type TokenAliasesRequest struct {
+	Tokens []string `json:"tokens"`
+}
+
+type TokenAliasesGRPCResponse struct {
+	Data []TokenAliasesData `json:"data"`
+}
+
+type TokenAliasesResponse struct {
+	Data         []TokenAlias `json:"data"`
+	DefaultDenom string       `json:"default_denom"`
+	Bech32Prefix string       `json:"bech32_prefix"`
+	Pagination   *Pagination  `json:"pagination,omitempty"`
+}
+
+type TokenSupply struct {
+	Amount sdk.Int `json:"amount"`
+	Denom  string  `json:"denom"`
+}
+
+type TokenSupplyResponse struct {
+	Supply []TokenSupply `json:"supply"`
+}
+
+type CustomPrefixesResponse struct {
+	DefaultDenom string `json:"defaultDenom"`
+	Bech32Prefix string `json:"bech32Prefix"`
+}
+
+type FaucetAccountInfo struct {
+	Address  string     `json:"address"`
+	Balances []sdk.Coin `json:"balances"`
+}
+
+type BalancesResponse struct {
+	Balances []sdk.Coin `json:"balances"`
 }

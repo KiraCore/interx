@@ -24,8 +24,8 @@ const (
 )
 
 // - `disable-basket-deposits` - emergency function & permission to disable one or all deposits of one or all token in the basket
-//   - To disable all deposits at once the `mints_max` should be set to `0`
-//   - To disable single token set `deposits` boolean flag to false
+//     - To disable all deposits at once the `mints_max` should be set to `0`
+//     - To disable single token set `deposits` boolean flag to false
 type MsgDisableBasketDeposits struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -128,8 +128,8 @@ func (*MsgDisableBasketDepositsResponse) Descriptor() ([]byte, []int) {
 }
 
 // - `disable-basket-withdraws`- emergency function & permission to disable one or all withdrawals of one or all token in the basket
-//   - To disable all withdraws at once the `burns_max` should be set to `0`
-//   - To disable single token set `withdraws` boolean flag to false
+//     - To disable all withdraws at once the `burns_max` should be set to `0`
+//     - To disable single token set `withdraws` boolean flag to false
 type MsgDisableBasketWithdraws struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -232,8 +232,8 @@ func (*MsgDisableBasketWithdrawsResponse) Descriptor() ([]byte, []int) {
 }
 
 // - `disable-basket-swaps`- emergency function & permission to disable one or all swaps of one or all token in the basket
-//   - To disable all swaps at once the `swaps_max` should be set to `0`
-//   - To disable single token set `swaps` boolean flag to false
+//     - To disable all swaps at once the `swaps_max` should be set to `0`
+//     - To disable single token set `swaps` boolean flag to false
 type MsgDisableBasketSwaps struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

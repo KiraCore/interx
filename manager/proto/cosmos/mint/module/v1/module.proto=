@@ -7,7 +7,7 @@ import "cosmos/app/v1alpha1/module.proto";
 // Module is the config object of the mint module.
 message Module {
   option (cosmos.app.v1alpha1.module) = {
-    go_import: "github.com/KiraCore/interx/proto-gen/cosmos/mint"
+    go_import: "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/mint"
   };
 
   string fee_collector_name = 1;

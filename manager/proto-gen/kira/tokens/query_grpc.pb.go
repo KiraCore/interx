@@ -19,27 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Query_GetTokenAlias_FullMethodName          = "/kira.tokens.Query/GetTokenAlias"
-	Query_GetAllTokenAliases_FullMethodName     = "/kira.tokens.Query/GetAllTokenAliases"
-	Query_GetTokenAliasesByDenom_FullMethodName = "/kira.tokens.Query/GetTokenAliasesByDenom"
-	Query_GetTokenRate_FullMethodName           = "/kira.tokens.Query/GetTokenRate"
-	Query_GetAllTokenRates_FullMethodName       = "/kira.tokens.Query/GetAllTokenRates"
-	Query_GetTokenRatesByDenom_FullMethodName   = "/kira.tokens.Query/GetTokenRatesByDenom"
-	Query_GetTokenBlackWhites_FullMethodName    = "/kira.tokens.Query/GetTokenBlackWhites"
+	Query_GetTokenInfo_FullMethodName         = "/kira.tokens.Query/GetTokenInfo"
+	Query_GetAllTokenInfos_FullMethodName     = "/kira.tokens.Query/GetAllTokenInfos"
+	Query_GetTokenInfosByDenom_FullMethodName = "/kira.tokens.Query/GetTokenInfosByDenom"
+	Query_GetTokenBlackWhites_FullMethodName  = "/kira.tokens.Query/GetTokenBlackWhites"
 )
 
 // QueryClient is the client API for Query service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type QueryClient interface {
-	// Returns the token alias
-	GetTokenAlias(ctx context.Context, in *TokenAliasRequest, opts ...grpc.CallOption) (*TokenAliasResponse, error)
-	GetAllTokenAliases(ctx context.Context, in *AllTokenAliasesRequest, opts ...grpc.CallOption) (*AllTokenAliasesResponse, error)
-	GetTokenAliasesByDenom(ctx context.Context, in *TokenAliasesByDenomRequest, opts ...grpc.CallOption) (*TokenAliasesByDenomResponse, error)
-	// Returns the token rates
-	GetTokenRate(ctx context.Context, in *TokenRateRequest, opts ...grpc.CallOption) (*TokenRateResponse, error)
-	GetAllTokenRates(ctx context.Context, in *AllTokenRatesRequest, opts ...grpc.CallOption) (*AllTokenRatesResponse, error)
-	GetTokenRatesByDenom(ctx context.Context, in *TokenRatesByDenomRequest, opts ...grpc.CallOption) (*TokenRatesByDenomResponse, error)
+	// Returns the token infos
+	GetTokenInfo(ctx context.Context, in *TokenInfoRequest, opts ...grpc.CallOption) (*TokenInfoResponse, error)
+	GetAllTokenInfos(ctx context.Context, in *AllTokenInfosRequest, opts ...grpc.CallOption) (*AllTokenInfosResponse, error)
+	GetTokenInfosByDenom(ctx context.Context, in *TokenInfosByDenomRequest, opts ...grpc.CallOption) (*TokenInfosByDenomResponse, error)
 	// Returns tokens black/white lists
 	GetTokenBlackWhites(ctx context.Context, in *TokenBlackWhitesRequest, opts ...grpc.CallOption) (*TokenBlackWhitesResponse, error)
 }
@@ -52,54 +45,27 @@ func NewQueryClient(cc grpc.ClientConnInterface) QueryClient {
 	return &queryClient{cc}
 }
 
-func (c *queryClient) GetTokenAlias(ctx context.Context, in *TokenAliasRequest, opts ...grpc.CallOption) (*TokenAliasResponse, error) {
-	out := new(TokenAliasResponse)
-	err := c.cc.Invoke(ctx, Query_GetTokenAlias_FullMethodName, in, out, opts...)
+func (c *queryClient) GetTokenInfo(ctx context.Context, in *TokenInfoRequest, opts ...grpc.CallOption) (*TokenInfoResponse, error) {
+	out := new(TokenInfoResponse)
+	err := c.cc.Invoke(ctx, Query_GetTokenInfo_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) GetAllTokenAliases(ctx context.Context, in *AllTokenAliasesRequest, opts ...grpc.CallOption) (*AllTokenAliasesResponse, error) {
-	out := new(AllTokenAliasesResponse)
-	err := c.cc.Invoke(ctx, Query_GetAllTokenAliases_FullMethodName, in, out, opts...)
+func (c *queryClient) GetAllTokenInfos(ctx context.Context, in *AllTokenInfosRequest, opts ...grpc.CallOption) (*AllTokenInfosResponse, error) {
+	out := new(AllTokenInfosResponse)
+	err := c.cc.Invoke(ctx, Query_GetAllTokenInfos_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) GetTokenAliasesByDenom(ctx context.Context, in *TokenAliasesByDenomRequest, opts ...grpc.CallOption) (*TokenAliasesByDenomResponse, error) {
-	out := new(TokenAliasesByDenomResponse)
-	err := c.cc.Invoke(ctx, Query_GetTokenAliasesByDenom_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) GetTokenRate(ctx context.Context, in *TokenRateRequest, opts ...grpc.CallOption) (*TokenRateResponse, error) {
-	out := new(TokenRateResponse)
-	err := c.cc.Invoke(ctx, Query_GetTokenRate_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) GetAllTokenRates(ctx context.Context, in *AllTokenRatesRequest, opts ...grpc.CallOption) (*AllTokenRatesResponse, error) {
-	out := new(AllTokenRatesResponse)
-	err := c.cc.Invoke(ctx, Query_GetAllTokenRates_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) GetTokenRatesByDenom(ctx context.Context, in *TokenRatesByDenomRequest, opts ...grpc.CallOption) (*TokenRatesByDenomResponse, error) {
-	out := new(TokenRatesByDenomResponse)
-	err := c.cc.Invoke(ctx, Query_GetTokenRatesByDenom_FullMethodName, in, out, opts...)
+func (c *queryClient) GetTokenInfosByDenom(ctx context.Context, in *TokenInfosByDenomRequest, opts ...grpc.CallOption) (*TokenInfosByDenomResponse, error) {
+	out := new(TokenInfosByDenomResponse)
+	err := c.cc.Invoke(ctx, Query_GetTokenInfosByDenom_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -119,14 +85,10 @@ func (c *queryClient) GetTokenBlackWhites(ctx context.Context, in *TokenBlackWhi
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility
 type QueryServer interface {
-	// Returns the token alias
-	GetTokenAlias(context.Context, *TokenAliasRequest) (*TokenAliasResponse, error)
-	GetAllTokenAliases(context.Context, *AllTokenAliasesRequest) (*AllTokenAliasesResponse, error)
-	GetTokenAliasesByDenom(context.Context, *TokenAliasesByDenomRequest) (*TokenAliasesByDenomResponse, error)
-	// Returns the token rates
-	GetTokenRate(context.Context, *TokenRateRequest) (*TokenRateResponse, error)
-	GetAllTokenRates(context.Context, *AllTokenRatesRequest) (*AllTokenRatesResponse, error)
-	GetTokenRatesByDenom(context.Context, *TokenRatesByDenomRequest) (*TokenRatesByDenomResponse, error)
+	// Returns the token infos
+	GetTokenInfo(context.Context, *TokenInfoRequest) (*TokenInfoResponse, error)
+	GetAllTokenInfos(context.Context, *AllTokenInfosRequest) (*AllTokenInfosResponse, error)
+	GetTokenInfosByDenom(context.Context, *TokenInfosByDenomRequest) (*TokenInfosByDenomResponse, error)
 	// Returns tokens black/white lists
 	GetTokenBlackWhites(context.Context, *TokenBlackWhitesRequest) (*TokenBlackWhitesResponse, error)
 	mustEmbedUnimplementedQueryServer()
@@ -136,23 +98,14 @@ type QueryServer interface {
 type UnimplementedQueryServer struct {
 }
 
-func (UnimplementedQueryServer) GetTokenAlias(context.Context, *TokenAliasRequest) (*TokenAliasResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTokenAlias not implemented")
+func (UnimplementedQueryServer) GetTokenInfo(context.Context, *TokenInfoRequest) (*TokenInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTokenInfo not implemented")
 }
-func (UnimplementedQueryServer) GetAllTokenAliases(context.Context, *AllTokenAliasesRequest) (*AllTokenAliasesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAllTokenAliases not implemented")
+func (UnimplementedQueryServer) GetAllTokenInfos(context.Context, *AllTokenInfosRequest) (*AllTokenInfosResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllTokenInfos not implemented")
 }
-func (UnimplementedQueryServer) GetTokenAliasesByDenom(context.Context, *TokenAliasesByDenomRequest) (*TokenAliasesByDenomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTokenAliasesByDenom not implemented")
-}
-func (UnimplementedQueryServer) GetTokenRate(context.Context, *TokenRateRequest) (*TokenRateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTokenRate not implemented")
-}
-func (UnimplementedQueryServer) GetAllTokenRates(context.Context, *AllTokenRatesRequest) (*AllTokenRatesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAllTokenRates not implemented")
-}
-func (UnimplementedQueryServer) GetTokenRatesByDenom(context.Context, *TokenRatesByDenomRequest) (*TokenRatesByDenomResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTokenRatesByDenom not implemented")
+func (UnimplementedQueryServer) GetTokenInfosByDenom(context.Context, *TokenInfosByDenomRequest) (*TokenInfosByDenomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTokenInfosByDenom not implemented")
 }
 func (UnimplementedQueryServer) GetTokenBlackWhites(context.Context, *TokenBlackWhitesRequest) (*TokenBlackWhitesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTokenBlackWhites not implemented")
@@ -170,110 +123,56 @@ func RegisterQueryServer(s grpc.ServiceRegistrar, srv QueryServer) {
 	s.RegisterService(&Query_ServiceDesc, srv)
 }
 
-func _Query_GetTokenAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TokenAliasRequest)
+func _Query_GetTokenInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TokenInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).GetTokenAlias(ctx, in)
+		return srv.(QueryServer).GetTokenInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_GetTokenAlias_FullMethodName,
+		FullMethod: Query_GetTokenInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetTokenAlias(ctx, req.(*TokenAliasRequest))
+		return srv.(QueryServer).GetTokenInfo(ctx, req.(*TokenInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_GetAllTokenAliases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AllTokenAliasesRequest)
+func _Query_GetAllTokenInfos_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllTokenInfosRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).GetAllTokenAliases(ctx, in)
+		return srv.(QueryServer).GetAllTokenInfos(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_GetAllTokenAliases_FullMethodName,
+		FullMethod: Query_GetAllTokenInfos_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetAllTokenAliases(ctx, req.(*AllTokenAliasesRequest))
+		return srv.(QueryServer).GetAllTokenInfos(ctx, req.(*AllTokenInfosRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_GetTokenAliasesByDenom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TokenAliasesByDenomRequest)
+func _Query_GetTokenInfosByDenom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TokenInfosByDenomRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).GetTokenAliasesByDenom(ctx, in)
+		return srv.(QueryServer).GetTokenInfosByDenom(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_GetTokenAliasesByDenom_FullMethodName,
+		FullMethod: Query_GetTokenInfosByDenom_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetTokenAliasesByDenom(ctx, req.(*TokenAliasesByDenomRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_GetTokenRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TokenRateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).GetTokenRate(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_GetTokenRate_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetTokenRate(ctx, req.(*TokenRateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_GetAllTokenRates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AllTokenRatesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).GetAllTokenRates(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_GetAllTokenRates_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetAllTokenRates(ctx, req.(*AllTokenRatesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_GetTokenRatesByDenom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TokenRatesByDenomRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).GetTokenRatesByDenom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_GetTokenRatesByDenom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).GetTokenRatesByDenom(ctx, req.(*TokenRatesByDenomRequest))
+		return srv.(QueryServer).GetTokenInfosByDenom(ctx, req.(*TokenInfosByDenomRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -304,28 +203,16 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*QueryServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetTokenAlias",
-			Handler:    _Query_GetTokenAlias_Handler,
+			MethodName: "GetTokenInfo",
+			Handler:    _Query_GetTokenInfo_Handler,
 		},
 		{
-			MethodName: "GetAllTokenAliases",
-			Handler:    _Query_GetAllTokenAliases_Handler,
+			MethodName: "GetAllTokenInfos",
+			Handler:    _Query_GetAllTokenInfos_Handler,
 		},
 		{
-			MethodName: "GetTokenAliasesByDenom",
-			Handler:    _Query_GetTokenAliasesByDenom_Handler,
-		},
-		{
-			MethodName: "GetTokenRate",
-			Handler:    _Query_GetTokenRate_Handler,
-		},
-		{
-			MethodName: "GetAllTokenRates",
-			Handler:    _Query_GetAllTokenRates_Handler,
-		},
-		{
-			MethodName: "GetTokenRatesByDenom",
-			Handler:    _Query_GetTokenRatesByDenom_Handler,
+			MethodName: "GetTokenInfosByDenom",
+			Handler:    _Query_GetTokenInfosByDenom_Handler,
 		},
 		{
 			MethodName: "GetTokenBlackWhites",

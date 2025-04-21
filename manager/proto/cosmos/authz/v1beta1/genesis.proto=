@@ -6,7 +6,7 @@ import "gogoproto/gogo.proto";
 import "cosmos/authz/v1beta1/authz.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/authz";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/authz";
 
 // GenesisState defines the authz module's genesis state.
 message GenesisState {

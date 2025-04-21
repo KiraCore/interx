@@ -3,7 +3,7 @@ syntax = "proto3";
 
 package cosmos.group.v1;
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/group";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/group";
 
 import "gogoproto/gogo.proto";
 import "cosmos_proto/cosmos.proto";

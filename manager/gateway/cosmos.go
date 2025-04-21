@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -12,14 +14,15 @@ import (
 	"time"
 
 	sekaitypes "github.com/KiraCore/sekai/types"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/go-bip39"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
 	"github.com/saiset-co/sai-interx-manager/logger"
 	cosmosAuth "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
 	cosmosBank "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/bank/v1beta1"
+	cosmosTx "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/tx/v1beta1"
 	kiraGov "github.com/saiset-co/sai-interx-manager/proto-gen/kira/gov"
 	kiraMultiStaking "github.com/saiset-co/sai-interx-manager/proto-gen/kira/multistaking"
 	kiraSlashing "github.com/saiset-co/sai-interx-manager/proto-gen/kira/slashing/v1beta1"
@@ -30,6 +33,9 @@ import (
 	kiraUpgrades "github.com/saiset-co/sai-interx-manager/proto-gen/kira/upgrade"
 	"github.com/saiset-co/sai-interx-manager/types"
 	"github.com/saiset-co/sai-service/service"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Proxy struct {
@@ -41,6 +47,8 @@ type CosmosGateway struct {
 	*BaseGateway
 	storage   types.Storage
 	url       string
+	privKey   *secp256k1.PrivKey
+	address   string
 	grpcProxy *Proxy
 	timeout   time.Duration
 	txModes   map[string]bool
@@ -51,6 +59,15 @@ const (
 	Inactive string = "INACTIVE"
 	Paused   string = "PAUSED"
 	Jailed   string = "JAILED"
+)
+
+var (
+	AccountAddressPrefix   = "kira"
+	AccountPubKeyPrefix    = "kirapub"
+	ValidatorAddressPrefix = "kiravaloper"
+	ValidatorPubKeyPrefix  = "kiravaloperpub"
+	ConsNodeAddressPrefix  = "kiravalcons"
+	ConsNodePubKeyPrefix   = "kiravalconspub"
 )
 
 var _ types.Gateway = (*CosmosGateway)(nil)
@@ -80,7 +97,7 @@ func newGRPCGatewayProxy(ctx *service.Context, address string) (*Proxy, error) {
 	}, nil
 }
 
-func (p *Proxy) ServeGRPC(r *http.Request) (interface{}, int, error) {
+func (p *Proxy) ServeGRPC(r *http.Request) ([]byte, error) {
 	r.Header.Set("Content-Type", "application/json")
 
 	//Todo: add cache here
@@ -91,17 +108,40 @@ func (p *Proxy) ServeGRPC(r *http.Request) (interface{}, int, error) {
 
 	defer resp.Body.Close()
 
-	result := new(interface{})
-	err := json.NewDecoder(resp.Body).Decode(result)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Logger.Error("ServeGRPC", zap.Error(err))
-		return nil, resp.StatusCode, err
+		logger.Logger.Error("CosmosGateway - Handle - gRPC gateway error response", zap.Error(err))
+		return nil, err
 	}
 
-	return result, resp.StatusCode, nil
+	if resp.StatusCode >= 400 {
+		var result = new(types.GRPCResponse)
+		err := json.Unmarshal(bodyBytes, &result)
+		if err != nil {
+			logger.Logger.Error("[query-network-properties] Invalid response format", zap.Error(err))
+			return nil, err
+		}
+
+		errMsg := fmt.Sprintf("gRPC gateway error: url=%s status=%d, code=%f, message=%s, details=%s", r.URL.Path, resp.StatusCode, result.Code, result.Message, string(result.Details))
+
+		logger.Logger.Error("CosmosGateway - Handle - gRPC gateway error response",
+			zap.Int("status", resp.StatusCode),
+			zap.Any("code", result.Code),
+			zap.Any("message", result.Message),
+			zap.Any("details", result.Details))
+
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	return bodyBytes, nil
 }
 
 func registerHandlers(ctx *service.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	if err := cosmosTx.RegisterServiceHandler(ctx.Context, mux, conn); err != nil {
+		logger.Logger.Error("registerHandlers", zap.Error(err))
+		return err
+	}
+
 	if err := cosmosBank.RegisterQueryHandler(ctx.Context, mux, conn); err != nil {
 		logger.Logger.Error("registerHandlers", zap.Error(err))
 		return err
@@ -156,6 +196,39 @@ func registerHandlers(ctx *service.Context, mux *runtime.ServeMux, conn *grpc.Cl
 }
 
 func NewCosmosGateway(ctx *service.Context, url, node string, storage types.Storage, timeout, retryAttempts int, retryDelay time.Duration, rateLimit int, txModes map[string]bool) (*CosmosGateway, error) {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(AccountAddressPrefix, AccountPubKeyPrefix)
+	config.SetBech32PrefixForValidator(ValidatorAddressPrefix, ValidatorPubKeyPrefix)
+	config.SetBech32PrefixForConsensusNode(ConsNodeAddressPrefix, ConsNodePubKeyPrefix)
+	config.Seal()
+
+	mnenonic := loadMnemonicFile()
+
+	if mnenonic == "" {
+		entropy, _ := bip39.NewEntropy(256)
+		mnenonic, _ = bip39.NewMnemonic(entropy)
+		saveMnemonicFile([]byte(mnenonic))
+	}
+
+	if !bip39.IsMnemonicValid(mnenonic) {
+		fmt.Println("Invalid Interx Mnemonic: ", mnenonic)
+		panic("Invalid Interx Mnemonic")
+	}
+
+	seed, err := bip39.NewSeedWithErrorChecking(mnenonic, "")
+	if err != nil {
+		panic(err)
+	}
+	master, ch := hd.ComputeMastersFromSeed(seed)
+	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
+	if err != nil {
+		panic(err)
+	}
+
+	privKey := &secp256k1.PrivKey{Key: priv}
+	pubKey := privKey.PubKey()
+	address := sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), pubKey.Address())
+
 	proxy, err := newGRPCGatewayProxy(ctx, node)
 	if err != nil {
 		logger.Logger.Error("NewCosmosGateway", zap.Error(err))
@@ -166,6 +239,8 @@ func NewCosmosGateway(ctx *service.Context, url, node string, storage types.Stor
 		BaseGateway: NewBaseGateway(ctx, retryAttempts, retryDelay, rateLimit),
 		storage:     storage,
 		url:         url,
+		privKey:     privKey,
+		address:     address,
 		grpcProxy:   proxy,
 		timeout:     time.Duration(timeout) * time.Second,
 		txModes:     txModes,
@@ -251,6 +326,65 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 				return nil, err
 			}
 			return g.identityVerifyRequestsByRequester(req, approver)
+		})
+	}
+
+	txByHashRegex := regexp.MustCompile(`^/transactions/(.+)$`)
+
+	if matches := txByHashRegex.FindStringSubmatch(req.Path); matches != nil {
+		hash := matches[1]
+
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+			return g.txByHash(hash)
+		})
+	}
+
+	txByBlockRegex := regexp.MustCompile(`^/blocks/(.+)/transactions$`)
+
+	if matches := txByBlockRegex.FindStringSubmatch(req.Path); matches != nil {
+		blockID := matches[1]
+
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+			return g.txByBlock(req, blockID)
+		})
+	}
+
+	blockById := regexp.MustCompile(`^/blocks/(.+)$`)
+
+	if matches := blockById.FindStringSubmatch(req.Path); matches != nil {
+		blockID := matches[1]
+
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+			return g.blockById(req, blockID)
+		})
+	}
+
+	proposalById := regexp.MustCompile(`^/kira/gov/proposal/(.+)$`)
+
+	if matches := proposalById.FindStringSubmatch(req.Path); matches != nil {
+		proposalId := matches[1]
+
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+
+			req.Path = "/kira/gov/proposals/" + proposalId
+
+			return g.proxy(req)
 		})
 	}
 
@@ -345,6 +479,16 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 				return g.undelegations(req)
 			})
 		}
+	case "/transactions":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.transactions(req)
+			})
+		}
 	case "/blocks":
 		{
 			return g.retry.Do(func() (interface{}, error) {
@@ -363,6 +507,46 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 					return nil, err
 				}
 				return g.status()
+			})
+		}
+	case "/kira/tokens/rates":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.tokenRates()
+			})
+		}
+	case "/kira/gov/proposals":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.proposals(req)
+			})
+		}
+	case "/kira/tokens/aliases":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.tokenAliases(req)
+			})
+		}
+	case "/kira/faucet":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.faucet(req)
 			})
 		}
 	}
@@ -418,29 +602,32 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 func (g *CosmosGateway) proxy(req types.InboundRequest) (interface{}, error) {
 	dataBytes, err := json.Marshal(req.Payload)
 	if err != nil {
-		logger.Logger.Error("CosmosGateway - Handle - Marshal payload failed", zap.Error(err))
+		logger.Logger.Error("[query-proxy] Marshal payload failed", zap.Error(err))
 		return nil, err
 	}
 
 	gatewayReq, err := http.NewRequestWithContext(g.context.Context, req.Method, req.Path, strings.NewReader(string(dataBytes)))
 	if err != nil {
-		logger.Logger.Error("CosmosGateway - Handle - Create request failed", zap.Error(err))
+		logger.Logger.Error("[query-proxy] Create request failed", zap.Error(err))
 		return nil, err
 	}
 
 	gatewayReq = g.encodeQuery(gatewayReq, req)
-	respBody, statusCode, err := g.grpcProxy.ServeGRPC(gatewayReq)
-
-	if statusCode >= 400 {
-		errMsg := fmt.Sprintf("gRPC gateway error: status=%d, body=%s", statusCode, respBody)
-		logger.Logger.Error("CosmosGateway - Handle - gRPC gateway error response",
-			zap.Int("status", statusCode),
-			zap.Any("body", respBody))
-
-		return nil, fmt.Errorf(errMsg)
+	grpcBytes, err := g.grpcProxy.ServeGRPC(gatewayReq)
+	if err != nil {
+		logger.Logger.Error("[query-proxy] Serve request failed", zap.Error(err))
+		return nil, err
 	}
 
-	return respBody, nil
+	var result interface{}
+
+	err = json.Unmarshal(grpcBytes, &result)
+	if err != nil {
+		logger.Logger.Error("CosmosGateway - validators - Unmarshal response failed", zap.Error(err))
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (g *CosmosGateway) filterAndPaginateValidators(response *types.ValidatorsResponse, payload map[string]interface{}) (*types.ValidatorsResponse, error) {
@@ -583,4 +770,20 @@ func (g *CosmosGateway) encodeQuery(gatewayReq *http.Request, req types.InboundR
 	}
 
 	return gatewayReq
+}
+
+func loadMnemonicFile() string {
+	mnemonic, err := ioutil.ReadFile("mnemonic.data")
+	if err != nil {
+		return ""
+	}
+
+	return string(mnemonic)
+}
+
+func saveMnemonicFile(data []byte) {
+	err := ioutil.WriteFile("mnemonic.data", data, 0644)
+	if err != nil {
+		panic(err)
+	}
 }

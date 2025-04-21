@@ -1,7 +1,7 @@
 syntax = "proto3";
 package cosmos.nft.v1beta1;
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/nft";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/nft";
 
 // EventSend is emitted on Msg/Send
 message EventSend {

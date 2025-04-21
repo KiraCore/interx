@@ -8,7 +8,7 @@ import "cosmos/slashing/v1beta1/slashing.proto";
 import "cosmos_proto/cosmos.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/slashing/types";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/slashing/types";
 
 // Query provides defines the gRPC querier service
 service Query {

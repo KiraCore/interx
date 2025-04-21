@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 import "cosmos/mint/v1beta1/mint.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/mint/types";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/mint/types";
 
 // Query provides defines the gRPC querier service.
 service Query {

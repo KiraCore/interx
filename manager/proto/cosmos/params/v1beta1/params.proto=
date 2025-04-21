@@ -1,7 +1,7 @@
 syntax = "proto3";
 package cosmos.params.v1beta1;
 
-option go_package            = "github.com/KiraCore/interx/proto-gen/cosmos/params/types/proposal";
+option go_package            = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/params/types/proposal";
 option (gogoproto.equal_all) = true;
 
 import "gogoproto/gogo.proto";

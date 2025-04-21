@@ -5,7 +5,7 @@ package cosmos.consensus.v1;
 import "google/api/annotations.proto";
 import "tendermint/types/params.proto";
 
-option go_package = "github.com/KiraCore/interx/proto-gen/cosmos/consensus/types";
+option go_package = "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/consensus/types";
 
 // Query defines the gRPC querier service.
 service Query {

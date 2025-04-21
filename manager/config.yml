@@ -25,7 +25,7 @@ cosmos:
     sync: true
     async: true
     block: true
-  gw_timeout: 10
+  gw_timeout: 30
   interaction: "http://worker-sai-cosmos-interaction:8884"
   token: "a@@#lsa$fd8f"
   retries: 1
