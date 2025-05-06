@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/saiset-co/sai-storage-mongo/external/adapter"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -52,8 +52,8 @@ func (g *CosmosGateway) statusAPI() (interface{}, error) {
 
 	//result.InterxInfo.Node = config.Config.Node
 	//result.InterxInfo.KiraAddr = g.address
-	result.InterxInfo.KiraPubKey = g.privKey.PubKey().String()
-	result.InterxInfo.FaucetAddr = g.address
+	result.InterxInfo.KiraPubKey = g.PubKey.String()
+	result.InterxInfo.FaucetAddr = g.PubKey.Address().String()
 	//result.InterxInfo.InterxVersion = config.Config.InterxVersion
 	//result.InterxInfo.SekaiVersion = config.Config.SekaiVersion
 
@@ -148,13 +148,16 @@ func (g *CosmosGateway) genesis() (*types.GenesisInfo, error) {
 	return gInfo, nil
 }
 
-func (g *CosmosGateway) blocks(req types.InboundRequest) (interface{}, error) {
+func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultResponse, error) {
+	var result types.BlocksResultResponse
+	var criteria = map[string]interface{}{}
+
 	type BlocksRequest struct {
-		BlockId string `json:"block_id,omitempty"`
-		Limit   int    `json:"limit,string,omitempty"`
-		Offset  int    `json:"offset,string,omitempty"`
-		HasTxs  int    `json:"has_txs,string,omitempty"`
-		Order   string `json:"order_by,omitempty"`
+		Height string `json:"height,omitempty"`
+		Limit  int    `json:"limit,string,omitempty"`
+		Offset int    `json:"offset,string,omitempty"`
+		HasTxs int    `json:"has_txs,string,omitempty"`
+		Order  string `json:"order_by,omitempty"`
 	}
 
 	request := BlocksRequest{
@@ -166,42 +169,42 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (interface{}, error) {
 
 	jsonData, err := json.Marshal(req.Payload)
 	if err != nil {
+		logger.Logger.Error("[query-blocks] Invalid request format", zap.Error(err))
 		return nil, err
 	}
 
 	err = json.Unmarshal(jsonData, &request)
 	if err != nil {
+		logger.Logger.Error("[query-blocks] Invalid request format", zap.Error(err))
 		return nil, err
 	}
 
-	var page = 0
-	var query = url.Values{}
-	var baseQuery = "block.height"
+	options := &adapter.Options{
+		Count: 1,
+		Limit: int64(request.Limit),
+		Skip:  int64(request.Offset),
+	}
 
-	if request.BlockId != "" {
-		baseQuery += fmt.Sprintf(" = %s", request.BlockId)
-	} else {
-		baseQuery += " > 0"
+	if request.Height != "" {
+		criteria["block.header.height"] = request.Height
 	}
 
 	if request.HasTxs == 1 {
-		baseQuery += " AND block.num_tx > 0"
+		criteria["block.data.txs"] = map[string]interface{}{
+			"$ne": []interface{}{},
+		}
 	}
 
-	query.Add("query", fmt.Sprintf("\"%s\"", baseQuery))
-
-	if request.Limit > 0 {
-		page = request.Offset/request.Limit + 1
-		query.Add("per_page", fmt.Sprintf("%d", request.Limit))
+	blocksResponse, err := g.storage.Read("cosmos_blocks", criteria, options, []string{})
+	if err != nil {
+		logger.Logger.Error("[query-blocks] Failed to get blocks", zap.Error(err))
+		return nil, err
 	}
 
-	if page > 0 {
-		query.Add("page", fmt.Sprintf("%d", page))
-	}
+	result.Blocks = blocksResponse.Result
+	result.Pagination.Total = blocksResponse.Count
 
-	query.Add("order_by", fmt.Sprintf("\"%s\"", request.Order))
-
-	return g.makeTendermintRPCRequest(g.context.Context, "/block_search", query.Encode())
+	return &result, nil
 }
 
 func (g *CosmosGateway) balances(req types.InboundRequest, accountID string) ([]sdk.Coin, error) {

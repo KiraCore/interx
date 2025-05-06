@@ -2,18 +2,17 @@ package gateway
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	sekaitypes "github.com/KiraCore/sekai/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"go.uber.org/zap"
 	"math"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
-
-	sekaitypes "github.com/KiraCore/sekai/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"go.uber.org/zap"
 
 	"github.com/saiset-co/sai-interx-manager/logger"
 	"github.com/saiset-co/sai-interx-manager/types"
@@ -21,34 +20,31 @@ import (
 )
 
 func (g *CosmosGateway) txByHash(hash string) (interface{}, error) {
-	txHash := strings.TrimPrefix(hash, "0x")
-
-	gatewayReq, err := http.NewRequestWithContext(g.context.Context, "GET", "/cosmos/tx/v1beta1/txs/"+txHash, nil)
-	if err != nil {
-		logger.Logger.Error("[query-transaction-by-hash] Create request failed", zap.Error(err))
-		return nil, err
+	req := types.InboundRequest{
+		Payload: map[string]interface{}{
+			"hash": hash,
+		},
 	}
 
-	grpcBytes, err := g.grpcProxy.ServeGRPC(gatewayReq)
-	if err != nil {
-		logger.Logger.Error("[query-transaction-by-hash] Serve request failed", zap.Error(err))
-		return nil, err
-	}
-
-	var result interface{}
-
-	err = json.Unmarshal(grpcBytes, &result)
-	if err != nil {
-		logger.Logger.Error("[query-transaction-by-hash] Unmarshal response failed", zap.Error(err))
-		return nil, err
-	}
-
-	return result, nil
+	return g.transactions(req)
 }
 
 func (g *CosmosGateway) blockById(req types.InboundRequest, blockID string) (interface{}, error) {
 	req.Payload["height"] = blockID
-	return g.blocks(req)
+
+	result, err := g.blocks(req)
+	if err != nil {
+		logger.Logger.Error("[query-block-by-id] Failed to get blocks", zap.Error(err))
+		return nil, err
+	}
+
+	if len(result.Blocks) < 1 {
+		err = errors.New(fmt.Sprintf("Block %s not found", blockID))
+		logger.Logger.Error("[query-block-by-id] Block not found", zap.Error(err))
+		return nil, err
+	}
+
+	return result.Blocks[0], nil
 }
 
 func (g *CosmosGateway) txByBlock(req types.InboundRequest, blockID string) (interface{}, error) {
@@ -355,12 +351,9 @@ func (g *CosmosGateway) undelegations(req types.InboundRequest) (interface{}, er
 
 func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, error) {
 	var result types.TxsResultResponse
+	var criteria = map[string]interface{}{}
 	var includeConfirmed = true
 	var includeFailed = false
-	var includeUnconfirmed = false
-	var unconfirmedTxs []types.TxResponse
-	var confirmedOffset = 0
-	var confirmedLimit = 0
 
 	request := types.QueryTxsParams{
 		Offset: 0,
@@ -369,131 +362,83 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 
 	jsonData, err := json.Marshal(req.Payload)
 	if err != nil {
+		logger.Logger.Error("[query-transactions] Invalid request format", zap.Error(err))
 		return nil, err
 	}
 
 	err = json.Unmarshal(jsonData, &request)
 	if err != nil {
+		logger.Logger.Error("[query-transactions] Invalid request format", zap.Error(err))
 		return nil, err
 	}
 
-	params := url.Values{}
-	params.Add("pagination.offset", strconv.Itoa(request.Offset))
-	params.Add("pagination.limit", strconv.Itoa(request.Limit))
-	if request.BlockId != "" {
-		params.Add("events", fmt.Sprintf("tx.height='%s'", request.BlockId))
+	options := &adapter.Options{
+		Count: 1,
+		Limit: int64(request.Limit),
+		Skip:  int64(request.Offset),
+	}
+
+	if request.Hash != "" {
+		criteria["hash"] = request.Hash
+	}
+
+	if request.Height != "" {
+		criteria["height"] = request.Height
 	} else {
-		params.Add("events", "tx.minheight='1'")
+		criteria["_id"] = map[string]interface{}{"$ne": nil}
 	}
 
-	if request.Address != "" {
-		params.Add("events", fmt.Sprintf("transfer.sender='%s'", request.Address))
-		params.Add("events", fmt.Sprintf("transfer.recipient='%s'", request.Address))
-	}
-
-	for _, txType := range request.Types {
-		params.Add("message.action", txType)
+	if len(request.Types) > 0 {
+		criteria["messages"] = map[string]interface{}{
+			"typeUrl": map[string]interface{}{
+				"$in": request.Types,
+			},
+		}
 	}
 
 	if request.StartDate > 0 {
-		startTime := time.Unix(request.StartDate, 0).UTC()
-		params.Add("tx.mintime", startTime.Format(time.RFC3339))
+		criteria["timestamp"] = map[string]interface{}{
+			"$gt": request.StartDate,
+		}
+		//startTime := time.Unix(request.StartDate, 0).UTC()
+		//params.Add("tx.mintime", startTime.Format(time.RFC3339))
 	}
 
 	if request.EndDate > 0 {
-		endTime := time.Unix(request.EndDate, 0).UTC()
-		params.Add("tx.maxtime", endTime.Format(time.RFC3339))
+		criteria["timestamp"] = map[string]interface{}{
+			"$lt": request.StartDate,
+		}
+		//endTime := time.Unix(request.EndDate, 0).UTC()
+		//params.Add("tx.maxtime", endTime.Format(time.RFC3339))
 	}
 
 	if len(request.Statuses) > 0 {
 		includeConfirmed = false
 		includeFailed = false
-		includeUnconfirmed = false
 
 		for _, status := range request.Statuses {
 			if status == "success" {
 				includeConfirmed = true
 			} else if status == "failed" {
 				includeFailed = true
-			} else if status == "unconfirmed" {
-				includeUnconfirmed = true
 			}
 		}
 	}
 
 	if includeConfirmed && !includeFailed {
-		params.Add("tx.code", "0")
+		criteria["tx_result.code"] = 0
 	} else if !includeConfirmed && includeFailed {
-		params.Add("tx.code.gt", "0")
+		criteria["tx_result.code"] = map[string]interface{}{"$gt": 0}
 	}
 
-	totalConfirmedCount, err := g.getConfirmedTransactionsCount(params, includeConfirmed, includeFailed)
+	txsResponse, err := g.storage.Read("cosmos_txs", criteria, options, []string{})
 	if err != nil {
-		logger.Logger.Error("[query-transactions] Failed to get total count", zap.Error(err))
+		logger.Logger.Error("[query-transactions] Failed to get transactions", zap.Error(err))
 		return nil, err
 	}
 
-	if includeUnconfirmed {
-		memPoolResult, err := g.getUnconfirmedTransactions(params)
-		if err == nil {
-			unconfirmedTxs = memPoolResult
-		} else {
-			logger.Logger.Error("[query-transactions] Failed to get unconfirmed txs", zap.Error(err))
-		}
-	}
-
-	totalTxCount := totalConfirmedCount + len(unconfirmedTxs)
-
-	if totalTxCount == 0 || request.Offset >= totalTxCount {
-		return types.TxsResultResponse{
-			Transactions: []types.TransactionResultResponse{},
-			TotalCount:   totalTxCount,
-		}, nil
-	}
-
-	var txResponses []types.TransactionResultResponse
-	unconfirmedCount := len(unconfirmedTxs)
-
-	if request.Offset < unconfirmedCount && request.Offset+request.Limit <= unconfirmedCount {
-		for i := request.Offset; i < request.Offset+request.Limit && i < unconfirmedCount; i++ {
-			tx := unconfirmedTxs[i]
-			txResponse := g.createTxResponse(tx, "unconfirmed", request.Address)
-			txResponses = append(txResponses, txResponse)
-		}
-	} else {
-		if request.Offset < unconfirmedCount {
-			for i := request.Offset; i < unconfirmedCount; i++ {
-				tx := unconfirmedTxs[i]
-				txResponse := g.createTxResponse(tx, "unconfirmed", request.Address)
-				txResponses = append(txResponses, txResponse)
-			}
-
-			confirmedOffset = 0
-			confirmedLimit = request.Limit - len(txResponses)
-		} else {
-			confirmedOffset = request.Offset - unconfirmedCount
-			confirmedLimit = request.Limit
-		}
-
-		if confirmedLimit > 0 && (includeConfirmed || includeFailed) {
-			confirmedTxs, err := g.getConfirmedTransactions(params, confirmedOffset, confirmedLimit,
-				includeConfirmed, includeFailed)
-			if err != nil {
-				logger.Logger.Error("[query-transactions] Failed to get confirmed txs", zap.Error(err))
-				return nil, err
-			}
-
-			for _, tx := range confirmedTxs {
-				status := "success"
-				if tx.Code > 0 {
-					status = "failed"
-				}
-
-				txResponse := g.createTxResponse(tx, status, request.Address)
-				txResponses = append(txResponses, txResponse)
-			}
-		}
-	}
+	result.Transactions = txsResponse.Result
+	result.Pagination.Total = txsResponse.Count
 
 	return result, nil
 }

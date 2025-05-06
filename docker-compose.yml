@@ -1,7 +1,9 @@
 networks:
-  interx:
-
+  interx_default:
+    name: interx_default
+    external: true
 include:
+  - ./sekai-compose.yml
   - ./manager/docker-compose.yml
   - ./proxy/docker-compose.yml
   - ./worker/docker-compose.yml

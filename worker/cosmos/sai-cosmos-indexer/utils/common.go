@@ -54,3 +54,17 @@ func SaiQuerySender(body io.Reader, address, token string) ([]byte, error) {
 
 	return resBytes, nil
 }
+
+func ParseAmount(amountStr string) (string, string) {
+	var amount, denom string
+	for i, r := range amountStr {
+		if r >= '0' && r <= '9' {
+			continue
+		} else {
+			amount = amountStr[:i]
+			denom = amountStr[i:]
+			break
+		}
+	}
+	return amount, denom
+}

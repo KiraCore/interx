@@ -13,13 +13,6 @@ import (
 	"strings"
 	"time"
 
-	sekaitypes "github.com/KiraCore/sekai/types"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/go-bip39"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/saiset-co/sai-interx-manager/logger"
 	cosmosAuth "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
 	cosmosBank "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/bank/v1beta1"
 	cosmosTx "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/tx/v1beta1"
@@ -31,6 +24,22 @@ import (
 	kiraTokens "github.com/saiset-co/sai-interx-manager/proto-gen/kira/tokens"
 	kiraUbi "github.com/saiset-co/sai-interx-manager/proto-gen/kira/ubi"
 	kiraUpgrades "github.com/saiset-co/sai-interx-manager/proto-gen/kira/upgrade"
+
+	sekaitypes "github.com/KiraCore/sekai/types"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/go-bip39"
+	"github.com/google/uuid"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/saiset-co/sai-interx-manager/logger"
 	"github.com/saiset-co/sai-interx-manager/types"
 	"github.com/saiset-co/sai-service/service"
 	"go.uber.org/zap"
@@ -46,12 +55,12 @@ type Proxy struct {
 type CosmosGateway struct {
 	*BaseGateway
 	storage   types.Storage
-	url       string
-	privKey   *secp256k1.PrivKey
-	address   string
+	config    types.CosmosConfig
 	grpcProxy *Proxy
-	timeout   time.Duration
-	txModes   map[string]bool
+	txConfig  client.TxConfig
+	kRing     keyring.Keyring
+	kName     string
+	PubKey    *secp256k1.PubKey
 }
 
 const (
@@ -195,60 +204,70 @@ func registerHandlers(ctx *service.Context, mux *runtime.ServeMux, conn *grpc.Cl
 	return nil
 }
 
-func NewCosmosGateway(ctx *service.Context, url, node string, storage types.Storage, timeout, retryAttempts int, retryDelay time.Duration, rateLimit int, txModes map[string]bool) (*CosmosGateway, error) {
+func NewCosmosGateway(ctx *service.Context, storage types.Storage, cosmosConfig types.CosmosConfig) (*CosmosGateway, error) {
 	config := sdk.GetConfig()
 	config.SetBech32PrefixForAccount(AccountAddressPrefix, AccountPubKeyPrefix)
 	config.SetBech32PrefixForValidator(ValidatorAddressPrefix, ValidatorPubKeyPrefix)
 	config.SetBech32PrefixForConsensusNode(ConsNodeAddressPrefix, ConsNodePubKeyPrefix)
 	config.Seal()
 
-	mnenonic := loadMnemonicFile()
+	mnemonic := loadMnemonicFile()
 
-	if mnenonic == "" {
+	if mnemonic == "" {
 		entropy, _ := bip39.NewEntropy(256)
-		mnenonic, _ = bip39.NewMnemonic(entropy)
-		saveMnemonicFile([]byte(mnenonic))
+		mnemonic, _ = bip39.NewMnemonic(entropy)
+		saveMnemonicFile([]byte(mnemonic))
 	}
 
-	if !bip39.IsMnemonicValid(mnenonic) {
-		fmt.Println("Invalid Interx Mnemonic: ", mnenonic)
+	if !bip39.IsMnemonicValid(mnemonic) {
+		fmt.Println("Invalid Interx Mnemonic: ", mnemonic)
 		panic("Invalid Interx Mnemonic")
 	}
 
-	seed, err := bip39.NewSeedWithErrorChecking(mnenonic, "")
+	hdPath := sdk.GetConfig().GetFullBIP44Path()
+	interfaceRegistry := codectypes.NewInterfaceRegistry()
+	interfaceRegistry.RegisterInterface("types.PubKey", (*cryptotypes.PubKey)(nil), &secp256k1.PubKey{})
+	interfaceRegistry.RegisterInterface("types.PrivKey", (*cryptotypes.PrivKey)(nil), &secp256k1.PrivKey{})
+	interfaceRegistry.RegisterInterface("types.Msg", (*sdk.Msg)(nil), &banktypes.MsgSend{})
+	_codec := codec.NewProtoCodec(interfaceRegistry)
+	txConfig := authtx.NewTxConfig(_codec, authtx.DefaultSignModes)
+	kRing := keyring.NewInMemory(_codec)
+	kName := uuid.New().String()
+
+	kInfo, err := kRing.NewAccount(kName, mnemonic, "", hdPath, hd.Secp256k1)
 	if err != nil {
-		panic(err)
-	}
-	master, ch := hd.ComputeMastersFromSeed(seed)
-	priv, err := hd.DerivePrivateKeyForPath(master, ch, "44'/118'/0'/0/0")
-	if err != nil {
-		panic(err)
+		logger.Logger.Error("Failed to create account from mnemonic", zap.Error(err))
+		return nil, err
 	}
 
-	privKey := &secp256k1.PrivKey{Key: priv}
-	pubKey := privKey.PubKey()
-	address := sdk.MustBech32ifyAddressBytes(sdk.GetConfig().GetBech32AccountAddrPrefix(), pubKey.Address())
+	pubKey, err := kInfo.GetPubKey()
+	if err != nil {
+		logger.Logger.Error("Failed to create account from mnemonic", zap.Error(err))
+		return nil, err
+	}
 
-	proxy, err := newGRPCGatewayProxy(ctx, node)
+	faucetPubKey := pubKey.(*secp256k1.PubKey)
+
+	proxy, err := newGRPCGatewayProxy(ctx, cosmosConfig.Node.JsonRpc)
 	if err != nil {
 		logger.Logger.Error("NewCosmosGateway", zap.Error(err))
 		return nil, err
 	}
 
 	return &CosmosGateway{
-		BaseGateway: NewBaseGateway(ctx, retryAttempts, retryDelay, rateLimit),
+		BaseGateway: NewBaseGateway(ctx, cosmosConfig.Retries, time.Duration(cosmosConfig.RetryDelay)*time.Second, cosmosConfig.RateLimit),
 		storage:     storage,
-		url:         url,
-		privKey:     privKey,
-		address:     address,
+		config:      cosmosConfig,
 		grpcProxy:   proxy,
-		timeout:     time.Duration(timeout) * time.Second,
-		txModes:     txModes,
+		txConfig:    txConfig,
+		kRing:       kRing,
+		kName:       kName,
+		PubKey:      faucetPubKey,
 	}, nil
 }
 
 func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), g.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(g.config.GWTimeout)*time.Second)
 	defer cancel()
 
 	g.context.Context = ctx
@@ -263,13 +282,15 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 	accountsRegex := regexp.MustCompile(`^/kira/accounts/(.+)$`)
 
 	if matches := accountsRegex.FindStringSubmatch(req.Path); matches != nil {
+		accountID := matches[1]
+
 		return g.retry.Do(func() (interface{}, error) {
 			if err := g.rateLimit.Wait(g.context.Context); err != nil {
 				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
 				return nil, err
 			}
-			req.Path = strings.Replace(req.Path, "/kira/accounts", "/cosmos/auth/v1beta1/accounts", -1)
-			return g.proxy(req)
+
+			return g.account(accountID)
 		})
 	}
 
@@ -541,6 +562,7 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 		}
 	case "/kira/faucet":
 		{
+			return g.faucet(req)
 			return g.retry.Do(func() (interface{}, error) {
 				if err := g.rateLimit.Wait(g.context.Context); err != nil {
 					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
@@ -566,7 +588,7 @@ func (g *CosmosGateway) Close() {
 }
 
 func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string, query string) (interface{}, error) {
-	endpoint := fmt.Sprintf("%s%s?%s", g.url, url, query)
+	endpoint := fmt.Sprintf("%s%s?%s", g.config.Node.Tendermint, url, query)
 
 	//Todo: add cache here
 
@@ -576,8 +598,8 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 		return nil, err
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		logger.Logger.Error("MakeTendermintRPCRequest - [rpc-call] Unable to connect to server", zap.Error(err))
 		return nil, err
@@ -599,7 +621,7 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 	return response.Result, nil
 }
 
-func (g *CosmosGateway) proxy(req types.InboundRequest) (interface{}, error) {
+func (g *CosmosGateway) proxy(req types.InboundRequest) ([]byte, error) {
 	dataBytes, err := json.Marshal(req.Payload)
 	if err != nil {
 		logger.Logger.Error("[query-proxy] Marshal payload failed", zap.Error(err))
@@ -619,15 +641,15 @@ func (g *CosmosGateway) proxy(req types.InboundRequest) (interface{}, error) {
 		return nil, err
 	}
 
-	var result interface{}
+	//var result interface{}
+	//
+	//err = json.Unmarshal(grpcBytes, &result)
+	//if err != nil {
+	//	logger.Logger.Error("CosmosGateway - validators - Unmarshal response failed", zap.Error(err))
+	//	return nil, err
+	//}
 
-	err = json.Unmarshal(grpcBytes, &result)
-	if err != nil {
-		logger.Logger.Error("CosmosGateway - validators - Unmarshal response failed", zap.Error(err))
-		return nil, err
-	}
-
-	return result, nil
+	return grpcBytes, nil
 }
 
 func (g *CosmosGateway) filterAndPaginateValidators(response *types.ValidatorsResponse, payload map[string]interface{}) (*types.ValidatorsResponse, error) {

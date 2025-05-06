@@ -351,7 +351,7 @@ func (g *CosmosGateway) txs(req types.InboundRequest) (interface{}, error) {
 	}
 
 	if request.Mode != "" {
-		if allowed, ok := g.txModes[request.Mode]; !ok || !allowed {
+		if allowed, ok := g.config.TxModes[request.Mode]; !ok || !allowed {
 			err = errors.New("[post-transaction] Invalid transaction mode")
 			return nil, err
 		}
@@ -383,4 +383,28 @@ func (g *CosmosGateway) validators(req types.InboundRequest) (*types.ValidatorsR
 	}
 
 	return g.filterAndPaginateValidators(validatorsResponse, req.Payload)
+}
+
+func (g *CosmosGateway) account(address string) (*types.AccountResponse, error) {
+	accountReq := types.InboundRequest{
+		Method:  "GET",
+		Path:    "/cosmos/auth/v1beta1/accounts/" + address,
+		Payload: map[string]interface{}{},
+	}
+
+	accountInfoBytes, err := g.proxy(accountReq)
+	if err != nil {
+		logger.Logger.Error("[query-account] Failed getting account info", zap.Error(err))
+		return nil, err
+	}
+
+	var accountResponse = new(types.AccountResponse)
+
+	err = json.Unmarshal(accountInfoBytes, accountResponse)
+	if err != nil {
+		logger.Logger.Error("[query-account] Invalid response format", zap.Error(err))
+		return nil, err
+	}
+
+	return accountResponse, nil
 }

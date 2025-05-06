@@ -153,9 +153,14 @@ type QueryUndelegationsResult struct {
 	Undelegations []Undelegation `json:"undelegations"`
 }
 
+type BlocksResultResponse struct {
+	Blocks     []map[string]interface{} `json:"blocks"`
+	Pagination Pagination               `json:"pagination"`
+}
+
 type TxsResultResponse struct {
-	Transactions []TransactionResultResponse `json:"transactions"`
-	TotalCount   int                         `json:"total_count"`
+	Transactions []map[string]interface{} `json:"transactions"`
+	Pagination   Pagination               `json:"pagination"`
 }
 
 type TransactionResultResponse struct {
@@ -169,7 +174,8 @@ type TransactionResultResponse struct {
 }
 
 type QueryTxsParams struct {
-	BlockId    string   `json:"blockId,omitempty"`
+	Hash       string   `json:"hash,omitempty"`
+	Height     string   `json:"height,omitempty"`
 	Address    string   `json:"address,omitempty"`
 	StartDate  int64    `json:"start_date,string,omitempty"`
 	EndDate    int64    `json:"end_date,string,omitempty"`
@@ -347,4 +353,39 @@ type FaucetAccountInfo struct {
 
 type BalancesResponse struct {
 	Balances []sdk.Coin `json:"balances"`
+}
+
+type FaucetRequest struct {
+	Claim string `json:"claim,omitempty"`
+	Token string `json:"token,omitempty"`
+}
+
+type CosmosConfig struct {
+	Node struct {
+		JsonRpc    string `json:"json_rpc"`
+		Tendermint string `json:"tendermint"`
+	}
+	TxModes map[string]bool `json:"tx_modes"`
+	Faucet  struct {
+		FaucetAmounts        map[string]int64 `json:"faucet_amounts"`
+		FaucetMinimumAmounts map[string]int64 `json:"faucet_minimum_amounts"`
+		FeeAmounts           map[string]int64 `json:"fee_amounts"`
+		TimeLimit            int64            `json:"time_limit,float64"`
+	}
+	GWTimeout   int    `json:"gw_timeout,float64"`
+	Interaction string `json:"interaction"`
+	Token       string `json:"token"`
+	Retries     int    `json:"retries,float64"`
+	RetryDelay  int    `json:"retry_delay,float64"`
+	RateLimit   int    `json:"rate_limit,float64"`
+}
+
+type AccountResponse struct {
+	Account struct {
+		Type          string      `json:"@type"`
+		Address       string      `json:"address"`
+		PubKey        interface{} `json:"pubKey"`
+		AccountNumber string      `json:"accountNumber"`
+		Sequence      string      `json:"sequence"`
+	} `json:"account"`
 }

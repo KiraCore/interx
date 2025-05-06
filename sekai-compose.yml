@@ -1,0 +1,23 @@
+services:
+  sekai:
+    image: ghcr.io/kiracore/sekin/sekai:v0.4.7
+    restart: always
+    volumes:
+      - ./tmp:/tmp
+      - ./sekai:/sekai
+    ports:
+      - "26658:26658"           # ABCI
+      - "26657:26657"           # RPC
+      - "26656:26656"           # P2P (gRPC)
+      - "26660:26660"           # Prometheus
+      - "127.0.0.1:8181:8080"             # RPC scaller
+      - "1317:1317"
+      - "9090:9090"
+    hostname: sekai.local
+    networks:
+      - interx_default
+
+networks:
+  interx_default:
+    name: interx_default
+    external: true

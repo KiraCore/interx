@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/saiset-co/sai-interx-manager/logger"
 	"go.uber.org/zap"
@@ -36,16 +37,24 @@ func (f *GatewayFactory) CreateGateway(gatewayType string) (types.Gateway, error
 			cast.ToInt(f.context.GetConfig("ethereum.rate_limit", 10)),
 		)
 	case "cosmos":
+		var cosmosConfig types.CosmosConfig
+
+		configBytes, err := json.Marshal(f.context.GetConfig("cosmos", cosmosConfig))
+		if err != nil {
+			logger.Logger.Error("Invalid cosmos configuration format")
+			return nil, err
+		}
+
+		err = json.Unmarshal(configBytes, &cosmosConfig)
+		if err != nil {
+			logger.Logger.Error("Invalid cosmos configuration format")
+			return nil, err
+		}
+
 		return NewCosmosGateway(
 			f.context,
-			cast.ToString(f.context.GetConfig("cosmos.node.tendermint", "")),
-			cast.ToString(f.context.GetConfig("cosmos.node.json_rpc", "")),
 			f.storage,
-			cast.ToInt(f.context.GetConfig("cosmos.gw_timeout", 3)),
-			cast.ToInt(f.context.GetConfig("cosmos.retries", 1)),
-			time.Duration(cast.ToInt64(f.context.GetConfig("cosmos.retry_delay", 10))),
-			cast.ToInt(f.context.GetConfig("cosmos.rate_limit", 10)),
-			cast.ToStringMapBool(f.context.GetConfig("cosmos.tx_modes", map[string]bool{})),
+			cosmosConfig,
 		)
 	case "bitcoin":
 		return NewBitcoinGateway(
