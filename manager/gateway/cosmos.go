@@ -470,7 +470,7 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 				return g.executionFee(req)
 			})
 		}
-	case "/network_properties":
+	case "/kira/gov/network_properties":
 		{
 			return g.retry.Do(func() (interface{}, error) {
 				if err := g.rateLimit.Wait(g.context.Context); err != nil {
