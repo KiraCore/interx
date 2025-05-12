@@ -13,7 +13,7 @@ The system consists of the following microservices:
 5. **Ethereum Indexer** - Indexes Ethereum blockchain data
 6. **Ethereum Interaction** - Creates, signs, and publishes Ethereum transactions
 7. **Storage** - MongoDB storage for indexed blocks and transactions
-8. 
+   
 ## Install new node
 
 1. Clone the project
