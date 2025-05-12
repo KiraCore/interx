@@ -111,7 +111,22 @@ ethereum:
   rate_limit: 10  # Maximum allowed requests per second
 
 cosmos:
-  node: "http://157.180.16.117:1317"  # Cosmos node address for request proxying
+  node:
+    json_rpc: "157.180.16.117:9090" # Cosmos gRPC address
+    tendermint: "http://157.180.16.117:26657" #Cosmos tendermint address
+  tx_modes: # Accepted transaction broadcast types
+    sync: true
+    async: true
+    block: true
+  faucet: # Faucet configuration
+    faucet_amounts:
+      ukex: 1000
+    faucet_minimum_amounts:
+      ukex: 100
+    fee_amounts:
+      ukex: 100
+    time_limit: 3600
+  gw_timeout: 30 # Gateway request timeout
   interaction: "http://worker-sai-cosmos-interaction:8884"  # Docker container address (do not change)
   token: ""  # Access token for the Cosmos interaction service
   retries: 1  # Number of request retries
