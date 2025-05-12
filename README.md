@@ -13,7 +13,22 @@ The system consists of the following microservices:
 5. **Ethereum Indexer** - Indexes Ethereum blockchain data
 6. **Ethereum Interaction** - Creates, signs, and publishes Ethereum transactions
 7. **Storage** - MongoDB storage for indexed blocks and transactions
+8. 
+## Install new node
 
+1. Clone the project
+2. Change ./manager/config.yml -> p2p part
+
+```yaml
+p2p:
+    id: "x"                     //Node sequence number
+    address: "0.0.0.0:9000"     //Node bind address
+    peers: ["x.x.x.x:9000"]     //Node peers (main node external IP:PORT)
+    max_peers: 2                //Maximum node slots to accept connections
+```
+
+3. Execute: `docker compose up -d --build` in the root project directory
+4. 
 ## Service Details
 
 ### Manager
