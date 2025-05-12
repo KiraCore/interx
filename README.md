@@ -17,16 +17,19 @@ The system consists of the following microservices:
 ## Install new node
 
 1. Clone the project
-2. Change ./manager/config.yml -> p2p part
+2. Change ./manager/config.yml
 
 ```yaml
+cosmos:
+  node:
+    json_rpc: "x.x.x.x:9090"            //Kira gRPC address
+    tendermint: "http://x.x.x.x:26657"  //Rira tendermint address
 p2p:
     id: "x"                     //Node sequence number
     address: "0.0.0.0:9000"     //Node bind address
     peers: ["x.x.x.x:9000"]     //Node peers (main node external IP:PORT)
     max_peers: 2                //Maximum node slots to accept connections
 ```
-
 3. Execute: `docker compose up -d --build` in the root project directory
    
 ## Service Details
