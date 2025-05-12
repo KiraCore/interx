@@ -28,7 +28,7 @@ p2p:
 ```
 
 3. Execute: `docker compose up -d --build` in the root project directory
-4. 
+   
 ## Service Details
 
 ### Manager
