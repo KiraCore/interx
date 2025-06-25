@@ -9,7 +9,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -573,6 +575,18 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 		}
 	}
 
+	case "/tendermint":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.tendermint(req)
+			})
+		}
+	}
+
 	return g.retry.Do(func() (interface{}, error) {
 		if err := g.rateLimit.Wait(g.context.Context); err != nil {
 			logger.Logger.Error("CosmosGateway - Handle - Rate limit exceeded", zap.Error(err))
@@ -619,6 +633,11 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 	}
 
 	return response.Result, nil
+}
+
+func (g *CosmosGateway) tendermint(req types.InboundRequest) (interface{}, error) {
+	query := mapToQuery(req.Payload)
+	return g.makeTendermintRPCRequest(g.context.Context, req.Path, query.Encode())
 }
 
 func (g *CosmosGateway) proxy(req types.InboundRequest) ([]byte, error) {
@@ -808,4 +827,35 @@ func saveMnemonicFile(data []byte) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func mapToQuery(m map[string]interface{}) url.Values {
+	query := url.Values{}
+
+	for key, value := range m {
+		switch v := value.(type) {
+		case string:
+			query.Set(key, v)
+		case int:
+			query.Set(key, strconv.Itoa(v))
+		case int64:
+			query.Set(key, strconv.FormatInt(v, 10))
+		case float64:
+			query.Set(key, strconv.FormatFloat(v, 'f', -1, 64))
+		case bool:
+			query.Set(key, strconv.FormatBool(v))
+		case []string:
+			for _, item := range v {
+				query.Add(key, item)
+			}
+		case []interface{}:
+			for _, item := range v {
+				query.Add(key, fmt.Sprintf("%v", item))
+			}
+		default:
+			query.Set(key, fmt.Sprintf("%v", v))
+		}
+	}
+
+	return query
 }
