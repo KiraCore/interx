@@ -1,4 +1,4 @@
-module github.com/saiset-co/sai-interx-manager
+module github.com/saiset-co/kira_new_interx
 
 go 1.23.0
 
