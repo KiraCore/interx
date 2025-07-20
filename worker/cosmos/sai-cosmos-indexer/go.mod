@@ -3,7 +3,7 @@ module github.com/saiset-co/saiCosmosIndexer
 go 1.21
 
 require (
-	github.com/KiraCore/sekai v0.4.7
+	github.com/KiraCore/sekai v0.4.13
 	github.com/cosmos/cosmos-sdk v0.47.6
 	github.com/json-iterator/go v1.1.12
 	github.com/saiset-co/sai-service v1.0.5

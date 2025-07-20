@@ -564,7 +564,6 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 		}
 	case "/kira/faucet":
 		{
-			return g.faucet(req)
 			return g.retry.Do(func() (interface{}, error) {
 				if err := g.rateLimit.Wait(g.context.Context); err != nil {
 					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
@@ -573,7 +572,6 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 				return g.faucet(req)
 			})
 		}
-	}
 
 	case "/tendermint":
 		{
@@ -635,11 +633,6 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 	return response.Result, nil
 }
 
-func (g *CosmosGateway) tendermint(req types.InboundRequest) (interface{}, error) {
-	query := mapToQuery(req.Payload)
-	return g.makeTendermintRPCRequest(g.context.Context, req.Path, query.Encode())
-}
-
 func (g *CosmosGateway) proxy(req types.InboundRequest) ([]byte, error) {
 	dataBytes, err := json.Marshal(req.Payload)
 	if err != nil {
@@ -669,6 +662,11 @@ func (g *CosmosGateway) proxy(req types.InboundRequest) ([]byte, error) {
 	//}
 
 	return grpcBytes, nil
+}
+
+func (g *CosmosGateway) tendermint(req types.InboundRequest) (interface{}, error) {
+	query := mapToQuery(req.Payload)
+	return g.makeTendermintRPCRequest(g.context.Context, req.Path, query.Encode())
 }
 
 func (g *CosmosGateway) filterAndPaginateValidators(response *types.ValidatorsResponse, payload map[string]interface{}) (*types.ValidatorsResponse, error) {
