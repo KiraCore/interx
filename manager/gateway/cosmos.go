@@ -411,6 +411,19 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 		})
 	}
 
+	tendermint := regexp.MustCompile(`^/tendermint/(.+)$`)
+
+	if matches := tendermint.FindStringSubmatch(req.Path); matches != nil {
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+
+			return g.tendermint(req)
+		})
+	}
+
 	switch req.Path {
 	case "/dashboard":
 		{
