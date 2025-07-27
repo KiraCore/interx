@@ -411,6 +411,21 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 		})
 	}
 
+	tendermint := regexp.MustCompile(`^/tendermint/(.+)$`)
+
+	if matches := tendermint.FindStringSubmatch(req.Path); matches != nil {
+		req.Path = "/" + matches[1]
+
+		return g.retry.Do(func() (interface{}, error) {
+			if err := g.rateLimit.Wait(g.context.Context); err != nil {
+				logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+				return nil, err
+			}
+
+			return g.tendermint(req)
+		})
+	}
+
 	switch req.Path {
 	case "/dashboard":
 		{
@@ -621,8 +636,8 @@ func (g *CosmosGateway) makeTendermintRPCRequest(ctx context.Context, url string
 	response := new(types.RPCResponse)
 	err = json.NewDecoder(resp.Body).Decode(response)
 	if err != nil {
-		logger.Logger.Debug("MakeTendermintRPCRequest - [rpc-call] Unable to decode response", zap.Any("body", resp.Body))
-		logger.Logger.Error("MakeTendermintRPCRequest - [rpc-call] Unable to decode response", zap.Error(err))
+		logger.Logger.Debug("MakeTendermintRPCRequest - [rpc-call] Unable to decode response",
+			zap.Any("body", resp.Body), zap.Any("endpoint", endpoint), zap.Error(err))
 		return nil, err
 	}
 
