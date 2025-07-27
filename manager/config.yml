@@ -7,27 +7,27 @@ common:
     port: 8881
 
 storage:
-  token: "a@@#lsa$fd8f"
+  token: ""
   url: "http://worker-sai-storage:8880"
 ethereum:
   interaction: "http://worker-sai-ethereum-interaction:8882"
   nodes:
     chain1: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"
-  token: "a@@#lsa$fd8f"
+  token: ""
   retries: 1
   retry_delay: 10
   rate_limit: 100000
 cosmos:
   node:
-    json_rpc: "157.180.16.117:9090"
-    tendermint: "http://157.180.16.117:26657"
+    json_rpc: ""
+    tendermint: ""
   tx_modes:
     sync: true
     async: true
     block: true
   gw_timeout: 30
   interaction: "http://worker-sai-cosmos-interaction:8884"
-  token: "a@@#lsa$fd8f"
+  token: ""
   retries: 1
   retry_delay: 10
   rate_limit: 2
