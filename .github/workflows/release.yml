@@ -1,0 +1,331 @@
+---
+name: Build, Release, and Sign Docker Images
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+jobs:
+  build_and_push:
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'feature/') ||
+       startsWith(github.event.pull_request.head.ref, 'hotfix/') ||
+       startsWith(github.event.pull_request.head.ref, 'bugfix/') ||
+       startsWith(github.event.pull_request.head.ref, 'release/') ||
+       startsWith(github.event.pull_request.head.ref, 'major/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.create_tag.outputs.new_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and Push Tag
+        id: create_tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: master
+          default_bump: minor
+          create_annotated_tag: true
+
+      - name: Print the new tag
+        run: |
+          echo "TAG: ${{ steps.create_tag.outputs.new_tag }}"
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          echo "VERSION: $VERSION"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.2.3'
+
+      - name: Confirm cosign installation
+        run: cosign version
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build Manager
+      - name: Build and push Manager Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./manager
+          file: ./manager/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-manager"
+            org.opencontainers.image.description="KIRA Interx Manager - P2P load balancer and HTTP server"
+
+      - name: Retrieve Manager image digest
+        id: get-manager-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Manager Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-manager-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Proxy
+      - name: Build and push Proxy Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./proxy
+          file: ./proxy/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-proxy"
+            org.opencontainers.image.description="KIRA Interx Proxy - Legacy HTTP request converter"
+
+      - name: Retrieve Proxy image digest
+        id: get-proxy-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Proxy Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-proxy-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Storage
+      - name: Build and push Storage Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker/sai-storage-mongo
+          file: ./worker/sai-storage-mongo/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-storage"
+            org.opencontainers.image.description="KIRA Interx Storage - MongoDB storage service"
+
+      - name: Retrieve Storage image digest
+        id: get-storage-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Storage Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-storage-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Cosmos Indexer
+      - name: Build and push Cosmos Indexer Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker/cosmos/sai-cosmos-indexer
+          file: ./worker/cosmos/sai-cosmos-indexer/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-cosmos-indexer"
+            org.opencontainers.image.description="KIRA Interx Cosmos Indexer - Indexes Cosmos blockchain data"
+
+      - name: Retrieve Cosmos Indexer image digest
+        id: get-cosmos-indexer-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Cosmos Indexer Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-cosmos-indexer-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Cosmos Interaction
+      - name: Build and push Cosmos Interaction Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker/cosmos/sai-cosmos-interaction
+          file: ./worker/cosmos/sai-cosmos-interaction/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-cosmos-interaction"
+            org.opencontainers.image.description="KIRA Interx Cosmos Interaction - Creates and publishes Cosmos transactions"
+
+      - name: Retrieve Cosmos Interaction image digest
+        id: get-cosmos-interaction-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Cosmos Interaction Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-cosmos-interaction-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Ethereum Indexer
+      - name: Build and push Ethereum Indexer Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker/ethereum/sai-ethereum-indexer
+          file: ./worker/ethereum/sai-ethereum-indexer/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-ethereum-indexer"
+            org.opencontainers.image.description="KIRA Interx Ethereum Indexer - Indexes Ethereum blockchain data"
+
+      - name: Retrieve Ethereum Indexer image digest
+        id: get-ethereum-indexer-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Ethereum Indexer Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-ethereum-indexer-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      # Build Ethereum Interaction
+      - name: Build and push Ethereum Interaction Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./worker/ethereum/sai-ethereum-contract-interaction
+          file: ./worker/ethereum/sai-ethereum-contract-interaction/Dockerfile
+          push: true
+          tags: ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }}
+          build-args: |
+            VERSION=${{ steps.create_tag.outputs.new_tag }}
+          labels: |
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/interx"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/interx/blob/master/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/interx.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0"
+            org.opencontainers.image.title="interx-ethereum-interaction"
+            org.opencontainers.image.description="KIRA Interx Ethereum Interaction - Creates and publishes Ethereum transactions"
+
+      - name: Retrieve Ethereum Interaction image digest
+        id: get-ethereum-interaction-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }})
+          echo "Digest: $DIGEST"
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Sign Ethereum Interaction Docker image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-ethereum-interaction-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.new_tag }}
+          release_name: Release ${{ steps.create_tag.outputs.new_tag }}
+          body: |
+            ## Docker Images Released
+
+            - `ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }}`
+            - `ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }}`
+
+            All images are signed with cosign.
+          draft: false
+          prerelease: false

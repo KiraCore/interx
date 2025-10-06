@@ -1,0 +1,53 @@
+---
+name: Release Merged Hook
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  trigger-dispatch:
+    if: |
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.head.ref, 'release/v') ||
+       startsWith(github.event.pull_request.head.ref, 'major/v'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Version from Branch Name
+        id: version-extract
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          if [[ "$BRANCH" =~ ^(release|major)/v(.+)$ ]]; then
+            VERSION="${BASH_REMATCH[2]}"
+          else
+            echo "Branch does not match expected pattern"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
+      - name: Trigger Repository Dispatch Event to Sekin
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          curl -X POST -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.REPO_ACCESS }}" \
+          "https://api.github.com/repos/KiraCore/sekin/dispatches" \
+          -d @- <<EOF
+          {
+            "event_type": "release_merged",
+            "client_payload": {
+              "version": "${VERSION}",
+              "authors": "KIRA",
+              "url": "https://kira.network",
+              "documentation": "https://docs.kira.network",
+              "source": "https://github.com/KiraCore/interx",
+              "vendor": "KiraCore",
+              "licenses": "CC BY-NC-SA 4.0",
+              "title": "interx",
+              "description": "KIRA Interoperability Microservices Architecture - A set of seven microservices designed to provide interoperability between blockchain networks, primarily focusing on Cosmos and Ethereum ecosystems. Includes Manager (P2P load balancer), Proxy (legacy converter), indexers and interaction services for both Cosmos and Ethereum, plus MongoDB storage."
+            }
+          }
+          EOF

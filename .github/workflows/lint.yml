@@ -1,0 +1,80 @@
+---
+name: Lint
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'release/**'
+      - 'major/**'
+      - master
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  golangci-lint:
+    name: Go Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component:
+          - manager
+          - proxy
+          - worker/sai-storage-mongo
+          - worker/cosmos/sai-cosmos-indexer
+          - worker/cosmos/sai-cosmos-interaction
+          - worker/ethereum/sai-ethereum-indexer/cmd/app
+          - worker/ethereum/sai-ethereum-contract-interaction
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: ${{ matrix.component }}
+          args: --timeout=10m
+
+  branch-validation:
+    name: Validate Branch Name
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - name: Validate branch name
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BRANCH="${{ github.head_ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+
+          echo "Checking branch: $BRANCH"
+
+          if [[ "$BRANCH" == "master" ]]; then
+            echo "✓ Master branch"
+            exit 0
+          fi
+
+          ALLOWED_PATTERNS="^(feature|hotfix|bugfix|release|major)\/.*"
+
+          if [[ $BRANCH =~ $ALLOWED_PATTERNS ]]; then
+            echo "✓ Valid branch name: $BRANCH"
+            exit 0
+          else
+            echo "✗ Invalid branch name: $BRANCH"
+            echo "Allowed patterns: feature/*, hotfix/*, bugfix/*, release/*, major/*"
+            exit 1
+          fi
