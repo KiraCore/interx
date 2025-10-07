@@ -45,17 +45,17 @@ jobs:
         id: changelog
         run: |
           # Get the previous tag
-          PREVIOUS_TAG=$(git describe --abbrev=0 --tags ${{ steps.create_tag.outputs.previous_tag }} 2>/dev/null || echo "")
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags HEAD^ 2>/dev/null || echo "")
 
           if [ -z "$PREVIOUS_TAG" ]; then
-            echo "No previous tag found, generating changelog from all commits"
-            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+            echo "No previous tag found, generating changelog from last 50 commits"
+            CHANGELOG=$(git log -50 --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Generating changelog from $PREVIOUS_TAG to HEAD"
+            CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
           fi
 
-          echo "Generating changelog from $PREVIOUS_TAG to ${{ steps.create_tag.outputs.new_tag }}"
-
           # Generate changelog
-          CHANGELOG=$(git log $PREVIOUS_TAG..${{ steps.create_tag.outputs.new_tag }} --pretty=format:"- %s (%h)" --no-merges)
 
           # Group commits by type
           FEATURES=$(echo "$CHANGELOG" | grep -i "^- feature:" || echo "")
