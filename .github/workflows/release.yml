@@ -41,6 +41,58 @@ jobs:
           VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "VERSION: $VERSION"
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags ${{ steps.create_tag.outputs.previous_tag }} 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, generating changelog from all commits"
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          echo "Generating changelog from $PREVIOUS_TAG to ${{ steps.create_tag.outputs.new_tag }}"
+
+          # Generate changelog
+          CHANGELOG=$(git log $PREVIOUS_TAG..${{ steps.create_tag.outputs.new_tag }} --pretty=format:"- %s (%h)" --no-merges)
+
+          # Group commits by type
+          FEATURES=$(echo "$CHANGELOG" | grep -i "^- feature:" || echo "")
+          FIXES=$(echo "$CHANGELOG" | grep -i "^- fix:" || echo "")
+          CICD=$(echo "$CHANGELOG" | grep -i "^- cicd:" || echo "")
+          UPDATES=$(echo "$CHANGELOG" | grep -i "^- update:" || echo "")
+          OTHERS=$(echo "$CHANGELOG" | grep -iv "^- \(feature:\|fix:\|cicd:\|update:\)" || echo "")
+
+          # Build formatted changelog
+          FORMATTED_CHANGELOG="## What's Changed"$'\n\n'
+
+          if [ ! -z "$FEATURES" ]; then
+            FORMATTED_CHANGELOG+="### ✨ Features"$'\n'"$FEATURES"$'\n\n'
+          fi
+
+          if [ ! -z "$FIXES" ]; then
+            FORMATTED_CHANGELOG+="### 🐛 Bug Fixes"$'\n'"$FIXES"$'\n\n'
+          fi
+
+          if [ ! -z "$UPDATES" ]; then
+            FORMATTED_CHANGELOG+="### 🔄 Updates"$'\n'"$UPDATES"$'\n\n'
+          fi
+
+          if [ ! -z "$CICD" ]; then
+            FORMATTED_CHANGELOG+="### 🚀 CI/CD"$'\n'"$CICD"$'\n\n'
+          fi
+
+          if [ ! -z "$OTHERS" ]; then
+            FORMATTED_CHANGELOG+="### 📝 Other Changes"$'\n'"$OTHERS"$'\n\n'
+          fi
+
+          # Save to file for later use
+          echo "$FORMATTED_CHANGELOG" > /tmp/changelog.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$FORMATTED_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
         with:
@@ -308,6 +360,66 @@ jobs:
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
           rm -f cosign.key
 
+      - name: Generate Image Hashes
+        id: image_hashes
+        run: |
+          echo "## 🔐 Image Digests & Verification" > /tmp/hashes.md
+          echo "" >> /tmp/hashes.md
+          echo "All Docker images are signed with cosign and can be verified using:" >> /tmp/hashes.md
+          echo '```bash' >> /tmp/hashes.md
+          echo 'cosign verify --key cosign.pub <image-digest>' >> /tmp/hashes.md
+          echo '```' >> /tmp/hashes.md
+          echo "" >> /tmp/hashes.md
+          echo "### Image Digests (SHA256)" >> /tmp/hashes.md
+          echo "" >> /tmp/hashes.md
+          echo "| Service | Image | Digest |" >> /tmp/hashes.md
+          echo "|---------|-------|--------|" >> /tmp/hashes.md
+          echo "| Manager | \`ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-manager-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Proxy | \`ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-proxy-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Storage | \`ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-storage-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Cosmos Indexer | \`ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-cosmos-indexer-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Cosmos Interaction | \`ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-cosmos-interaction-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Ethereum Indexer | \`ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-ethereum-indexer-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "| Ethereum Interaction | \`ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }}\` | \`${{ steps.get-ethereum-interaction-digest.outputs.digest }}\` |" >> /tmp/hashes.md
+          echo "" >> /tmp/hashes.md
+
+          # Save for output
+          cat /tmp/hashes.md
+          echo "hashes<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/hashes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build Release Notes
+        id: release_notes
+        run: |
+          cat /tmp/changelog.md > /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "## 🐳 Docker Images" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "| Service | Image |" >> /tmp/release_notes.md
+          echo "|---------|-------|" >> /tmp/release_notes.md
+          echo "| Manager | \`ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Proxy | \`ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Storage | \`ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Cosmos Indexer | \`ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Cosmos Interaction | \`ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Ethereum Indexer | \`ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "| Ethereum Interaction | \`ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }}\` |" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          cat /tmp/hashes.md >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "## 📦 Installation" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "Update your \`docker-compose.yml\` to use version \`${{ steps.create_tag.outputs.new_tag }}\` or pull images directly:" >> /tmp/release_notes.md
+          echo '```bash' >> /tmp/release_notes.md
+          echo "docker pull ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}" >> /tmp/release_notes.md
+          echo '```' >> /tmp/release_notes.md
+
+          cat /tmp/release_notes.md
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
@@ -315,17 +427,6 @@ jobs:
         with:
           tag_name: ${{ steps.create_tag.outputs.new_tag }}
           release_name: Release ${{ steps.create_tag.outputs.new_tag }}
-          body: |
-            ## Docker Images Released
-
-            - `ghcr.io/kiracore/interx/manager:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/proxy:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/storage:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/cosmos-indexer:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/cosmos-interaction:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/ethereum-indexer:${{ steps.create_tag.outputs.new_tag }}`
-            - `ghcr.io/kiracore/interx/ethereum-interaction:${{ steps.create_tag.outputs.new_tag }}`
-
-            All images are signed with cosign.
+          body: ${{ steps.release_notes.outputs.notes }}
           draft: false
           prerelease: false
