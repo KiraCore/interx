@@ -1,6 +1,21 @@
+# IDE and Editor
 .vscode/
-.DS_Store
 .ides/
+.DS_Store
+
+# Docker and Infrastructure
+docker-compose-unified.yml
+init_network.sh
+
+# Dependencies
+sekai/
+
+# Logs
+manager/logs/
+proxy/logs/
+
+# Storage
+worker/sai-storage-mongo/storage
 
 # Binaries
 manager/manager
@@ -16,4 +31,3 @@ worker/ethereum/sai-ethereum-contract-interaction/sai-eth-interaction
 worker/ethereum/sai-ethereum-indexer/cmd/app/bin/act
 worker/ethereum/sai-ethereum-indexer/cmd/app/ethereum-indexer
 worker/sai-storage-mongo/sai-storage-mongo
-worker/sai-storage-mongo/storage
