@@ -430,3 +430,25 @@ jobs:
           body: ${{ steps.release_notes.outputs.notes }}
           draft: false
           prerelease: false
+
+  trigger_sekin_update:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sekin repository update
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: kiracore/sekin
+          event-type: interx_release
+          client-payload: |
+            {
+              "version": "${{ needs.build_and_push.outputs.version }}",
+              "manager_image": "ghcr.io/kiracore/interx/manager:${{ needs.build_and_push.outputs.version }}",
+              "proxy_image": "ghcr.io/kiracore/interx/proxy:${{ needs.build_and_push.outputs.version }}",
+              "storage_image": "ghcr.io/kiracore/interx/storage:${{ needs.build_and_push.outputs.version }}",
+              "cosmos_indexer_image": "ghcr.io/kiracore/interx/cosmos-indexer:${{ needs.build_and_push.outputs.version }}",
+              "cosmos_interaction_image": "ghcr.io/kiracore/interx/cosmos-interaction:${{ needs.build_and_push.outputs.version }}",
+              "ethereum_indexer_image": "ghcr.io/kiracore/interx/ethereum-indexer:${{ needs.build_and_push.outputs.version }}",
+              "ethereum_interaction_image": "ghcr.io/kiracore/interx/ethereum-interaction:${{ needs.build_and_push.outputs.version }}"
+            }
