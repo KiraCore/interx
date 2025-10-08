@@ -438,7 +438,7 @@ jobs:
       - name: Trigger sekin repository update
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.REPO_ACCESS }}
           repository: kiracore/sekin
           event-type: interx_release
           client-payload: |
