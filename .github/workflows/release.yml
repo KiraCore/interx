@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.create_tag.outputs.new_tag }}
+      release_notes: ${{ steps.release_notes.outputs.notes }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -420,14 +421,18 @@ jobs:
           cat /tmp/release_notes.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+  create_release:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.create_tag.outputs.new_tag }}
-          release_name: Release ${{ steps.create_tag.outputs.new_tag }}
-          body: ${{ steps.release_notes.outputs.notes }}
+          tag_name: ${{ needs.build_and_push.outputs.version }}
+          release_name: Release ${{ needs.build_and_push.outputs.version }}
+          body: ${{ needs.build_and_push.outputs.release_notes }}
           draft: false
           prerelease: false
 
