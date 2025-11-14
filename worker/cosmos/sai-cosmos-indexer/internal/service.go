@@ -150,7 +150,7 @@ func (is *InternalService) handleBlockTxs() error {
 		return err
 	}
 
-	if is.handleBlocks {
+	if is.config.HandleBlocks {
 		err = is.sendBlockToStorage(blockInfo)
 		if err != nil {
 			logger.Logger.Error("handleBlockTxs", zap.Error(err))

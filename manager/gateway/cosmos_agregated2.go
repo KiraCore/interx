@@ -187,6 +187,8 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultRes
 
 	if request.Height != "" {
 		criteria["block.header.height"] = request.Height
+	} else {
+		criteria["_id"] = map[string]interface{}{"$ne": nil}
 	}
 
 	if request.HasTxs == 1 {
