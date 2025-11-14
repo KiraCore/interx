@@ -1,37 +1,133 @@
-# KIRA Interoperability Microservices Architecture
+# Interx: KIRA Cross-Chain Microservices
 
-This repository contains a set of seven microservices designed to provide interoperability between blockchain networks, primarily focusing on Cosmos and Ethereum ecosystems.
+Interx is a modular microservices architecture that provides cross-chain interoperability and indexing for the KIRA blockchain ecosystem. It serves as the gateway between blockchain networks, enabling seamless interaction with Cosmos (Sekai) and Ethereum-based chains through a distributed, load-balanced architecture.
+
+## Part of KIRA Infrastructure
+
+Interx is a core component of the [Sekin](https://github.com/KiraCore/sekin) infrastructure stack, working alongside:
+- **Sekai**: KIRA's Cosmos SDK-based blockchain node
+- **Shidai**: Orchestration and lifecycle management layer
+- **Syslog-ng**: Centralized logging infrastructure
+
+While Interx can be deployed standalone, it is designed to integrate seamlessly with the full KIRA stack for production deployments.
+
+## Key Features
+
+- **Multi-Chain Support**: Native integration with Cosmos SDK chains (KIRA/Sekai) and Ethereum/EVM networks
+- **Distributed Load Balancing**: P2P-based request distribution across multiple nodes with intelligent routing
+- **Comprehensive Indexing**: Real-time blockchain data indexing for blocks, transactions, and smart contract events
+- **Transaction Management**: Create, sign, and broadcast transactions across supported chains
+- **Legacy Compatibility**: Backward-compatible proxy layer for existing Interx API consumers
+- **Horizontal Scaling**: Add nodes dynamically to handle increased load
+- **Faucet Integration**: Built-in token faucet for testnet operations
+- **Smart Contract Support**: Ethereum contract interaction and event monitoring
 
 ## Architecture Overview
 
-The system consists of the following microservices:
+Interx deploys seven specialized microservices that work together to provide comprehensive blockchain interoperability:
 
-1. **Manager** - Main P2P load balancer and HTTP server for incoming requests
-2. **Proxy** - Converts legacy interx paths to Manager requests
-3. **Cosmos Indexer** - Indexes Cosmos blockchain data
-4. **Cosmos Interaction** - Creates, signs, and publishes Cosmos transactions
-5. **Ethereum Indexer** - Indexes Ethereum blockchain data
-6. **Ethereum Interaction** - Creates, signs, and publishes Ethereum transactions
-7. **Storage** - MongoDB storage for indexed blocks and transactions
-   
-## Install new node
+### Core Services
 
-1. Clone the project
-2. Change ./manager/config.yml
+1. **Manager** (ports 8080, 9000/udp)
+   - Main entry point and P2P load balancer
+   - Distributes requests across the network
+   - HTTP API server for incoming requests
 
-```yaml
-cosmos:
-  node:
-    json_rpc: "x.x.x.x:9090"            //Kira gRPC address
-    tendermint: "http://x.x.x.x:26657"  //Rira tendermint address
-p2p:
-    id: "x"                     //Node sequence number
-    address: "0.0.0.0:9000"     //Node bind address
-    peers: ["x.x.x.x:9000"]     //Node peers (main node external IP:PORT)
-    max_peers: 2                //Maximum node slots to accept connections
-```
-3. Execute: `docker compose up -d --build` in the root project directory
-   
+2. **Proxy** (port 80 → 8080)
+   - Legacy API compatibility layer
+   - Converts traditional HTTP requests to Manager format
+   - Maintains backward compatibility with older Interx deployments
+
+### Blockchain Workers
+
+3. **Cosmos Indexer** (port 8883)
+   - Continuous indexing of Cosmos/KIRA blockchain data
+   - Monitors blocks and transactions
+   - Stores data via Storage service
+
+4. **Cosmos Interaction** (port 8884)
+   - Transaction creation and signing for Cosmos chains
+   - Broadcast transaction management
+   - Supports multiple broadcast modes (sync, async, block)
+
+5. **Ethereum Indexer** (port 8881)
+   - Indexes Ethereum and EVM-compatible chains
+   - Smart contract event monitoring
+   - Block and transaction data collection
+
+6. **Ethereum Interaction** (port 8882)
+   - Ethereum transaction creation and signing
+   - Contract interaction handling
+   - Multi-chain support via chain IDs
+
+### Data Layer
+
+7. **Storage** (port 8880)
+   - MongoDB-based persistence layer
+   - Stores indexed blockchain data
+   - Accessed exclusively through Manager service
+
+## Quick Start
+
+### Standalone Deployment
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/KiraCore/interx.git
+   cd interx
+   ```
+
+2. **Create the external network**
+   ```bash
+   docker network create interx_default
+   ```
+
+3. **Configure Manager service**
+
+   Edit `./manager/config.yml` with your node settings:
+   ```yaml
+   cosmos:
+     node:
+       json_rpc: "x.x.x.x:9090"            # KIRA gRPC address
+       tendermint: "http://x.x.x.x:26657"  # KIRA Tendermint address
+
+   p2p:
+     id: "1"                     # Unique node identifier
+     address: "0.0.0.0:9000"     # P2P bind address
+     peers: ["x.x.x.x:9000"]     # List of peer nodes (empty for first node)
+     max_peers: 2                # Maximum peer connections
+   ```
+
+4. **Launch all services**
+   ```bash
+   docker compose up -d --build
+   ```
+
+5. **Access the API**
+   - Manager API: `http://localhost:8080`
+   - Proxy (legacy): `http://localhost:80`
+
+### Deployment with Sekin Stack
+
+For production deployments, Interx is typically deployed as part of the [Sekin infrastructure stack](https://github.com/KiraCore/sekin). The Sekin stack provides:
+- Pre-configured integration with Sekai nodes
+- Centralized logging via syslog-ng
+- Orchestration through Shidai
+- Standardized networking (10.1.0.0/16)
+
+Refer to the [Sekin documentation](https://github.com/KiraCore/sekin) for full stack deployment.
+
+## P2P Load Balancing
+
+Interx implements a distributed load balancing system through P2P communication between Manager nodes:
+
+- **Metrics Collection**: Each node tracks CPU load, memory usage, and requests per second over a configurable window
+- **Intelligent Routing**: Requests are automatically forwarded to less-loaded peers when local resources are constrained
+- **Threshold-Based**: Load balancing decisions use configurable thresholds to prevent unnecessary routing
+- **Peer Discovery**: Nodes maintain connections with configured peers and can accept new connections up to `max_peers`
+
+This architecture allows horizontal scaling by adding more Interx nodes to the P2P network.
+
 ## Service Details
 
 ### Manager
@@ -70,8 +166,9 @@ GET /kira/gov/all_roles
 ```
 GET /ethereum/{chain_id}/eth_blockNumber
 ```
-- `chain_id`: chain id from the config 
-- 
+Where `chain_id` corresponds to the chain identifier configured in the Manager config.
+
+
 ### Cosmos Indexer
 
 This service continuously indexes Cosmos blockchain data (blocks and transactions) and stores them in the MongoDB database. It operates independently and doesn't accept external calls.
@@ -91,6 +188,52 @@ Handles the creation, signing, and publishing of Ethereum transactions. Like the
 ### Storage
 
 MongoDB-based storage service for indexed blockchain data. In this architecture, it only accepts calls from the Manager service.
+
+## API Usage Examples
+
+### Using the Proxy (Legacy Format)
+
+The Proxy service provides backward-compatible HTTP endpoints:
+
+```bash
+# Query Cosmos/KIRA chain
+curl http://localhost/cosmos/bank/v1beta1/supply
+curl http://localhost/kira/gov/all_roles
+
+# Query Ethereum chain
+curl http://localhost/ethereum/1/eth_blockNumber
+curl http://localhost/ethereum/56/eth_getBalance?address=0x...
+```
+
+### Using the Manager (New Format)
+
+Direct Manager API requests use a structured JSON format:
+
+```bash
+# Cosmos query
+curl -X POST http://localhost:8080 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "cosmos",
+    "data": {
+      "method": "GET",
+      "path": "/cosmos/bank/v1beta1/supply",
+      "payload": {}
+    }
+  }'
+
+# Ethereum query
+curl -X POST http://localhost:8080 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "ethereum",
+    "data": {
+      "method": "POST",
+      "path": "eth_blockNumber",
+      "payload": {}
+    }
+  }'
+```
 
 ## Configuration
 
@@ -151,8 +294,55 @@ The balancer makes decisions based on system metrics collected over the configur
 - If the minimum overall load among all nodes is less than the current node's load by more than the threshold value, the request is forwarded to the less loaded node.
 - Metrics include CPU load, memory usage, and requests per second.
 
-## Getting Started
+## Development
 
-1. Configure the Manager service with appropriate settings.
-2. Start all services using Docker Compose.
-3. The system will be accessible through the Proxy service for legacy requests or directly through the Manager for new format requests.
+### Building from Source
+
+Each microservice can be built independently using its respective Dockerfile:
+
+```bash
+# Build a specific worker
+cd worker/cosmos/sai-cosmos-indexer
+docker build -t interx-cosmos-indexer .
+
+# Build the manager
+cd manager
+docker build -t interx-manager .
+
+# Build all services via docker-compose
+docker compose build
+```
+
+### Project Structure
+
+```
+interx/
+├── manager/              # Main API and P2P load balancer
+├── proxy/                # Legacy API compatibility layer
+├── worker/
+│   ├── cosmos/
+│   │   ├── sai-cosmos-indexer/       # Cosmos blockchain indexer
+│   │   └── sai-cosmos-interaction/   # Cosmos transaction handler
+│   ├── ethereum/
+│   │   ├── sai-ethereum-indexer/           # Ethereum blockchain indexer
+│   │   └── sai-ethereum-contract-interaction/ # Ethereum transaction handler
+│   └── sai-storage-mongo/            # MongoDB storage service
+└── docker-compose.yml    # Orchestration configuration
+```
+
+### Configuration Files
+
+Each service requires a `config.yml` file mounted at `/srv/config.yml`:
+- `manager/config.yml` - Main configuration (see Configuration section)
+- `proxy/config.yml` - Proxy service settings
+- `worker/*/config.yml` - Individual worker configurations
+
+## Additional Resources
+
+- [Sekin Stack](https://github.com/KiraCore/sekin) - Full KIRA infrastructure deployment
+- [KIRA Network](https://kira.network) - Official KIRA website
+- [Documentation](https://docs.kira.network) - Comprehensive KIRA documentation
+
+## License
+
+This project is part of the KIRA Network infrastructure.
