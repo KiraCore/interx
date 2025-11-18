@@ -197,7 +197,7 @@ func (g *CosmosGateway) proposalsCount() (int, error) {
 	return totalCount, nil
 }
 
-func (g *CosmosGateway) getProposals(req types.InboundRequest) (*types.ProposalsResponse, error) {
+func (g *CosmosGateway) getProposals(req types.InboundRequest) (interface{}, error) {
 	proposals := new(types.ProposalsResponse)
 	limit := sekaitypes.PageIterationLimit - 1
 	offset := 0
@@ -232,7 +232,7 @@ func (g *CosmosGateway) getProposals(req types.InboundRequest) (*types.Proposals
 		}
 
 		if afterProposalID, afterOk := req.Payload["afterProposalId"].(string); afterOk {
-			for _, proposal := range proposals.Proposals {
+			for _, proposal := range subResult.Proposals {
 				if proposal.ProposalID > afterProposalID {
 					proposals.Proposals = append(proposals.Proposals, proposal)
 				}
