@@ -300,7 +300,13 @@ func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error)
 			return proposalsResponse, err
 		}
 
-		_, err = g.storage.Create("proposals_cache", newProposals.Proposals)
+		// Convert []types.Proposal to []interface{} for storage
+		proposalsInterface := make([]interface{}, len(newProposals.Proposals))
+		for i, proposal := range newProposals.Proposals {
+			proposalsInterface[i] = proposal
+		}
+
+		_, err = g.storage.Create("proposals_cache", proposalsInterface)
 		if err != nil {
 			logger.Logger.Error("[query-proposals] Failed to save proposals cache", zap.Error(err))
 			return proposalsResponse, err
