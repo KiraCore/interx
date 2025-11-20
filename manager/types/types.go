@@ -9,23 +9,23 @@ type GRPCResponse struct {
 type EVMStatus struct {
 	NodeInfo struct {
 		Network    uint64 `json:"network"`
-		RPCAddress string `json:"rpc_address"`
+		RPCAddress string `json:"rpcAddress"`
 		Version    struct {
 			Net      string `json:"net"`
 			Web3     string `json:"web3"`
 			Protocol string `json:"protocol"`
 		} `json:"version"`
-	} `json:"node_info"`
+	} `json:"nodeInfo"`
 	SyncInfo struct {
-		CatchingUp          bool   `json:"catching_up"`
-		EarliestBlockHash   string `json:"earliest_block_hash"`
-		EarliestBlockHeight uint64 `json:"earliest_block_height"`
-		EarliestBlockTime   uint64 `json:"earliest_block_time"`
-		LatestBlockHash     string `json:"latest_block_hash"`
-		LatestBlockHeight   uint64 `json:"latest_block_height"`
-		LatestBlockTime     uint64 `json:"latest_block_time"`
-	} `json:"sync_info"`
-	GasPrice string `json:"gas_price"`
+		CatchingUp          bool   `json:"catchingUp"`
+		EarliestBlockHash   string `json:"earliestBlockHash"`
+		EarliestBlockHeight uint64 `json:"earliestBlockHeight"`
+		EarliestBlockTime   uint64 `json:"earliestBlockTime"`
+		LatestBlockHash     string `json:"latestBlockHash"`
+		LatestBlockHeight   uint64 `json:"latestBlockHeight"`
+		LatestBlockTime     uint64 `json:"latestBlockTime"`
+	} `json:"syncInfo"`
+	GasPrice string `json:"gasPrice"`
 }
 
 type IdentityRecord struct {
@@ -48,24 +48,24 @@ type QueryValidator struct {
 	Rank                int64            `json:"rank,string"`
 	Streak              int64            `json:"streak,string"`
 	Mischance           int64            `json:"mischance,string"`
-	MischanceConfidence int64            `json:"mischance_confidence,string"`
+	MischanceConfidence int64            `json:"mischanceConfidence,string"`
 	Identity            []IdentityRecord `json:"identity,omitempty"`
 
-	StartHeight           int64  `json:"start_height,string"`
-	InactiveUntil         string `json:"inactive_until"`
-	LastPresentBlock      int64  `json:"last_present_block,string"`
-	MissedBlocksCounter   int64  `json:"missed_blocks_counter,string"`
-	ProducedBlocksCounter int64  `json:"produced_blocks_counter,string"`
-	StakingPoolId         int64  `json:"staking_pool_id,string,omitempty"`
-	StakingPoolStatus     string `json:"staking_pool_status,omitempty"`
+	StartHeight           int64  `json:"startHeight,string"`
+	InactiveUntil         string `json:"inactiveUntil"`
+	LastPresentBlock      int64  `json:"lastPresentBlock,string"`
+	MissedBlocksCounter   int64  `json:"missedBlocks_counter,string"`
+	ProducedBlocksCounter int64  `json:"producedBlocksCounter,string"`
+	StakingPoolId         int64  `json:"stakingPoolId,string,omitempty"`
+	StakingPoolStatus     string `json:"stakingPool_status,omitempty"`
 
 	Description       string `json:"description,omitempty"`
 	Website           string `json:"website,omitempty"`
 	Logo              string `json:"logo,omitempty"`
 	Social            string `json:"social,omitempty"`
 	Contact           string `json:"contact,omitempty"`
-	Validator_node_id string `json:"validator_node_id,omitempty"`
-	Sentry_node_id    string `json:"sentry_node_id,omitempty"`
+	Validator_node_id string `json:"validatorNodeId,omitempty"`
+	Sentry_node_id    string `json:"sentryNodeId,omitempty"`
 }
 
 type QueryValidators []QueryValidator
@@ -118,12 +118,12 @@ type ValidatorInfoResponse = struct {
 
 type AllValidators struct {
 	Status struct {
-		ActiveValidators   int `json:"active_validators"`
-		PausedValidators   int `json:"paused_validators"`
-		InactiveValidators int `json:"inactive_validators"`
-		JailedValidators   int `json:"jailed_validators"`
-		TotalValidators    int `json:"total_validators"`
-		WaitingValidators  int `json:"waiting_validators"`
+		ActiveValidators   int `json:"activeValidators"`
+		PausedValidators   int `json:"pausedValidators"`
+		InactiveValidators int `json:"inactiveValidators"`
+		JailedValidators   int `json:"jailedValidators"`
+		TotalValidators    int `json:"totalValidators"`
+		WaitingValidators  int `json:"waitingValidators"`
 	} `json:"status"`
 	PoolTokens      []string                 `json:"-"`
 	AddrToValidator map[string]string        `json:"-"`
@@ -169,11 +169,11 @@ type AllPools struct {
 }
 
 type NodeConfig struct {
-	NodeType        string `json:"node_type"`
-	SentryNodeID    string `json:"sentry_node_id"`
-	SnapshotNodeID  string `json:"snapshot_node_id"`
-	ValidatorNodeID string `json:"validator_node_id"`
-	SeedNodeID      string `json:"seed_node_id"`
+	NodeType        string `json:"nodeType"`
+	SentryNodeID    string `json:"sentryNodeId"`
+	SnapshotNodeID  string `json:"snapshotNodeId"`
+	ValidatorNodeID string `json:"validatorNodeId"`
+	SeedNodeID      string `json:"seedNodeId"`
 }
 
 type ProtocolVersion struct {
@@ -183,14 +183,14 @@ type ProtocolVersion struct {
 }
 
 type NodeOtherInfo struct {
-	TxIndex    string `json:"tx_index,omitempty"`
-	RpcAddress string `json:"rpc_address,omitempty"`
+	TxIndex    string `json:"txIndex,omitempty"`
+	RpcAddress string `json:"rpcAddress,omitempty"`
 }
 
 type NodeInfo struct {
 	ProtocolVersion ProtocolVersion `json:"protocol_version,omitempty"`
 	Id              string          `json:"id,omitempty"`
-	ListenAddr      string          `json:"listen_addr,omitempty"`
+	ListenAddr      string          `json:"listenAddr,omitempty"`
 	Network         string          `json:"network,omitempty"`
 	Version         string          `json:"version,omitempty"`
 	Channels        string          `json:"channels,omitempty"`
@@ -199,15 +199,15 @@ type NodeInfo struct {
 }
 
 type SyncInfo struct {
-	LatestBlockHash     string `json:"latest_block_hash,omitempty"`
-	LatestAppHash       string `json:"latest_app_hash,omitempty"`
-	LatestBlockHeight   string `json:"latest_block_height,omitempty"`
-	LatestBlockTime     string `json:"latest_block_time,omitempty"`
-	EarliestBlockHash   string `json:"earliest_block_hash,omitempty"`
-	EarliestAppHash     string `json:"earliest_app_hash,omitempty"`
-	EarliestBlockHeight string `json:"earliest_block_height,omitempty"`
-	EarliestBlockTime   string `json:"earliest_block_time,omitempty"`
-	CatchingUp          bool   `json:"catching_up,omitempty"`
+	LatestBlockHash     string `json:"latestBlockHash,omitempty"`
+	LatestAppHash       string `json:"latestAppHash,omitempty"`
+	LatestBlockHeight   string `json:"latestBlockHeight,omitempty"`
+	LatestBlockTime     string `json:"latestBlockTime,omitempty"`
+	EarliestBlockHash   string `json:"earliestBlockHash,omitempty"`
+	EarliestAppHash     string `json:"earliestAppHash,omitempty"`
+	EarliestBlockHeight string `json:"earliestBlockHeight,omitempty"`
+	EarliestBlockTime   string `json:"earliestBlockTime,omitempty"`
+	CatchingUp          bool   `json:"catchingUp,omitempty"`
 }
 
 type PubKey struct {
@@ -217,8 +217,8 @@ type PubKey struct {
 
 type ValidatorInfo struct {
 	Address     string  `json:"address,omitempty"`
-	PubKey      *PubKey `json:"pub_key,omitempty"`
-	VotingPower string  `json:"voting_power,omitempty"`
+	PubKey      *PubKey `json:"pubKey,omitempty"`
+	VotingPower string  `json:"votingPower,omitempty"`
 }
 
 type InterxStatus struct {
@@ -227,20 +227,20 @@ type InterxStatus struct {
 		PubKey struct {
 			Type  string `json:"type"`
 			Value string `json:"value"`
-		} `json:"pub_key,omitempty"`
+		} `json:"pubKey,omitempty"`
 		Moniker           string     `json:"moniker"`
-		KiraAddr          string     `json:"kira_addr"`
-		KiraPubKey        string     `json:"kira_pub_key"`
-		FaucetAddr        string     `json:"faucet_addr"`
-		GenesisChecksum   string     `json:"genesis_checksum"`
-		ChainID           string     `json:"chain_id"`
+		KiraAddr          string     `json:"kiraAddr"`
+		KiraPubKey        string     `json:"kiraPpubKey"`
+		FaucetAddr        string     `json:"faucetAddr"`
+		GenesisChecksum   string     `json:"genesisChecksum"`
+		ChainID           string     `json:"chainId"`
 		InterxVersion     string     `json:"version,omitempty"`
-		SekaiVersion      string     `json:"sekai_version,omitempty"`
-		LatestBlockHeight string     `json:"latest_block_height"`
-		CatchingUp        bool       `json:"catching_up"`
+		SekaiVersion      string     `json:"sekaiVersion,omitempty"`
+		LatestBlockHeight string     `json:"latestBlockHeight"`
+		CatchingUp        bool       `json:"catchingUp"`
 		Node              NodeConfig `json:"node"`
-	} `json:"interx_info,omitempty"`
-	NodeInfo      NodeInfo      `json:"node_info,omitempty"`
-	SyncInfo      SyncInfo      `json:"sync_info,omitempty"`
-	ValidatorInfo ValidatorInfo `json:"validator_info,omitempty"`
+	} `json:"interxInfo,omitempty"`
+	NodeInfo      NodeInfo      `json:"nodeInfo,omitempty"`
+	SyncInfo      SyncInfo      `json:"syncInfo,omitempty"`
+	ValidatorInfo ValidatorInfo `json:"validatorInfo,omitempty"`
 }

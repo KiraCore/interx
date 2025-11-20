@@ -1,9 +1,10 @@
 package types
 
 import (
+	"time"
+
 	types2 "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"time"
 )
 
 type GenesisChunkedResponse struct {
@@ -13,9 +14,9 @@ type GenesisChunkedResponse struct {
 }
 
 type KiraStatus struct {
-	NodeInfo      NodeInfo      `json:"node_info,omitempty"`
-	SyncInfo      SyncInfo      `json:"sync_info,omitempty"`
-	ValidatorInfo ValidatorInfo `json:"validator_info,omitempty"`
+	NodeInfo      NodeInfo      `json:"nodeInfo,omitempty"`
+	SyncInfo      SyncInfo      `json:"syncInfo,omitempty"`
+	ValidatorInfo ValidatorInfo `json:"validatorInfo,omitempty"`
 }
 
 type GenesisInfo struct {
@@ -39,13 +40,13 @@ type Delegation struct {
 		ValKey  string `json:"valkey,omitempty"`
 		Website string `json:"website,omitempty"`
 		Logo    string `json:"logo,omitempty"`
-	} `json:"validator_info"`
+	} `json:"validatorInfo"`
 	PoolInfo struct {
 		ID         int64    `json:"id,omitempty"`
 		Commission string   `json:"commission,omitempty"`
 		Status     string   `json:"status,omitempty"`
 		Tokens     []string `json:"tokens,omitempty"`
-	} `json:"pool_info"`
+	} `json:"poolInfo"`
 }
 
 type QueryDelegationsResult struct {
@@ -136,8 +137,8 @@ type QueryValidatorPoolResult struct {
 	ID              int64      `json:"id,omitempty"`
 	Slashed         string     `json:"slashed"`
 	Commission      string     `json:"commission"`
-	TotalDelegators int64      `json:"total_delegators"`
-	VotingPower     []sdk.Coin `json:"voting_power"`
+	TotalDelegators int64      `json:"totalDelegators"`
+	VotingPower     []sdk.Coin `json:"votingPower"`
 	Tokens          []string   `json:"tokens"`
 }
 
@@ -177,8 +178,8 @@ type QueryTxsParams struct {
 	Hash       string   `json:"hash,omitempty"`
 	Height     string   `json:"height,omitempty"`
 	Address    string   `json:"address,omitempty"`
-	StartDate  int64    `json:"start_date,string,omitempty"`
-	EndDate    int64    `json:"end_date,string,omitempty"`
+	StartDate  int64    `json:"startSate,string,omitempty"`
+	EndDate    int64    `json:"endDate,string,omitempty"`
 	Directions []string `json:"directions,omitempty"`
 	Statuses   []string `json:"statuses,omitempty"`
 	Types      []string `json:"types,omitempty"`
@@ -192,7 +193,7 @@ type TxResponse struct {
 	Codespace string `json:"codespace"`
 	Code      uint32 `json:"code"`
 	Data      string `json:"data"`
-	RawLog    string `json:"raw_log"`
+	RawLog    string `json:"rawLog"`
 	Logs      []struct {
 		Events []struct {
 			Type       string `json:"type"`
@@ -203,8 +204,8 @@ type TxResponse struct {
 		} `json:"events"`
 	} `json:"logs"`
 	Info      string    `json:"info"`
-	GasWanted string    `json:"gas_wanted"`
-	GasUsed   string    `json:"gas_used"`
+	GasWanted string    `json:"gasWanted"`
+	GasUsed   string    `json:"gasUsed"`
 	Tx        Tx        `json:"tx"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -223,35 +224,35 @@ type Tx struct {
 			PublicKey struct {
 				Type string `json:"@type"`
 				Key  string `json:"key"`
-			} `json:"public_key"`
+			} `json:"publicKey"`
 			ModeInfo struct {
 				Single struct {
 					Mode string `json:"mode"`
 				} `json:"single"`
-			} `json:"mode_info"`
+			} `json:"modeInfo"`
 			Sequence string `json:"sequence"`
-		} `json:"signer_infos"`
+		} `json:"signerInfos"`
 		Fee struct {
 			Amount   sdk.Coins `json:"amount"`
-			GasLimit string    `json:"gas_limit"`
+			GasLimit string    `json:"gasLimit"`
 			Payer    string    `json:"payer"`
 			Granter  string    `json:"granter"`
 		} `json:"fee"`
-	} `json:"auth_info"`
+	} `json:"authInfo"`
 	Signatures []string `json:"signatures"`
 }
 
 type ProposalsRequest struct {
 	Proposer   string   `json:"proposer,omitempty"`
-	DateStart  int      `json:"date_start,string,omitempty"`
-	DateEnd    int      `json:"date_end,string,omitempty"`
-	SortBy     string   `json:"sort_by,omitempty"`
+	DateStart  int      `json:"dateStart,string,omitempty"`
+	DateEnd    int      `json:"dateEnd,string,omitempty"`
+	SortBy     string   `json:"sortBy,omitempty"`
 	Types      []string `json:"types,omitempty"`
 	Statuses   []string `json:"statuses,omitempty"`
 	Voter      string   `json:"voter,omitempty"`
 	Offset     int64    `json:"offset,string,omitempty"`
 	Limit      int64    `json:"limit,string,omitempty"`
-	CountTotal int64    `json:"count_total,string,omitempty"`
+	CountTotal int64    `json:"countTotal,string,omitempty"`
 }
 
 type Proposal struct {
@@ -266,19 +267,19 @@ type Proposal struct {
 	MinEnactmentEndBlockHeight string      `json:"minEnactmentEndBlockHeight"`
 	ExecResult                 string      `json:"execResult"`
 	Result                     string      `json:"result"`
-	VotersCount                int         `json:"voters_count"`
-	VotesCount                 int         `json:"votes_count"`
+	VotersCount                int         `json:"votersCount"`
+	VotesCount                 int         `json:"votesCount"`
 	Quorum                     string      `json:"quorum"`
-	Metadata                   string      `json:"meta_data"`
-	Hash                       string      `json:"transaction_hash,omitempty"`
+	Metadata                   string      `json:"metaData"`
+	Hash                       string      `json:"transactionHash,omitempty"`
 	Timestamp                  int         `json:"timestamp,omitempty"`
-	BlockHeight                int         `json:"block_height,omitempty"`
+	BlockHeight                int         `json:"blockHeight,omitempty"`
 	Type                       string      `json:"type,omitempty"`
 	Proposer                   string      `json:"proposer,omitempty"`
 }
 
 type Pagination struct {
-	NextKey string `json:"next_key"`
+	NextKey string `json:"nextKey"`
 	Total   int    `json:"total,string"`
 }
 
@@ -327,8 +328,8 @@ type TokenAliasesGRPCResponse struct {
 
 type TokenAliasesResponse struct {
 	Data         []TokenAlias `json:"data"`
-	DefaultDenom string       `json:"default_denom"`
-	Bech32Prefix string       `json:"bech32_prefix"`
+	DefaultDenom string       `json:"defaultDenom"`
+	Bech32Prefix string       `json:"bech32Prefix"`
 	Pagination   *Pagination  `json:"pagination,omitempty"`
 }
 
