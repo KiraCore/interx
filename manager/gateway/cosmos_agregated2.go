@@ -210,7 +210,7 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultRes
 	return &result, nil
 }
 
-func (g *CosmosGateway) balances(req types.InboundRequest, accountID string) ([]sdk.Coin, error) {
+func (g *CosmosGateway) balances(req types.InboundRequest, accountID string) (*types.BalancesResponse, error) {
 	type BalancesRequest struct {
 		Limit      int `json:"limit,string,omitempty"`
 		Offset     int `json:"offset,string,omitempty"`
@@ -253,15 +253,17 @@ func (g *CosmosGateway) balances(req types.InboundRequest, accountID string) ([]
 		return nil, err
 	}
 
-	var result types.BalancesResponse
+	var result = new(types.BalancesResponse)
 
-	err = json.Unmarshal(grpcBytes, &result)
+	err = json.Unmarshal(grpcBytes, result)
 	if err != nil {
 		logger.Logger.Error("[query-balances] Invalid response format", zap.Error(err))
 		return nil, err
 	}
 
-	return result.Balances, nil
+	result.Pagination.Total = len(result.Balances)
+
+	return result, nil
 }
 
 func (g *CosmosGateway) delegations(req types.InboundRequest) (interface{}, error) {

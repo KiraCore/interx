@@ -413,7 +413,7 @@ func (g *CosmosGateway) faucet(req types.InboundRequest) (interface{}, error) {
 
 		var info = types.FaucetAccountInfo{
 			Address:  faucetAddress,
-			Balances: balances,
+			Balances: balances.Balances,
 		}
 
 		return info, nil
@@ -487,7 +487,7 @@ func (g *CosmosGateway) processFaucet(req types.InboundRequest) (interface{}, er
 	availableAmount := new(big.Int)
 	availableAmount.SetString("0", 10)
 
-	for _, balance := range faucetBalances {
+	for _, balance := range faucetBalances.Balances {
 		if balance.Denom == request.Token {
 			availableAmount.Set(balance.Amount.BigInt())
 		}
@@ -495,7 +495,7 @@ func (g *CosmosGateway) processFaucet(req types.InboundRequest) (interface{}, er
 
 	claimAmount := new(big.Int)
 	claimAmount.SetString("0", 10)
-	for _, balance := range claimBalances {
+	for _, balance := range claimBalances.Balances {
 		if balance.Denom == request.Token {
 			claimAmount.Set(balance.Amount.BigInt())
 		}
@@ -556,13 +556,13 @@ func (g *CosmosGateway) processFaucet(req types.InboundRequest) (interface{}, er
 		return nil, err
 	}
 
-	accountNumber, err := strconv.ParseUint(accountInfo.Account.AccountNumber, 10, 64)
+	accountNumber, err := strconv.ParseUint(accountInfo.AccountNumber, 10, 64)
 	if err != nil {
 		logger.Logger.Error("[faucet] Invalid account response format", zap.Error(err))
 		return nil, err
 	}
 
-	sequence, err := strconv.ParseUint(accountInfo.Account.Sequence, 10, 64)
+	sequence, err := strconv.ParseUint(accountInfo.Sequence, 10, 64)
 	if err != nil {
 		logger.Logger.Error("[faucet] Invalid account response format", zap.Error(err))
 		return nil, err
