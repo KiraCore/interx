@@ -5,11 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/saiset-co/sai-storage-mongo/external/adapter"
 
 	sekaitypes "github.com/KiraCore/sekai/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -50,12 +51,12 @@ func (g *CosmosGateway) statusAPI() (interface{}, error) {
 	result.InterxInfo.LatestBlockHeight = sentryStatus.SyncInfo.LatestBlockHeight
 	result.InterxInfo.CatchingUp = sentryStatus.SyncInfo.CatchingUp
 
-	//result.InterxInfo.Node = config.Config.Node
-	//result.InterxInfo.KiraAddr = g.address
+	//result.InterxInfo.Node = sentryStatus.NodeInfo.Other.RpcAddress
+	result.InterxInfo.KiraAddr = sentryStatus.ValidatorInfo.Address
 	result.InterxInfo.KiraPubKey = g.PubKey.String()
 	result.InterxInfo.FaucetAddr = g.PubKey.Address().String()
-	//result.InterxInfo.InterxVersion = config.Config.InterxVersion
-	//result.InterxInfo.SekaiVersion = config.Config.SekaiVersion
+	result.InterxInfo.InterxVersion = cast.ToString(g.context.GetConfig("version", ""))
+	result.InterxInfo.SekaiVersion = sentryStatus.NodeInfo.Version
 
 	return result, nil
 }

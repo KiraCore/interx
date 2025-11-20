@@ -6,6 +6,8 @@ common:
     enabled: false
     port: 8881
 
+version: "v0.4.48"
+
 storage:
   token: ""
   url: "http://worker-sai-storage:8880"
