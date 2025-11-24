@@ -87,6 +87,7 @@ jobs:
           release_branches: master
           default_bump: minor
           create_annotated_tag: true
+          tag_prefix: ""
           custom_tag: ${{ steps.get_version.outputs.new_tag }}
 
       - name: Print the new tag
