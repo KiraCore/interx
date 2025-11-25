@@ -10,9 +10,9 @@ version: "v0.10.6"
 
 storage:
   token: ""
-  url: "http://worker-sai-storage:8880"
+  url: "http://storage.local:8880"
 ethereum:
-  interaction: "http://worker-sai-ethereum-interaction:8882"
+  interaction: "http://ethereum-interaction.local:8882"
   nodes:
     chain1: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"
   token: ""
@@ -21,14 +21,14 @@ ethereum:
   rate_limit: 100000
 cosmos:
   node:
-    json_rpc: ""
-    tendermint: ""
+    json_rpc: "sekai.local:9090"
+    tendermint: "http://sekai.local:26657"
   tx_modes:
     sync: true
     async: true
     block: true
   gw_timeout: 30
-  interaction: "http://worker-sai-cosmos-interaction:8884"
+  interaction: "http://cosmos-interaction.local:8884"
   token: ""
   retries: 1
   retry_delay: 10
