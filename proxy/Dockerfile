@@ -15,4 +15,4 @@ COPY --from=build /src/sai-interax-proxy /srv/
 
 RUN chmod +x /srv/sai-interax-proxy
 
-CMD /srv/sai-interax-proxy start > /srv/logs/app.log 2>&1
+CMD /srv/sai-interax-proxy start
