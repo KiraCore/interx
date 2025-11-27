@@ -20,7 +20,7 @@ COPY --from=build /src/config.yml /srv/config.yml
 
 RUN chmod +x /srv/sai-interx-manager
 
-# Write version to file for easy inspection
 RUN echo "${VERSION}" > /srv/VERSION
 
-CMD /srv/sai-interx-manager start > /srv/logs/app.log 2>&1
+CMD /srv/sai-interx-manager start
+
