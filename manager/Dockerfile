@@ -15,4 +15,4 @@ COPY --from=build /src/sai-interx-manager /srv/
 
 RUN chmod +x /srv/sai-interx-manager
 
-CMD /srv/sai-interx-manager start > /srv/logs/app.log 2>&1
+CMD /srv/sai-interx-manager start
