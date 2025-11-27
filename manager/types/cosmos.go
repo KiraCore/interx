@@ -352,7 +352,8 @@ type FaucetAccountInfo struct {
 }
 
 type BalancesResponse struct {
-	Balances []sdk.Coin `json:"balances"`
+	Balances   []sdk.Coin  `json:"balances"`
+	Pagination *Pagination `json:"pagination,omitempty"`
 }
 
 type FaucetRequest struct {
@@ -380,12 +381,14 @@ type CosmosConfig struct {
 	RateLimit   int    `json:"rate_limit,float64"`
 }
 
+type AccountInfo struct {
+	Type          string      `json:"@type"`
+	Address       string      `json:"address"`
+	PubKey        interface{} `json:"pubKey"`
+	AccountNumber string      `json:"accountNumber"`
+	Sequence      string      `json:"sequence"`
+}
+
 type AccountResponse struct {
-	Account struct {
-		Type          string      `json:"@type"`
-		Address       string      `json:"address"`
-		PubKey        interface{} `json:"pubKey"`
-		AccountNumber string      `json:"accountNumber"`
-		Sequence      string      `json:"sequence"`
-	} `json:"account"`
+	Account *AccountInfo `json:"account"`
 }

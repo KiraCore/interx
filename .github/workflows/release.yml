@@ -26,6 +26,58 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Use REPO_ACCESS token if available for pushing to protected branches
+          token: ${{ secrets.REPO_ACCESS || secrets.GITHUB_TOKEN }}
+
+      - name: Determine next version
+        id: get_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: master
+          default_bump: minor
+          dry_run: true
+
+      - name: Update version in manager/config.yml
+        run: |
+          # Update the version in manager/config.yml
+          VERSION="${{ steps.get_version.outputs.new_tag }}"
+          echo "Updating manager/config.yml with version: $VERSION"
+
+          # Check if manager/config.yml exists
+          if [ ! -f manager/config.yml ]; then
+            echo "Warning: manager/config.yml does not exist. Skipping version update."
+            exit 0
+          fi
+
+          # Use sed to update the version line in the config file
+          sed -i "s/^version:.*$/version: \"$VERSION\"/" manager/config.yml
+
+          # Verify the update
+          echo "Updated manager/config.yml content:"
+          grep "^version:" manager/config.yml || echo "No version field found in manager/config.yml"
+
+          # Configure git
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Check if there are changes to commit
+          if git diff --quiet manager/config.yml; then
+            echo "No changes to manager/config.yml"
+          else
+            # Commit the version update
+            git add manager/config.yml
+            git commit -m "ci: bump version to $VERSION in manager/config.yml [skip ci]"
+
+            # Try to push to master
+            echo "Attempting to push version update to master..."
+            if git push origin HEAD:master; then
+              echo "Successfully pushed version update to master"
+            else
+              echo "Warning: Could not push to master (may be protected). Version in config.yml may not match release tag."
+              echo "Consider using a Personal Access Token with appropriate permissions in REPO_ACCESS secret."
+            fi
+          fi
 
       - name: Create and Push Tag
         id: create_tag
@@ -35,6 +87,8 @@ jobs:
           release_branches: master
           default_bump: minor
           create_annotated_tag: true
+          tag_prefix: ""
+          custom_tag: ${{ steps.get_version.outputs.new_tag }}
 
       - name: Print the new tag
         run: |

@@ -11,7 +11,7 @@ common:
     port: 8881
 storage:
   atlas: false
-  host: "mongo-db"
+  host: "mongo.local"
   port: "27017"
   user: ""
   pass: ""
