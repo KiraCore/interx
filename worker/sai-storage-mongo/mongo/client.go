@@ -280,7 +280,7 @@ func (c Client) Aggregate(collectionName string, pipeline interface{}) (*types.F
 	return findResult, nil
 }
 
-func (c Client) CreateIndexes(collectionName string, data interface{}) ([]string, error) {
+func (c Client) CreateIndexes(collectionName string, data interface{}) (*types.FindResult, error) {
 	collection := c.GetCollection(collectionName)
 	var _data []IndexData
 
@@ -332,39 +332,49 @@ func (c Client) CreateIndexes(collectionName string, data interface{}) ([]string
 		return nil, err
 	}
 
-	return result, nil
+	resultInterface := make([]interface{}, len(result))
+	for i, v := range result {
+		resultInterface[i] = v
+	}
+
+	return &types.FindResult{
+		Count:  int64(len(resultInterface)),
+		Result: resultInterface,
+	}, nil
 }
 
-func (c Client) GetIndexes(collectionName string) ([]interface{}, error) {
+func (c Client) GetIndexes(collectionName string) (*types.FindResult, error) {
 	var result []interface{}
 	collection := c.GetCollection(collectionName)
 
 	cur, err := collection.Indexes().List(context.TODO())
 	if err != nil {
 		logger.Logger.Error("GetIndexes", zap.Error(err))
-		return result, err
+		return nil, err
 	}
 
 	defer cur.Close(context.TODO())
 
 	for cur.Next(context.TODO()) {
-		var index interface{}
-		decodeErr := cur.Decode(&index)
+		var indexDoc interface{}
+		decodeErr := cur.Decode(&indexDoc)
 
 		if decodeErr != nil {
-			return result, decodeErr
+			return nil, decodeErr
 		}
 
-		result = append(result, index)
-		break
+		result = append(result, indexDoc)
 	}
 
 	if cursorErr := cur.Err(); cursorErr != nil {
 		logger.Logger.Error("GetIndexes", zap.Error(err))
-		return result, cursorErr
+		return nil, cursorErr
 	}
 
-	return result, nil
+	return &types.FindResult{
+		Count:  int64(len(result)),
+		Result: result,
+	}, nil
 }
 
 func (c Client) DropIndexes(collectionName string) ([]interface{}, error) {
