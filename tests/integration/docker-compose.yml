@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interx-integration-tests
+    environment:
+      - INTERX_URL=${INTERX_URL:-http://3.123.154.245:11000}
+      - TEST_ADDRESS=${TEST_ADDRESS:-kira143q8vxpvuykt9pq50e6hng9s38vmy844n8k9wx}
+      - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS:-kira1vvcj9avffvyav83gmptdlzrprgvsrjxzh7f9sz}
+      - DELEGATOR_ADDRESS=${DELEGATOR_ADDRESS:-kira177lwmjyjds3cy7trers83r4pjn3dhv8zrqk9dl}
+    network_mode: host
+    command: ["go", "test", "-v", "-count=1", "./..."]
+
+  smoke-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interx-smoke-tests
+    environment:
+      - INTERX_URL=${INTERX_URL:-http://3.123.154.245:11000}
+      - TEST_ADDRESS=${TEST_ADDRESS:-kira143q8vxpvuykt9pq50e6hng9s38vmy844n8k9wx}
+    network_mode: host
+    command: ["go", "test", "-v", "-count=1", "-run", "TestInterxStatus|TestKiraStatus", "./..."]
+
+  account-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interx-account-tests
+    environment:
+      - INTERX_URL=${INTERX_URL:-http://3.123.154.245:11000}
+      - TEST_ADDRESS=${TEST_ADDRESS:-kira143q8vxpvuykt9pq50e6hng9s38vmy844n8k9wx}
+    network_mode: host
+    command: ["go", "test", "-v", "-count=1", "-run", "TestQuery(Accounts|Balances)", "./..."]
