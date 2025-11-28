@@ -1,0 +1,353 @@
+---
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'release/**'
+      - 'major/**'
+      - master
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+    inputs:
+      interx_url:
+        description: 'Interx server URL to test against'
+        required: false
+        default: 'http://3.123.154.245:11000'
+      test_address:
+        description: 'Test account address'
+        required: false
+        default: 'kira143q8vxpvuykt9pq50e6hng9s38vmy844n8k9wx'
+
+env:
+  INTERX_URL: ${{ github.event.inputs.interx_url || 'http://3.123.154.245:11000' }}
+  TEST_ADDRESS: ${{ github.event.inputs.test_address || 'kira143q8vxpvuykt9pq50e6hng9s38vmy844n8k9wx' }}
+
+jobs:
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check server availability
+        id: server-check
+        run: |
+          echo "Testing connection to $INTERX_URL"
+          if curl -sf "$INTERX_URL/api/status" > /dev/null; then
+            echo "server_available=true" >> $GITHUB_OUTPUT
+            echo "Server is available"
+          else
+            echo "server_available=false" >> $GITHUB_OUTPUT
+            echo "Warning: Server at $INTERX_URL is not available"
+          fi
+
+      - name: Build test container
+        if: steps.server-check.outputs.server_available == 'true'
+        working-directory: tests/integration
+        run: docker build -t interx-integration-tests .
+
+      - name: Run smoke tests
+        if: steps.server-check.outputs.server_available == 'true'
+        working-directory: tests/integration
+        run: |
+          docker run --rm --network host \
+            -e INTERX_URL=${{ env.INTERX_URL }} \
+            -e TEST_ADDRESS=${{ env.TEST_ADDRESS }} \
+            interx-integration-tests \
+            go test -v -count=1 -run "TestInterxStatus|TestKiraStatus" ./...
+
+    outputs:
+      server_available: ${{ steps.server-check.outputs.server_available }}
+
+  format-validation:
+    name: Miro Format Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: smoke-tests
+    if: needs.smoke-tests.outputs.server_available == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build test container
+        working-directory: tests/integration
+        run: docker build -t interx-integration-tests .
+
+      - name: Run format validation tests
+        id: format-tests
+        working-directory: tests/integration
+        run: |
+          docker run --rm --network host \
+            -e INTERX_URL=${{ env.INTERX_URL }} \
+            -e TEST_ADDRESS=${{ env.TEST_ADDRESS }} \
+            interx-integration-tests \
+            go test -v -count=1 -run "ResponseFormat" ./... 2>&1 | tee format-test-output.log
+
+          # Count failures
+          FAILURES=$(grep -c "^--- FAIL" format-test-output.log || echo "0")
+          PASSES=$(grep -c "^--- PASS" format-test-output.log || echo "0")
+          echo "failures=$FAILURES" >> $GITHUB_OUTPUT
+          echo "passes=$PASSES" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Format test summary
+        run: |
+          echo "## Miro Format Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | ${{ steps.format-tests.outputs.passes }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | ${{ steps.format-tests.outputs.failures }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.format-tests.outputs.failures }}" != "0" ]; then
+            echo "### Failed Tests (Known Issues)" >> $GITHUB_STEP_SUMMARY
+            echo "These failures track known incompatibilities with miro frontend:" >> $GITHUB_STEP_SUMMARY
+            echo "- Issue #13: snake_case vs camelCase" >> $GITHUB_STEP_SUMMARY
+            echo "- Issue #16: String vs number types" >> $GITHUB_STEP_SUMMARY
+            echo "- Issue #19: Missing expected fields" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload format test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: format-validation-results
+          path: tests/integration/format-test-output.log
+          retention-days: 7
+
+  integration-tests:
+    name: Full Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: smoke-tests
+    if: needs.smoke-tests.outputs.server_available == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build test container
+        working-directory: tests/integration
+        run: docker build -t interx-integration-tests .
+
+      - name: Run integration tests
+        id: integration-tests
+        working-directory: tests/integration
+        run: |
+          docker run --rm --network host \
+            -e INTERX_URL=${{ env.INTERX_URL }} \
+            -e TEST_ADDRESS=${{ env.TEST_ADDRESS }} \
+            interx-integration-tests \
+            go test -v -count=1 -timeout=10m ./... 2>&1 | tee test-output.log
+
+          # Parse results
+          FAILURES=$(grep -c "^--- FAIL" test-output.log || echo "0")
+          PASSES=$(grep -c "^--- PASS" test-output.log || echo "0")
+          TOTAL=$((FAILURES + PASSES))
+          echo "failures=$FAILURES" >> $GITHUB_OUTPUT
+          echo "passes=$PASSES" >> $GITHUB_OUTPUT
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Test summary
+        run: |
+          echo "## Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total | ${{ steps.integration-tests.outputs.total }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed | ${{ steps.integration-tests.outputs.passes }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed | ${{ steps.integration-tests.outputs.failures }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # List failed tests
+          if [ "${{ steps.integration-tests.outputs.failures }}" != "0" ]; then
+            echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            grep "^--- FAIL" tests/integration/test-output.log >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: tests/integration/test-output.log
+          retention-days: 7
+
+  category-tests:
+    name: ${{ matrix.category.name }} Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: smoke-tests
+    if: needs.smoke-tests.outputs.server_available == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        category:
+          - name: Account
+            pattern: "Test(Account|Balances|QueryAccounts)"
+          - name: Transactions
+            pattern: "Test(Transaction|Blocks)"
+          - name: Validators
+            pattern: "Test(Validator|Consensus)"
+          - name: Status
+            pattern: "Test(Status|Dashboard|Metadata|RPC|TotalSupply)"
+          - name: Governance
+            pattern: "Test(Proposal|Voters|Votes|NetworkProperties|ExecutionFee|DataKeys|Permissions|Roles)"
+          - name: Staking
+            pattern: "Test(StakingPool|Delegations|Undelegations)"
+          - name: Tokens
+            pattern: "Test(TokenAliases|TokenRates)"
+          - name: Identity
+            pattern: "Test(Identity)"
+          - name: NodeDiscovery
+            pattern: "Test(P2P|Interx|Snap)List"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build test container
+        working-directory: tests/integration
+        run: docker build -t interx-integration-tests .
+
+      - name: Run ${{ matrix.category.name }} tests
+        working-directory: tests/integration
+        run: |
+          docker run --rm --network host \
+            -e INTERX_URL=${{ env.INTERX_URL }} \
+            -e TEST_ADDRESS=${{ env.TEST_ADDRESS }} \
+            interx-integration-tests \
+            go test -v -count=1 -run "${{ matrix.category.pattern }}" ./...
+        continue-on-error: true
+
+  test-report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, format-validation, integration-tests, category-tests]
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+        continue-on-error: true
+
+      - name: Generate report
+        run: |
+          echo "## Integration Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Server:** \`${{ env.INTERX_URL }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Job status table
+          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # Helper function for status emoji
+          status_icon() {
+            case "$1" in
+              success) echo ":white_check_mark:" ;;
+              failure) echo ":x:" ;;
+              skipped) echo ":fast_forward:" ;;
+              cancelled) echo ":stop_sign:" ;;
+              *) echo ":grey_question:" ;;
+            esac
+          }
+
+          echo "| Smoke Tests | $(status_icon "${{ needs.smoke-tests.result }}") ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Format Validation | $(status_icon "${{ needs.format-validation.result }}") ${{ needs.format-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | $(status_icon "${{ needs.integration-tests.result }}") ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Category Tests | $(status_icon "${{ needs.category-tests.result }}") ${{ needs.category-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Parse integration test results if available
+          if [ -f "test-results/integration-test-results/test-output.log" ]; then
+            LOG_FILE="test-results/integration-test-results/test-output.log"
+
+            TOTAL_PASS=$(grep -c "^--- PASS" "$LOG_FILE" 2>/dev/null || echo "0")
+            TOTAL_FAIL=$(grep -c "^--- FAIL" "$LOG_FILE" 2>/dev/null || echo "0")
+            TOTAL=$((TOTAL_PASS + TOTAL_FAIL))
+
+            echo "### Integration Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| :white_check_mark: Passed | $TOTAL_PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| :x: Failed | $TOTAL_FAIL |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # List failed tests if any
+            if [ "$TOTAL_FAIL" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:x: Failed Tests ($TOTAL_FAIL)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- FAIL" "$LOG_FILE" | head -50 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            # List passed tests in collapsible section
+            if [ "$TOTAL_PASS" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:white_check_mark: Passed Tests ($TOTAL_PASS)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- PASS" "$LOG_FILE" | head -100 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # Parse format validation results if available
+          if [ -f "test-results/format-validation-results/format-test-output.log" ]; then
+            LOG_FILE="test-results/format-validation-results/format-test-output.log"
+
+            FORMAT_PASS=$(grep -c "^--- PASS" "$LOG_FILE" 2>/dev/null || echo "0")
+            FORMAT_FAIL=$(grep -c "^--- FAIL" "$LOG_FILE" 2>/dev/null || echo "0")
+
+            echo "### Format Validation Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| :white_check_mark: Passed | $FORMAT_PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| :x: Failed | $FORMAT_FAIL |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$FORMAT_FAIL" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:x: Format Validation Failures ($FORMAT_FAIL)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- FAIL" "$LOG_FILE" | head -50 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Full test logs available in workflow artifacts.*" >> $GITHUB_STEP_SUMMARY
