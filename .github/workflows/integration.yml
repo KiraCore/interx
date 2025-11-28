@@ -241,8 +241,8 @@ jobs:
   test-report:
     name: Test Report
     runs-on: ubuntu-latest
-    needs: [format-validation, integration-tests, category-tests]
-    if: always() && needs.smoke-tests.result != 'skipped'
+    needs: [smoke-tests, format-validation, integration-tests, category-tests]
+    if: always()
 
     steps:
       - name: Download all artifacts
@@ -255,12 +255,99 @@ jobs:
         run: |
           echo "## Integration Test Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Server:** \`${{ env.INTERX_URL }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Job status table
           echo "### Job Status" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Format Validation | ${{ needs.format-validation.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Category Tests | ${{ needs.category-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          # Helper function for status emoji
+          status_icon() {
+            case "$1" in
+              success) echo ":white_check_mark:" ;;
+              failure) echo ":x:" ;;
+              skipped) echo ":fast_forward:" ;;
+              cancelled) echo ":stop_sign:" ;;
+              *) echo ":grey_question:" ;;
+            esac
+          }
+
+          echo "| Smoke Tests | $(status_icon "${{ needs.smoke-tests.result }}") ${{ needs.smoke-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Format Validation | $(status_icon "${{ needs.format-validation.result }}") ${{ needs.format-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | $(status_icon "${{ needs.integration-tests.result }}") ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Category Tests | $(status_icon "${{ needs.category-tests.result }}") ${{ needs.category-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "Test logs are available in the workflow artifacts." >> $GITHUB_STEP_SUMMARY
+
+          # Parse integration test results if available
+          if [ -f "test-results/integration-test-results/test-output.log" ]; then
+            LOG_FILE="test-results/integration-test-results/test-output.log"
+
+            TOTAL_PASS=$(grep -c "^--- PASS" "$LOG_FILE" 2>/dev/null || echo "0")
+            TOTAL_FAIL=$(grep -c "^--- FAIL" "$LOG_FILE" 2>/dev/null || echo "0")
+            TOTAL=$((TOTAL_PASS + TOTAL_FAIL))
+
+            echo "### Integration Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| :white_check_mark: Passed | $TOTAL_PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| :x: Failed | $TOTAL_FAIL |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Total** | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # List failed tests if any
+            if [ "$TOTAL_FAIL" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:x: Failed Tests ($TOTAL_FAIL)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- FAIL" "$LOG_FILE" | head -50 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+
+            # List passed tests in collapsible section
+            if [ "$TOTAL_PASS" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:white_check_mark: Passed Tests ($TOTAL_PASS)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- PASS" "$LOG_FILE" | head -100 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # Parse format validation results if available
+          if [ -f "test-results/format-validation-results/format-test-output.log" ]; then
+            LOG_FILE="test-results/format-validation-results/format-test-output.log"
+
+            FORMAT_PASS=$(grep -c "^--- PASS" "$LOG_FILE" 2>/dev/null || echo "0")
+            FORMAT_FAIL=$(grep -c "^--- FAIL" "$LOG_FILE" 2>/dev/null || echo "0")
+
+            echo "### Format Validation Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| :white_check_mark: Passed | $FORMAT_PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| :x: Failed | $FORMAT_FAIL |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$FORMAT_FAIL" != "0" ]; then
+              echo "<details>" >> $GITHUB_STEP_SUMMARY
+              echo "<summary>:x: Format Validation Failures ($FORMAT_FAIL)</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              grep "^--- FAIL" "$LOG_FILE" | head -50 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Full test logs available in workflow artifacts.*" >> $GITHUB_STEP_SUMMARY
