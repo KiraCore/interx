@@ -4,7 +4,8 @@ WORKDIR /src/
 
 COPY ./ /src/
 
-RUN go build -o sai-eth-interaction -buildvcs=false
+ENV GOPRIVATE=github.com/KiraCore/*
+RUN go mod tidy && go build -o sai-eth-interaction -buildvcs=false
 
 FROM ubuntu
 

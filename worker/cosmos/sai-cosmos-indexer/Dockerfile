@@ -5,7 +5,8 @@ WORKDIR /src
 
 COPY ./ /src/
 
-RUN go build -o sai-cosmos-indexer -buildvcs=false
+ENV GOPRIVATE=github.com/KiraCore/*
+RUN go mod tidy && go build -o sai-cosmos-indexer -buildvcs=false
 
 FROM ubuntu
 

@@ -5,7 +5,8 @@ WORKDIR /src/cmd/app
 
 COPY ./ /src/
 
-RUN go build -o sai-eth-indexer -buildvcs=false
+ENV GOPRIVATE=github.com/KiraCore/*
+RUN go mod tidy && go build -o sai-eth-indexer -buildvcs=false
 
 FROM ubuntu
 
