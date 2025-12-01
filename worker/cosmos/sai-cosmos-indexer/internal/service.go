@@ -5,14 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	sekaiapp "github.com/KiraCore/sekai/app"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"go.uber.org/zap"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	sekaiapp "github.com/KiraCore/sekai/app"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.uber.org/zap"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cast"
@@ -28,6 +32,11 @@ const (
 	filePathAddresses   = "./addresses.json"
 	filePathLatestBlock = "./latest_handled_block"
 )
+
+type IndexData struct {
+	Keys   []bson.M `bson:"keys" json:"keys"`
+	Unique bool     `bson:"unique" json:"unique"`
+}
 
 type InternalService struct {
 	mu            *sync.Mutex
@@ -99,6 +108,98 @@ func (is *InternalService) Init() {
 	if is.currentBlock < startBlock {
 		is.currentBlock = startBlock
 	}
+
+	is.ProcessIndexes()
+}
+
+func (is *InternalService) ProcessIndexes() {
+	var newBlockIndexes = []IndexData{
+		{
+			Keys:   []bson.M{{"block_id.hash": 1}},
+			Unique: false,
+		},
+	}
+
+	var newTransactionIndexes = []IndexData{
+		{
+			Keys:   []bson.M{{"hash": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"height": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"messages.typeUrl": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"timestamp": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"tx_result.code": 1}},
+			Unique: false,
+		},
+	}
+
+	blockIndexes, err := is.getIndexes(is.config.CollectionName + "_blocks")
+	if err != nil {
+		logger.Logger.Error("getIndexes > blockIndexes", zap.Error(err))
+		return
+	}
+
+	if !hasRequiredIndexes(blockIndexes, newBlockIndexes) {
+		indexResp, err := is.createIndexes(is.config.CollectionName+"_blocks", newBlockIndexes)
+		if err != nil {
+			logger.Logger.Error("createIndexes > blockIndexes", zap.Error(err))
+			return
+		}
+
+		logger.Logger.Debug("ProcessIndexes", zap.Any("indexResp", indexResp))
+	}
+
+	transactionIndexes, err := is.getIndexes(is.config.CollectionName + "_txs")
+	if err != nil {
+		logger.Logger.Error("getIndexes > transactionIndexes", zap.Error(err))
+		return
+	}
+
+	if !hasRequiredIndexes(transactionIndexes, newTransactionIndexes) {
+		indexResp, err := is.createIndexes(is.config.CollectionName+"_txs", newTransactionIndexes)
+		if err != nil {
+			logger.Logger.Error("createIndexes > transactionIndexes", zap.Error(err))
+			return
+		}
+
+		logger.Logger.Debug("ProcessIndexes", zap.Any("indexResp", indexResp))
+	}
+
+}
+
+func hasRequiredIndexes(data interface{}, required []IndexData) bool {
+	resultStr := fmt.Sprintf("%v", data)
+
+	for _, req := range required {
+		found := false
+		for _, keyMap := range req.Keys {
+			for k := range keyMap {
+				indexName := k + "_1"
+				if strings.Contains(resultStr, indexName) {
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (is *InternalService) Process() {
@@ -224,6 +325,66 @@ func (is *InternalService) handleBlockTxs() error {
 	err = is.rewriteLastHandledBlock(is.currentBlock)
 
 	return err
+}
+
+func (is *InternalService) getIndexes(collection string) (interface{}, error) {
+	storageRequest := adapter.Request{
+		Method: "get_indexes",
+		Data: adapter.GetIndexesRequest{
+			Collection: collection,
+		},
+	}
+
+	bodyBytes, err := jsoniter.Marshal(&storageRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	respBytes, err := utils.SaiQuerySender(bytes.NewBuffer(bodyBytes), is.storageConfig.Url, is.storageConfig.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp interface{}
+	err = json.Unmarshal(respBytes, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (is *InternalService) createIndexes(collection string, indexes []IndexData) (interface{}, error) {
+	indexesInterface := make([]interface{}, len(indexes))
+	for i, idx := range indexes {
+		indexesInterface[i] = idx
+	}
+
+	storageRequest := adapter.Request{
+		Method: "create_indexes",
+		Data: adapter.CreateIndexesRequest{
+			Collection: collection,
+			Data:       indexesInterface,
+		},
+	}
+
+	bodyBytes, err := jsoniter.Marshal(&storageRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := utils.SaiQuerySender(bytes.NewBuffer(bodyBytes), is.storageConfig.Url, is.storageConfig.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp interface{}
+	err = json.Unmarshal(bytes, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (is *InternalService) sendBlockToStorage(block *model.BlockInfo) error {
