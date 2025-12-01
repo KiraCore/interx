@@ -1,25 +1,46 @@
+# ============================================================================
+# COSMOS INDEXER CONFIGURATION
+# ============================================================================
+# Indexes Cosmos/SEKAI blockchain data into MongoDB storage.
+# Source: worker/cosmos/sai-cosmos-indexer/internal/service.go
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
   http:
-    enabled: true
-    port: 8883
+    enabled: true                # Enable HTTP server for health checks/API
+    port: 8883                   # HTTP port
   ws:
-    enabled: false
-    port: 8081
+    enabled: false               # Enable WebSocket server
+    port: 8081                   # WebSocket port
 
+# ----------------------------------------------------------------------------
+# STORAGE SERVICE (sai-storage-mongo)
+# ----------------------------------------------------------------------------
 storage:
-  token: ""
-  url: "http://storage.local:8880"
-  email: ""
-  password: ""
-  mongo_collection_name: "cosmos"
-notifier:
-  token: "lafijsiadnm/a@@#lsa$fd8f"
-  url: "http://localhost:8885"
-  sender_id: "Cosmos"
+  token: ""                              # Auth token for storage service
+  url: "http://storage.local:8880"       # Storage service URL
+  email: ""                              # Email for auth (alternative to token)
+  password: ""                           # Password for auth (alternative to token)
+  mongo_collection_name: "cosmos"        # MongoDB collection name for indexed data
 
-node_address: "http://sekai.local:26657"
-start_block: 1
-tx_type: ""
-sleep_duration: 2
-handle_blocks: true
-skip_faile_tx: false
+# ----------------------------------------------------------------------------
+# NOTIFIER SERVICE (optional alerts/notifications)
+# ----------------------------------------------------------------------------
+notifier:
+  token: "lafijsiadnm/a@@#lsa$fd8f"      # Auth token for notifier
+  url: "http://localhost:8885"           # Notifier service URL
+  sender_id: "Cosmos"                    # Identifier for notification source
+  email: ""                              # Email for auth (alternative to token)
+  password: ""                           # Password for auth (alternative to token)
+
+# ----------------------------------------------------------------------------
+# INDEXER SETTINGS
+# ----------------------------------------------------------------------------
+node_address: "http://sekai.local:26657"   # Tendermint RPC endpoint to index from
+start_block: 1                             # Block height to start indexing from (0 = latest)
+tx_type: ""                                # Filter by tx type (empty = all types)
+sleep_duration: 2                          # Seconds to wait between polling for new blocks
+handle_blocks: true                        # Index block data (not just transactions)
+skip_failed_tx: false                      # Skip failed transactions (code expects this name)
+# NOTE: Original config had typo "skip_faile_tx" - use "skip_failed_tx"

@@ -1,14 +1,50 @@
+# ============================================================================
+# ETHEREUM CONTRACT INTERACTION SERVICE CONFIGURATION
+# ============================================================================
+# HTTP proxy for creating transactions to Ethereum/EVM contracts.
+# Source: worker/ethereum/sai-ethereum-contract-interaction/internal/handlers.go
+# Note: Contracts are defined separately in contracts.json
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
   http:
-    enabled: true
-    port: 8882
+    enabled: true                # Enable HTTP server
+    port: 8882                   # HTTP port for API endpoints
   socket:
-    enabled: false
-    port: 9000
+    enabled: false               # Enable socket server
+    port: 9000                   # Socket port
   ws:
-    enabled: false
-    port: 9001
-  log_mode: "debug"
+    enabled: false               # Enable WebSocket server
+    port: 9001                   # WebSocket port
+  log_mode: "debug"              # Log level: debug, info, warn, error
+
+# ----------------------------------------------------------------------------
+# AUTHENTICATION
+# ----------------------------------------------------------------------------
+# Token used to authenticate incoming requests from Manager service
 token: "a@@#lsa$fd8f"
+
+# ----------------------------------------------------------------------------
+# ETHEREUM NODE (fallback, contracts.json has per-contract servers)
+# ----------------------------------------------------------------------------
 specific:
-  eth_server: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"
+  eth_server: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"  # Default ETH RPC
+
+# ============================================================================
+# CONTRACTS CONFIGURATION (in contracts.json)
+# ============================================================================
+# Contracts are defined in a separate contracts.json file with structure:
+# {
+#   "contracts": [
+#     {
+#       "name": "ContractName",          # Contract identifier for API calls
+#       "server": "https://rpc.url",     # ETH RPC endpoint for this contract
+#       "abi": "[{...}]",                # Contract ABI as JSON string
+#       "address": "0x...",              # Contract address on chain
+#       "private": "...",                # Private key for signing (hex, no 0x)
+#       "gas_limit": 10000000            # Gas limit for transactions
+#     }
+#   ]
+# }
+# ============================================================================

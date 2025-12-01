@@ -1,45 +1,104 @@
+# ============================================================================
+# INTERX MANAGER CONFIGURATION
+# ============================================================================
+# Source: manager/internal/service.go, manager/gateway/factory.go
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
   http:
-    enabled: true
-    port: 8080
+    enabled: true                # Enable HTTP server
+    port: 8080                   # HTTP port (used for API + P2P health checks)
   ws:
-    enabled: false
-    port: 8881
+    enabled: false               # Enable WebSocket server
+    port: 8881                   # WebSocket port
 
+# Service version for compatibility checks
 version: "v0.15.0"
 
+# ----------------------------------------------------------------------------
+# STORAGE SERVICE (sai-storage-mongo)
+# Used by: StorageGateway
+# ----------------------------------------------------------------------------
 storage:
-  token: ""
-  url: "http://storage.local:8880"
+  token: ""                              # Auth token for storage service
+  url: "http://storage.local:8880"       # Storage service URL
+  # retries: 1                           # Retry attempts for failed requests (default: 1)
+  # retry_delay: 10                      # Delay between retries in seconds (default: 10)
+  # rate_limit: 10                       # Requests per second limit (default: 10)
+
+# ----------------------------------------------------------------------------
+# ETHEREUM GATEWAY
+# Used by: EthereumGateway for EVM chain interactions
+# ----------------------------------------------------------------------------
 ethereum:
-  interaction: "http://ethereum-interaction.local:8882"
-  nodes:
+  interaction: "http://ethereum-interaction.local:8882"  # ethereum-contract-interaction service URL
+  nodes:                                 # Map of chain_id -> RPC endpoint
     chain1: "https://data-seed-prebsc-1-s1.bnbchain.org:8545"
-  token: ""
-  retries: 1
-  retry_delay: 10
-  rate_limit: 100000
+    # mainnet: "https://eth-mainnet.example.com"
+    # polygon: "https://polygon-rpc.example.com"
+  token: ""                              # Auth token for interaction service
+  retries: 1                             # Retry attempts (default: 1)
+  retry_delay: 10                        # Retry delay in seconds (default: 10)
+  rate_limit: 100000                     # Requests/sec limit (high = disabled)
+
+# ----------------------------------------------------------------------------
+# COSMOS/KIRA GATEWAY (SEKAI)
+# Used by: CosmosGateway
+# Struct: manager/types/cosmos.go:364-382
+# ----------------------------------------------------------------------------
 cosmos:
   node:
-    json_rpc: "sekai.local:9090"
-    tendermint: "http://sekai.local:26657"
-  tx_modes:
-    sync: true
-    async: true
-    block: true
-  gw_timeout: 30
-  interaction: "http://cosmos-interaction.local:8884"
-  token: ""
-  retries: 1
-  retry_delay: 10
-  rate_limit: 2
+    json_rpc: "sekai.local:9090"         # gRPC endpoint (no protocol prefix)
+    tendermint: "http://sekai.local:26657"  # Tendermint RPC (with http://)
+  tx_modes:                              # Transaction broadcast modes
+    sync: true                           # Returns after CheckTx (fast)
+    async: true                          # Returns immediately (fastest)
+    block: true                          # Returns after block inclusion (slowest, safest)
+  gw_timeout: 30                         # HTTP client timeout in seconds
+  interaction: "http://cosmos-interaction.local:8884"  # cosmos-interaction service URL
+  token: ""                              # Auth token for interaction service
+  retries: 1                             # Retry attempts
+  retry_delay: 10                        # Retry delay in seconds
+  rate_limit: 2                          # Requests/sec (low for public nodes)
+  # faucet:                              # Optional faucet configuration
+  #   faucet_amounts:                    # Tokens to dispense per claim
+  #     ukex: 100000000
+  #   faucet_minimum_amounts:            # Max balance to be eligible
+  #     ukex: 1000000
+  #   fee_amounts:                       # Tx fee by denom
+  #     ukex: 100
+  #   time_limit: 86400                  # Seconds between claims
 
+# ----------------------------------------------------------------------------
+# BITCOIN GATEWAY (optional, uncomment if needed)
+# Used by: BitcoinGateway
+# ----------------------------------------------------------------------------
+# bitcoin:
+#   url: ""                              # Bitcoin RPC URL (http://user:pass@host:port)
+#   retries: 1
+#   retry_delay: 10
+#   rate_limit: 10
+
+# ----------------------------------------------------------------------------
+# P2P NETWORK
+# Used by: manager/internal/service.go:33-44
+# Struct: manager/p2p/config/config.go
+# ----------------------------------------------------------------------------
 p2p:
-  id: "1"
-  address: "127.0.0.1:9000"
-  peers: []
-  max_peers: 2
+  id: "1"                                # Unique node ID in P2P network
+  address: "127.0.0.1:9000"              # P2P listen address (host:port)
+  peers: []                              # Initial peer addresses to connect
+  # peers:
+  #   - "192.168.1.10:9000"
+  #   - "192.168.1.11:9000"
+  max_peers: 2                           # Max peer connections (default: 3, code default: 10)
 
+# ----------------------------------------------------------------------------
+# LOAD BALANCER
+# Struct: manager/p2p/config/config.go:19-26
+# Hardcoded weights: CPU=0.3, Memory=0.3, RPS=0.2, Latency=0.2
+# ----------------------------------------------------------------------------
 balancer:
-  window_size: 60
-  threshold: 0.2
+  window_size: 60                        # Metrics averaging window in seconds
+  threshold: 0.2                         # Load difference threshold for rebalancing
