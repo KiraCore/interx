@@ -2,8 +2,8 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/saiset-co/saiEthIndexer/handlers"
-	"github.com/saiset-co/saiEthIndexer/tasks"
+	"github.com/KiraCore/saiEthIndexer/handlers"
+	"github.com/KiraCore/saiEthIndexer/tasks"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"

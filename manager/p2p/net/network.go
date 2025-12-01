@@ -6,11 +6,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/p2p"
-	"github.com/saiset-co/sai-interx-manager/p2p/balancer"
-	"github.com/saiset-co/sai-interx-manager/p2p/config"
-	"github.com/saiset-co/sai-interx-manager/p2p/metrics"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/p2p"
+	"github.com/KiraCore/sai-interx-manager/p2p/balancer"
+	"github.com/KiraCore/sai-interx-manager/p2p/config"
+	"github.com/KiraCore/sai-interx-manager/p2p/metrics"
 )
 
 type Network struct {

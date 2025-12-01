@@ -15,17 +15,17 @@ import (
 	"strings"
 	"time"
 
-	cosmosAuth "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
-	cosmosBank "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/bank/v1beta1"
-	cosmosTx "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/tx/v1beta1"
-	kiraGov "github.com/saiset-co/sai-interx-manager/proto-gen/kira/gov"
-	kiraMultiStaking "github.com/saiset-co/sai-interx-manager/proto-gen/kira/multistaking"
-	kiraSlashing "github.com/saiset-co/sai-interx-manager/proto-gen/kira/slashing/v1beta1"
-	kiraSpending "github.com/saiset-co/sai-interx-manager/proto-gen/kira/spending"
-	kiraStaking "github.com/saiset-co/sai-interx-manager/proto-gen/kira/staking"
-	kiraTokens "github.com/saiset-co/sai-interx-manager/proto-gen/kira/tokens"
-	kiraUbi "github.com/saiset-co/sai-interx-manager/proto-gen/kira/ubi"
-	kiraUpgrades "github.com/saiset-co/sai-interx-manager/proto-gen/kira/upgrade"
+	cosmosAuth "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
+	cosmosBank "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/bank/v1beta1"
+	cosmosTx "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/tx/v1beta1"
+	kiraGov "github.com/KiraCore/sai-interx-manager/proto-gen/kira/gov"
+	kiraMultiStaking "github.com/KiraCore/sai-interx-manager/proto-gen/kira/multistaking"
+	kiraSlashing "github.com/KiraCore/sai-interx-manager/proto-gen/kira/slashing/v1beta1"
+	kiraSpending "github.com/KiraCore/sai-interx-manager/proto-gen/kira/spending"
+	kiraStaking "github.com/KiraCore/sai-interx-manager/proto-gen/kira/staking"
+	kiraTokens "github.com/KiraCore/sai-interx-manager/proto-gen/kira/tokens"
+	kiraUbi "github.com/KiraCore/sai-interx-manager/proto-gen/kira/ubi"
+	kiraUpgrades "github.com/KiraCore/sai-interx-manager/proto-gen/kira/upgrade"
 
 	sekaitypes "github.com/KiraCore/sekai/types"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -41,9 +41,9 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
+	"github.com/KiraCore/sai-service/service"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -564,7 +564,7 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
 					return nil, err
 				}
-				return g.proposals(req)
+				return g.getProposals(req)
 			})
 		}
 	case "/kira/tokens/aliases":

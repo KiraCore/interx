@@ -20,9 +20,10 @@ on:
 
 jobs:
   golangci-lint:
-    name: Go Lint
+    name: Lint (${{ matrix.component }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         component:
           - manager
@@ -42,12 +43,85 @@ jobs:
           go-version: '1.24.2'
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        id: lint
         continue-on-error: true
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           working-directory: ${{ matrix.component }}
-          args: --timeout=10m
+          args: --timeout=10m --out-format=colored-line-number
+
+      - name: Save lint result
+        if: always()
+        run: |
+          COMPONENT_SAFE=$(echo "${{ matrix.component }}" | tr '/' '-')
+          mkdir -p lint-results
+          echo '{"component": "${{ matrix.component }}", "status": "${{ steps.lint.outcome }}"}' > lint-results/${COMPONENT_SAFE}.json
+
+      - name: Upload lint result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-result-${{ strategy.job-index }}
+          path: lint-results/
+          retention-days: 1
+
+  lint-report:
+    name: Lint Report
+    runs-on: ubuntu-latest
+    needs: golangci-lint
+    if: always()
+    steps:
+      - name: Download all lint results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lint-result-*
+          path: lint-results
+          merge-multiple: true
+
+      - name: Generate lint report
+        run: |
+          echo "## Lint Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          PASSED=0
+          FAILED=0
+          TOTAL=0
+
+          for file in lint-results/*.json; do
+            if [ -f "$file" ]; then
+              COMPONENT=$(jq -r '.component' "$file")
+              STATUS=$(jq -r '.status' "$file")
+              TOTAL=$((TOTAL + 1))
+
+              if [ "$STATUS" == "success" ]; then
+                echo "| \`$COMPONENT\` | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
+                PASSED=$((PASSED + 1))
+              else
+                echo "| \`$COMPONENT\` | :x: Fail |" >> $GITHUB_STEP_SUMMARY
+                FAILED=$((FAILED + 1))
+              fi
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total:** $TOTAL components" >> $GITHUB_STEP_SUMMARY
+          echo "- **Passed:** $PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failed:** $FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ $FAILED -gt 0 ]; then
+            echo "> **Note:** Lint failures are currently non-blocking. Set \`ENFORCE_LINT: true\` to make them required." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Uncomment to enforce lint checks in the future:
+          # if [ $FAILED -gt 0 ]; then
+          #   echo "::error::$FAILED component(s) failed lint checks"
+          #   exit 1
+          # fi
 
   branch-validation:
     name: Validate Branch Name

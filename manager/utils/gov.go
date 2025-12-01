@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
 )
 
 func QueryNetworkPropertiesFromGrpcResult(success []byte) (*types.NetworkPropertiesResponse, error) {

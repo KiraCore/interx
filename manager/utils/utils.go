@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/types"
 	"strconv"
 	"strings"
 )

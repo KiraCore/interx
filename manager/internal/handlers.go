@@ -5,9 +5,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/p2p"
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/p2p"
+	"github.com/KiraCore/sai-service/service"
 )
 
 func (is *InternalService) NewHandler() service.Handler {

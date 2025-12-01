@@ -4,7 +4,7 @@ package p2p
 import (
 	"time"
 
-	saiService "github.com/saiset-co/sai-service/service"
+	saiService "github.com/KiraCore/sai-service/service"
 )
 
 type NodeID string

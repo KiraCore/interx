@@ -4,15 +4,24 @@ WORKDIR /src
 
 COPY ./ /src/
 
-RUN go build -o sai-interx-manager -buildvcs=false
+ENV GOPRIVATE=github.com/KiraCore/*
+RUN go mod tidy && go build -o sai-interx-manager -buildvcs=false
 
 FROM ubuntu
+
+# Accept VERSION build arg and set as environment variable
+ARG VERSION=unknown
+ENV VERSION=${VERSION}
 
 WORKDIR /srv
 RUN apt-get update && apt-get -y install ca-certificates
 
 COPY --from=build /src/sai-interx-manager /srv/
+COPY --from=build /src/config.yml /srv/config.yml
 
 RUN chmod +x /srv/sai-interx-manager
 
-CMD /srv/sai-interx-manager start > /srv/logs/app.log 2>&1
+RUN echo "${VERSION}" > /srv/VERSION
+
+CMD /srv/sai-interx-manager start
+

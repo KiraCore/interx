@@ -1,11 +1,11 @@
-module github.com/saiset-co/sai-eth-interaction
+module github.com/KiraCore/sai-eth-interaction
 
 go 1.21
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/ethereum/go-ethereum v1.14.5
-	github.com/saiset-co/sai-service v1.0.5
+	github.com/KiraCore/sai-service v1.0.5
 	go.uber.org/zap v1.26.0
 )
 

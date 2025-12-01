@@ -1,4 +1,4 @@
-module github.com/saiset-co/sai-interx-manager
+module github.com/KiraCore/sai-interx-manager
 
 go 1.23.0
 
@@ -14,8 +14,8 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
-	github.com/saiset-co/sai-service v1.0.5
-	github.com/saiset-co/sai-storage-mongo v1.1.4
+	github.com/KiraCore/sai-service v1.0.5
+	github.com/KiraCore/sai-storage-mongo v1.1.4
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible
 	github.com/spf13/cast v1.5.0
 	go.mongodb.org/mongo-driver v1.17.3

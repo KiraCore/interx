@@ -9,10 +9,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-storage-mongo/logger"
-	"github.com/saiset-co/sai-storage-mongo/mongo"
-	"github.com/saiset-co/sai-storage-mongo/types"
-	"github.com/saiset-co/sai-storage-mongo/utils"
+	"github.com/KiraCore/sai-storage-mongo/logger"
+	"github.com/KiraCore/sai-storage-mongo/mongo"
+	"github.com/KiraCore/sai-storage-mongo/types"
+	"github.com/KiraCore/sai-storage-mongo/utils"
 )
 
 const (
@@ -102,7 +102,9 @@ func (action *UpsertAction) Handle(request types.IRequest) (interface{}, int, er
 func (action *UpsertAction) processUpdate(data interface{}) (interface{}, error) {
 	if itemData, ok := data.(map[string]interface{}); ok {
 		itemData["ch_time"] = time.Now().Unix()
-		data = itemData
+		data = bson.M{
+			"$set": itemData,
+		}
 	}
 
 	return data, nil

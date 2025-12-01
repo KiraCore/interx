@@ -15,8 +15,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
 )
 
 func (g *CosmosGateway) allValidators() (*types.ValidatorsResponse, error) {
@@ -385,7 +385,7 @@ func (g *CosmosGateway) validators(req types.InboundRequest) (*types.ValidatorsR
 	return g.filterAndPaginateValidators(validatorsResponse, req.Payload)
 }
 
-func (g *CosmosGateway) account(address string) (*types.AccountResponse, error) {
+func (g *CosmosGateway) account(address string) (*types.AccountInfo, error) {
 	accountReq := types.InboundRequest{
 		Method:  "GET",
 		Path:    "/cosmos/auth/v1beta1/accounts/" + address,
@@ -406,5 +406,5 @@ func (g *CosmosGateway) account(address string) (*types.AccountResponse, error) 
 		return nil, err
 	}
 
-	return accountResponse, nil
+	return accountResponse.Account, nil
 }

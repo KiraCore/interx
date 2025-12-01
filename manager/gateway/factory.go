@@ -3,14 +3,14 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/logger"
 	"go.uber.org/zap"
 	"time"
 
-	saiService "github.com/saiset-co/sai-service/service"
+	saiService "github.com/KiraCore/sai-service/service"
 	"github.com/spf13/cast"
 
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/types"
 )
 
 type GatewayFactory struct {

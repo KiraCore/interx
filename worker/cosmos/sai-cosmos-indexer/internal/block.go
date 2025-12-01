@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/saiCosmosIndexer/internal/model"
-	"github.com/saiset-co/saiCosmosIndexer/logger"
+	"github.com/KiraCore/saiCosmosIndexer/internal/model"
+	"github.com/KiraCore/saiCosmosIndexer/logger"
 )
 
 func (is *InternalService) getLatestBlock() (*model.LatestBlock, error) {

@@ -1,4 +1,4 @@
-module github.com/saiset-co/saiCosmosInteraction
+module github.com/KiraCore/saiCosmosInteraction
 
 go 1.21.6
 
@@ -7,7 +7,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.47.7
 	github.com/google/uuid v1.3.0
 	github.com/json-iterator/go v1.1.12
-	github.com/saiset-co/sai-service v1.0.5
+	github.com/KiraCore/sai-service v1.0.5
 	github.com/spf13/cast v1.5.0
 	go.uber.org/zap v1.26.0
 )

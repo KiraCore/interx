@@ -8,7 +8,7 @@ package types
 
 import (
 	_ "github.com/gogo/protobuf/gogoproto"
-	_ "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
+	_ "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
