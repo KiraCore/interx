@@ -6,7 +6,7 @@ common:
     enabled: false
     port: 8881
 
-version: "v0.14.0"
+version: "v0.14.1"
 
 storage:
   token: ""
