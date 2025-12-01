@@ -1,24 +1,72 @@
+# ============================================================================
+# SAI STORAGE MONGO CONFIGURATION
+# ============================================================================
+# MongoDB storage service providing persistence for all INTERX services.
+# Source: worker/sai-storage-mongo/types/storage.go
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
-  version: "2.0"
+  version: "2.0"                 # Config version
   socket:
-    enabled: false
-    port: 8882
+    enabled: false               # Enable socket server
+    port: 8882                   # Socket port
   http:
-    enabled: true
-    port: 8880
+    enabled: true                # Enable HTTP server for storage API
+    port: 8880                   # HTTP port
   ws:
-    enabled: false
-    port: 8881
+    enabled: false               # Enable WebSocket server
+    port: 8881                   # WebSocket port
+
+# ----------------------------------------------------------------------------
+# MONGODB CONNECTION
+# Struct: types/storage.go:3-16
+# ----------------------------------------------------------------------------
 storage:
-  atlas: false
-  host: "mongo.local"
-  port: "27017"
-  user: ""
-  pass: ""
-  database: "sai"
+  # MongoDB Atlas cloud hosting (mutually exclusive with host/port)
+  atlas: false                           # Use MongoDB Atlas cloud service
+
+  # Self-hosted MongoDB connection
+  host: "mongo.local"                    # MongoDB server hostname
+  port: "27017"                          # MongoDB server port
+
+  # Authentication credentials
+  user: ""                               # MongoDB username (leave empty for no auth)
+  pass: ""                               # MongoDB password
+
+  # Database name
+  database: "sai"                        # Database name to use
+
+  # Full connection string (overrides host/port/user/pass if set)
+  # Format: mongodb://user:pass@host:port/database?options
   connectionString: ""
-  duplicate: false
-  duplicateURL: ""
-  duplicateTimeout: 400
-  duplicatePause: 3
-  duplicateMethod: "notify"
+
+  # --------------------------------------------------------------------------
+  # DATA DUPLICATION / REPLICATION
+  # --------------------------------------------------------------------------
+  # Sends copies of data to another service (e.g., for backup or sync)
+
+  duplicate: false                       # Enable data duplication
+  duplicateURL: ""                       # Target URL for duplicated data
+  duplicateTimeout: 400                  # Timeout in ms for duplicate requests
+  duplicatePause: 3                      # Pause in seconds between duplicate batches
+  duplicateMethod: "notify"              # Method: "notify" (async) or other
+
+# ============================================================================
+# ENVIRONMENT VARIABLES (alternative to config file)
+# ============================================================================
+# Can be set via environment variables (see .env.dev):
+#
+# ATLAS=false              # Use MongoDB Atlas
+# HOST=mongo-db            # MongoDB host
+# PORT=27017               # MongoDB port
+# USER=                    # MongoDB username
+# PASS=                    # MongoDB password
+# DB=sai                   # Database name
+# CONNECTION_STRING=       # Full connection string
+# DUPLICATE=false          # Enable duplication
+# DUPLICATE_URL=           # Duplication target URL
+# DUPLICATE_TIMEOUT=400    # Duplication timeout (ms)
+# DUPLICATE_PAUSE=3        # Duplication pause (seconds)
+# DUPLICATE_METHOD=notify  # Duplication method
+# ============================================================================

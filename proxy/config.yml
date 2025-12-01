@@ -1,10 +1,21 @@
+# ============================================================================
+# INTERX PROXY CONFIGURATION
+# ============================================================================
+# Simple reverse proxy that forwards requests to the Manager service.
+# Source: proxy/internal/service.go
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
   http:
-    enabled: false
-    port: 8080
+    enabled: false               # Enable HTTP server (proxy uses custom listener)
+    port: 8080                   # HTTP port (default: 80 in code)
   ws:
-    enabled: false
-    port: 8881
+    enabled: false               # Enable WebSocket server
+    port: 8881                   # WebSocket port
 
+# ----------------------------------------------------------------------------
+# MANAGER CONNECTION
+# ----------------------------------------------------------------------------
 manager:
-  url: http://manager.local:8080
+  url: http://manager.local:8080   # URL of the Manager service to proxy to

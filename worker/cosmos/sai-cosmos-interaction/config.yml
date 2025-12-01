@@ -1,8 +1,21 @@
+# ============================================================================
+# COSMOS INTERACTION SERVICE CONFIGURATION
+# ============================================================================
+# Handles Cosmos/SEKAI blockchain interactions (tx signing, queries).
+# Source: worker/cosmos/sai-cosmos-interaction/internal/handlers.go
+# ============================================================================
+
+# Common server settings (sai-service framework pattern)
 common:
   http:
-    enabled: true
-    port: 8884
+    enabled: true                # Enable HTTP server
+    port: 8884                   # HTTP port for API endpoints
   ws:
-    enabled: false
-    port: 8081
+    enabled: false               # Enable WebSocket server
+    port: 8081                   # WebSocket port
+
+# ----------------------------------------------------------------------------
+# AUTHENTICATION
+# ----------------------------------------------------------------------------
+# Token used to authenticate incoming requests from Manager service
 token: "a@@#lsa$fd8f"
