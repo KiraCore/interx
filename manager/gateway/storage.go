@@ -3,13 +3,13 @@ package gateway
 import (
 	"encoding/json"
 	"errors"
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-service/service"
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
 	"time"
 
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/types"
 )
 
 type StorageGateway struct {

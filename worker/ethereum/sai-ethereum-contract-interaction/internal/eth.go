@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/saiset-co/sai-eth-interaction/models"
+	"github.com/KiraCore/sai-eth-interaction/models"
 	"go.uber.org/zap"
 )
 

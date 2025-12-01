@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/onrik/ethrpc"
-	"github.com/saiset-co/saiEthIndexer/config"
-	"github.com/saiset-co/saiEthIndexer/pkg/eth"
-	"github.com/saiset-co/saiEthIndexer/utils"
+	"github.com/KiraCore/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/pkg/eth"
+	"github.com/KiraCore/saiEthIndexer/utils"
 	"go.uber.org/zap"
 )
 

@@ -7,10 +7,10 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/sai-storage-mongo/internal/actions"
-	"github.com/saiset-co/sai-storage-mongo/logger"
-	"github.com/saiset-co/sai-storage-mongo/types"
+	"github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/sai-storage-mongo/internal/actions"
+	"github.com/KiraCore/sai-storage-mongo/logger"
+	"github.com/KiraCore/sai-storage-mongo/types"
 )
 
 func (is InternalService) NewHandler() service.Handler {

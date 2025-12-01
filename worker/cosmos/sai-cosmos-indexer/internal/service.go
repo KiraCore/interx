@@ -17,11 +17,11 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cast"
 
-	saiService "github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
-	"github.com/saiset-co/saiCosmosIndexer/internal/model"
-	"github.com/saiset-co/saiCosmosIndexer/logger"
-	"github.com/saiset-co/saiCosmosIndexer/utils"
+	saiService "github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/saiCosmosIndexer/internal/model"
+	"github.com/KiraCore/saiCosmosIndexer/logger"
+	"github.com/KiraCore/saiCosmosIndexer/utils"
 )
 
 const (

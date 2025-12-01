@@ -3,10 +3,10 @@ package metrics
 import (
 	"time"
 
-	saiService "github.com/saiset-co/sai-service/service"
+	saiService "github.com/KiraCore/sai-service/service"
 
-	"github.com/saiset-co/sai-interx-manager/p2p"
-	"github.com/saiset-co/sai-interx-manager/p2p/types"
+	"github.com/KiraCore/sai-interx-manager/p2p"
+	"github.com/KiraCore/sai-interx-manager/p2p/types"
 )
 
 type RequestStat struct {

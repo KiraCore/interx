@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/sai-storage-mongo/internal"
-	"github.com/saiset-co/sai-storage-mongo/logger"
-	"github.com/saiset-co/sai-storage-mongo/mongo"
-	"github.com/saiset-co/sai-storage-mongo/types"
+	"github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/sai-storage-mongo/internal"
+	"github.com/KiraCore/sai-storage-mongo/logger"
+	"github.com/KiraCore/sai-storage-mongo/mongo"
+	"github.com/KiraCore/sai-storage-mongo/types"
 )
 
 func main() {

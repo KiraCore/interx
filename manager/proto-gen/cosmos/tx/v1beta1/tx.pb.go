@@ -11,7 +11,7 @@ import (
 	types "github.com/cosmos/cosmos-sdk/crypto/types"
 	signing "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	_ "github.com/gogo/protobuf/gogoproto"
-	v1beta1 "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
+	v1beta1 "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	anypb "google.golang.org/protobuf/types/known/anypb"

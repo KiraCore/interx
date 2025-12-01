@@ -1,9 +1,9 @@
 package main
 
 import (
-	saiService "github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/saiCosmosIndexer/internal"
-	"github.com/saiset-co/saiCosmosIndexer/logger"
+	saiService "github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/saiCosmosIndexer/internal"
+	"github.com/KiraCore/saiCosmosIndexer/logger"
 )
 
 func main() {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	sekaitypes "github.com/KiraCore/sekai/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 	"go.uber.org/zap"
 	"math"
 	"net/http"
@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
-	"github.com/saiset-co/sai-interx-manager/utils"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/utils"
 )
 
 func (g *CosmosGateway) txByHash(hash string) (interface{}, error) {

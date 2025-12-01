@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	valid "github.com/asaskevich/govalidator"
-	configinternal "github.com/saiset-co/saiEthIndexer/internal/config-internal"
+	configinternal "github.com/KiraCore/saiEthIndexer/internal/config-internal"
 )
 
 type Configuration struct {

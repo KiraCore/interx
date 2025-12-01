@@ -1,7 +1,7 @@
 package gateway
 
 import (
-	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/logger"
 	"go.uber.org/zap"
 	"time"
 )

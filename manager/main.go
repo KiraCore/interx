@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/saiset-co/sai-interx-manager/internal"
-	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/internal"
+	"github.com/KiraCore/sai-interx-manager/logger"
 
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-service/service"
 )
 
 func main() {

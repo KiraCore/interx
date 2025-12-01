@@ -1,4 +1,4 @@
-module github.com/saiset-co/saiEthIndexer
+module github.com/KiraCore/saiEthIndexer
 
 go 1.22.4
 
@@ -9,7 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/json-iterator/go v1.1.12
 	github.com/onrik/ethrpc v1.2.0
-	github.com/saiset-co/sai-storage-mongo v1.1.2
+	github.com/KiraCore/sai-storage-mongo v1.1.2
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	go.uber.org/zap v1.27.0

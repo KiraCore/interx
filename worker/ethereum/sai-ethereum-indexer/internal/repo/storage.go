@@ -3,8 +3,8 @@ package repository
 import (
 	"bytes"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
-	"github.com/saiset-co/saiEthIndexer/utils"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/saiEthIndexer/utils"
 )
 
 type Repo interface {

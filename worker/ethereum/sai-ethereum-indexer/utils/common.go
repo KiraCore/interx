@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/saiset-co/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/config"
 )
 
 func InArray(val interface{}, array interface{}) (index int) {

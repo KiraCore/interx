@@ -3,7 +3,7 @@ package notifier
 import (
 	"bytes"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/saiset-co/saiEthIndexer/utils"
+	"github.com/KiraCore/saiEthIndexer/utils"
 )
 
 type Notifier interface {

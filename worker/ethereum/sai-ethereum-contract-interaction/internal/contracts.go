@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/saiset-co/sai-eth-interaction/models"
-	"github.com/saiset-co/sai-eth-interaction/utils"
+	"github.com/KiraCore/sai-eth-interaction/models"
+	"github.com/KiraCore/sai-eth-interaction/utils"
 	"go.uber.org/zap"
 )
 

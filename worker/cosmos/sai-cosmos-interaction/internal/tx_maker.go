@@ -23,7 +23,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/saiset-co/saiCosmosInteraction/internal/model"
+	"github.com/KiraCore/saiCosmosInteraction/internal/model"
 	"github.com/spf13/cast"
 )
 

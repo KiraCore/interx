@@ -1,6 +1,6 @@
 package types
 
-import "github.com/saiset-co/sai-interx-manager/p2p"
+import "github.com/KiraCore/sai-interx-manager/p2p"
 
 type JoinRequest struct {
 	NodeID       p2p.NodeID      `json:"node_id"`

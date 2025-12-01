@@ -1,4 +1,4 @@
-module github.com/saiset-co/sai-storage-mongo
+module github.com/KiraCore/sai-storage-mongo
 
 go 1.21
 
@@ -6,7 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/saiset-co/sai-service v1.0.5
+	github.com/KiraCore/sai-service v1.0.5
 	go.mongodb.org/mongo-driver v1.13.1
 	go.uber.org/zap v1.26.0
 )

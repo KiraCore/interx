@@ -9,8 +9,8 @@ package types
 import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
 	_ "github.com/gogo/protobuf/gogoproto"
-	v1beta1 "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
-	v1beta11 "github.com/saiset-co/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
+	v1beta1 "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/auth/v1beta1"
+	v1beta11 "github.com/KiraCore/sai-interx-manager/proto-gen/cosmos/base/v1beta1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

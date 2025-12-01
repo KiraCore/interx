@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/saiset-co/sai-eth-interaction/models"
+import "github.com/KiraCore/sai-eth-interaction/models"
 
 func RemoveContract(slice []models.Contract, s int) []models.Contract {
 	return append(slice[:s], slice[s+1:]...)

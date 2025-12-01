@@ -4,8 +4,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 )
 
 type Storage interface {
