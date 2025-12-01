@@ -17,10 +17,10 @@ import (
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
-	"github.com/saiset-co/sai-interx-manager/utils"
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/utils"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 )
 
 func (g *CosmosGateway) tokenRates() (interface{}, error) {

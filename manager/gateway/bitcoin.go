@@ -2,12 +2,12 @@ package gateway
 
 import (
 	"encoding/json"
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-service/service"
 	"go.uber.org/zap"
 	"time"
 
-	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/types"
 )
 
 type BitcoinGateway struct {

@@ -10,11 +10,11 @@ import (
 	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"github.com/saiset-co/saiEthIndexer/config"
-	"github.com/saiset-co/saiEthIndexer/handlers"
-	"github.com/saiset-co/saiEthIndexer/internal/http"
-	"github.com/saiset-co/saiEthIndexer/pkg/httpserver"
-	"github.com/saiset-co/saiEthIndexer/tasks"
+	"github.com/KiraCore/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/handlers"
+	"github.com/KiraCore/saiEthIndexer/internal/http"
+	"github.com/KiraCore/saiEthIndexer/pkg/httpserver"
+	"github.com/KiraCore/saiEthIndexer/tasks"
 	"go.uber.org/zap"
 )
 

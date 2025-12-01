@@ -1,10 +1,10 @@
-module github.com/saiset-co/sai-interax-proxy
+module github.com/KiraCore/sai-interx-proxy
 
 go 1.23.5
 
 require (
 	github.com/rs/cors v1.10.1
-	github.com/saiset-co/sai-service v1.0.5
+	github.com/KiraCore/sai-service v1.0.5
 	github.com/spf13/cast v1.7.1
 	go.uber.org/zap v1.27.0
 )

@@ -3,8 +3,8 @@ package tasks
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/saiset-co/saiEthIndexer/internal/notifier"
-	repository "github.com/saiset-co/saiEthIndexer/internal/repo"
+	"github.com/KiraCore/saiEthIndexer/internal/notifier"
+	repository "github.com/KiraCore/saiEthIndexer/internal/repo"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/onrik/ethrpc"
-	"github.com/saiset-co/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/config"
 	"go.uber.org/zap"
 )
 

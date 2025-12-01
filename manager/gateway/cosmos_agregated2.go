@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 
 	sekaitypes "github.com/KiraCore/sekai/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -19,9 +19,9 @@ import (
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interx-manager/logger"
-	"github.com/saiset-co/sai-interx-manager/types"
-	"github.com/saiset-co/sai-interx-manager/utils"
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
+	"github.com/KiraCore/sai-interx-manager/utils"
 )
 
 func (g *CosmosGateway) statusAPI() (interface{}, error) {

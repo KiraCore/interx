@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-interax-proxy/logger"
-	"github.com/saiset-co/sai-interax-proxy/types"
-	"github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-interx-proxy/logger"
+	"github.com/KiraCore/sai-interx-proxy/types"
+	"github.com/KiraCore/sai-service/service"
 )
 
 type InternalService struct {

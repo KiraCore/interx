@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/cosmos/cosmos-sdk/types"
-	saiService "github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/saiCosmosInteraction/internal"
-	"github.com/saiset-co/saiCosmosInteraction/logger"
+	saiService "github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/saiCosmosInteraction/internal"
+	"github.com/KiraCore/saiCosmosInteraction/logger"
 )
 
 var (

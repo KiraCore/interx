@@ -5,7 +5,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
-	"github.com/saiset-co/saiCosmosIndexer/utils"
+	"github.com/KiraCore/saiCosmosIndexer/utils"
 )
 
 type Notifier interface {

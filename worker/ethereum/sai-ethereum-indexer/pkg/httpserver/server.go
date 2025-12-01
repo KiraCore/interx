@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/saiset-co/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/config"
 )
 
 const (

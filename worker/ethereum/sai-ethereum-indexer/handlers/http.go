@@ -5,8 +5,8 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
-	"github.com/saiset-co/saiEthIndexer/config"
-	"github.com/saiset-co/saiEthIndexer/tasks"
+	"github.com/KiraCore/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/tasks"
 	"go.uber.org/zap"
 )
 

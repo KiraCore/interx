@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/saiset-co/sai-eth-interaction/internal"
-	saiService "github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-eth-interaction/internal"
+	saiService "github.com/KiraCore/sai-service/service"
 )
 
 func main() {

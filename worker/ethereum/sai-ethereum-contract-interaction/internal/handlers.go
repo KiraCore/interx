@@ -14,8 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/saiset-co/sai-eth-interaction/models"
-	saiService "github.com/saiset-co/sai-service/service"
+	"github.com/KiraCore/sai-eth-interaction/models"
+	saiService "github.com/KiraCore/sai-service/service"
 	"go.uber.org/zap"
 )
 

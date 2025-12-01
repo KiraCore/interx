@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	saiService "github.com/saiset-co/sai-service/service"
-	"github.com/saiset-co/saiCosmosInteraction/internal/model"
-	"github.com/saiset-co/saiCosmosInteraction/utils"
+	saiService "github.com/KiraCore/sai-service/service"
+	"github.com/KiraCore/saiCosmosInteraction/internal/model"
+	"github.com/KiraCore/saiCosmosInteraction/utils"
 )
 
 func (is *InternalService) NewHandler() saiService.Handler {

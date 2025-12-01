@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/saiset-co/sai-storage-mongo/logger"
-	"github.com/saiset-co/sai-storage-mongo/types"
+	"github.com/KiraCore/sai-storage-mongo/logger"
+	"github.com/KiraCore/sai-storage-mongo/types"
 )
 
 var DuplicateCh chan DuplicateRequest

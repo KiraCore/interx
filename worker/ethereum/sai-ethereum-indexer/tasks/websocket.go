@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/saiset-co/saiEthIndexer/config"
+	"github.com/KiraCore/saiEthIndexer/config"
 )
 
 type WebsocketManager struct {

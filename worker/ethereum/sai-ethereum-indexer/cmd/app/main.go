@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/saiset-co/saiEthIndexer/internal/app"
-	"github.com/saiset-co/saiEthIndexer/tasks"
+	"github.com/KiraCore/saiEthIndexer/internal/app"
+	"github.com/KiraCore/saiEthIndexer/tasks"
 )
 
 func main() {

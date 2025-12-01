@@ -1,4 +1,4 @@
-module github.com/saiset-co/saiCosmosIndexer
+module github.com/KiraCore/saiCosmosIndexer
 
 go 1.21
 
@@ -6,8 +6,8 @@ require (
 	github.com/KiraCore/sekai v0.4.13
 	github.com/cosmos/cosmos-sdk v0.47.6
 	github.com/json-iterator/go v1.1.12
-	github.com/saiset-co/sai-service v1.0.5
-	github.com/saiset-co/sai-storage-mongo v1.1.4
+	github.com/KiraCore/sai-service v1.0.5
+	github.com/KiraCore/sai-storage-mongo v1.1.4
 	github.com/spf13/cast v1.7.1
 	go.uber.org/zap v1.27.0
 )
