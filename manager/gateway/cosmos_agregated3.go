@@ -4,19 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	sekaitypes "github.com/KiraCore/sekai/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/KiraCore/sai-storage-mongo/external/adapter"
-	"go.uber.org/zap"
 	"math"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/KiraCore/sai-interx-manager/logger"
-	"github.com/KiraCore/sai-interx-manager/types"
-	"github.com/KiraCore/sai-interx-manager/utils"
+	sekaitypes "github.com/KiraCore/sekai/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/saiset-co/sai-storage-mongo/external/adapter"
+	"go.uber.org/zap"
+
+	"github.com/saiset-co/sai-interx-manager/logger"
+	"github.com/saiset-co/sai-interx-manager/types"
+	"github.com/saiset-co/sai-interx-manager/utils"
 )
 
 func (g *CosmosGateway) txByHash(hash string) (interface{}, error) {
@@ -372,11 +373,44 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		return nil, err
 	}
 
+	sortMap := make(map[string]interface{})
+	if request.Sort != nil {
+		sortMap = request.Sort
+	} else if req.Payload["sort"] != nil {
+		sortStr, ok := req.Payload["sort"].(string)
+		if ok && sortStr != "" {
+			parts := strings.Split(sortStr, ":")
+			var field string
+			var direction string
+
+			if len(parts) == 2 {
+				field = strings.TrimSpace(parts[0])
+				direction = strings.TrimSpace(parts[1])
+			} else if len(parts) == 1 {
+				field = "cr_time"
+				direction = strings.TrimSpace(parts[0])
+			}
+
+			if field != "" {
+				var dirValue int
+				if direction == "desc" || direction == "-1" {
+					dirValue = -1
+				} else {
+					dirValue = 1
+				}
+				sortMap[field] = dirValue
+			}
+		}
+	}
+
 	options := &adapter.Options{
 		Count: 1,
 		Limit: int64(request.Limit),
 		Skip:  int64(request.Offset),
+		Sort:  sortMap,
 	}
+
+	criteria["_id"] = map[string]interface{}{"$ne": nil}
 
 	if request.Hash != "" {
 		criteria["hash"] = request.Hash
@@ -384,15 +418,11 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 
 	if request.Height != "" {
 		criteria["height"] = request.Height
-	} else {
-		criteria["_id"] = map[string]interface{}{"$ne": nil}
 	}
 
 	if len(request.Types) > 0 {
-		criteria["messages"] = map[string]interface{}{
-			"typeUrl": map[string]interface{}{
-				"$in": request.Types,
-			},
+		criteria["messages.typeUrl"] = map[string]interface{}{
+			"$in": request.Types,
 		}
 	}
 
@@ -400,16 +430,17 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		criteria["timestamp"] = map[string]interface{}{
 			"$gt": request.StartDate,
 		}
-		//startTime := time.Unix(request.StartDate, 0).UTC()
-		//params.Add("tx.mintime", startTime.Format(time.RFC3339))
-	}
 
-	if request.EndDate > 0 {
-		criteria["timestamp"] = map[string]interface{}{
-			"$lt": request.StartDate,
+		if request.EndDate > 0 {
+			criteria["timestamp"] = map[string]interface{}{
+				"$gt": request.StartDate,
+				"$lt": request.EndDate,
+			}
 		}
-		//endTime := time.Unix(request.EndDate, 0).UTC()
-		//params.Add("tx.maxtime", endTime.Format(time.RFC3339))
+	} else if request.EndDate > 0 {
+		criteria["timestamp"] = map[string]interface{}{
+			"$lt": request.EndDate,
+		}
 	}
 
 	if len(request.Statuses) > 0 {
@@ -417,9 +448,10 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		includeFailed = false
 
 		for _, status := range request.Statuses {
-			if status == "success" {
+			switch status {
+			case "success":
 				includeConfirmed = true
-			} else if status == "failed" {
+			case "failed":
 				includeFailed = true
 			}
 		}
@@ -429,6 +461,34 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		criteria["tx_result.code"] = 0
 	} else if !includeConfirmed && includeFailed {
 		criteria["tx_result.code"] = map[string]interface{}{"$gt": 0}
+	}
+
+	if len(request.Directions) > 0 && request.Address == "" {
+		return nil, fmt.Errorf("directions filter requires address to be specified")
+	}
+
+	if request.Address != "" {
+		orConditions := []map[string]interface{}{}
+
+		if len(request.Directions) == 0 {
+			orConditions = []map[string]interface{}{
+				{"messages.from_address": request.Address},
+				{"messages.to_address": request.Address},
+			}
+		} else {
+			for _, direction := range request.Directions {
+				switch direction {
+				case "inbound":
+					orConditions = append(orConditions, map[string]interface{}{"messages.to_address": request.Address})
+				case "outbound":
+					orConditions = append(orConditions, map[string]interface{}{"messages.from_address": request.Address})
+				}
+			}
+		}
+
+		if len(orConditions) > 0 {
+			criteria["$or"] = orConditions
+		}
 	}
 
 	txsResponse, err := g.storage.Read("cosmos_txs", criteria, options, []string{})
