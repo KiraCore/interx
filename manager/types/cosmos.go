@@ -1,9 +1,10 @@
 package types
 
 import (
+	"time"
+
 	types2 "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"time"
 )
 
 type GenesisChunkedResponse struct {
@@ -174,16 +175,17 @@ type TransactionResultResponse struct {
 }
 
 type QueryTxsParams struct {
-	Hash       string   `json:"hash,omitempty"`
-	Height     string   `json:"height,omitempty"`
-	Address    string   `json:"address,omitempty"`
-	StartDate  int64    `json:"start_date,string,omitempty"`
-	EndDate    int64    `json:"end_date,string,omitempty"`
-	Directions []string `json:"directions,omitempty"`
-	Statuses   []string `json:"statuses,omitempty"`
-	Types      []string `json:"types,omitempty"`
-	Offset     int      `json:"offset,string,omitempty"`
-	Limit      int      `json:"limit,string,omitempty"`
+	Hash       string                 `json:"hash,omitempty"`
+	Height     string                 `json:"height,omitempty"`
+	Address    string                 `json:"address,omitempty"`
+	StartDate  int64                  `json:"start_date,string,omitempty"`
+	EndDate    int64                  `json:"end_date,string,omitempty"`
+	Directions []string               `json:"directions,omitempty"`
+	Statuses   []string               `json:"statuses,omitempty"`
+	Types      []string               `json:"types,omitempty"`
+	Offset     int                    `json:"offset,string,omitempty"`
+	Limit      int                    `json:"limit,string,omitempty"`
+	Sort       map[string]interface{} `json:"sort,omitempty"`
 }
 
 type TxResponse struct {
