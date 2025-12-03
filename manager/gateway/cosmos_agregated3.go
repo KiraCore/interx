@@ -427,19 +427,19 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 	}
 
 	if request.StartDate > 0 {
-		criteria["timestamp"] = map[string]interface{}{
-			"$gt": request.StartDate,
+		criteria["cr_time"] = map[string]interface{}{
+			"$gte": request.StartDate,
 		}
 
 		if request.EndDate > 0 {
-			criteria["timestamp"] = map[string]interface{}{
-				"$gt": request.StartDate,
-				"$lt": request.EndDate,
+			criteria["cr_time"] = map[string]interface{}{
+				"$gte": request.StartDate,
+				"$lte": request.EndDate,
 			}
 		}
 	} else if request.EndDate > 0 {
-		criteria["timestamp"] = map[string]interface{}{
-			"$lt": request.EndDate,
+		criteria["cr_time"] = map[string]interface{}{
+			"$lte": request.EndDate,
 		}
 	}
 
@@ -474,6 +474,7 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 			orConditions = []map[string]interface{}{
 				{"messages.from_address": request.Address},
 				{"messages.to_address": request.Address},
+				{"messages.address": request.Address},
 			}
 		} else {
 			for _, direction := range request.Directions {
@@ -482,6 +483,7 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 					orConditions = append(orConditions, map[string]interface{}{"messages.to_address": request.Address})
 				case "outbound":
 					orConditions = append(orConditions, map[string]interface{}{"messages.from_address": request.Address})
+					orConditions = append(orConditions, map[string]interface{}{"messages.address": request.Address})
 				}
 			}
 		}

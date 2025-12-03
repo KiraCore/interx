@@ -185,7 +185,7 @@ type QueryTxsParams struct {
 	Types      []string               `json:"types,omitempty"`
 	Offset     int                    `json:"offset,string,omitempty"`
 	Limit      int                    `json:"limit,string,omitempty"`
-	Sort       map[string]interface{} `json:"sort,omitempty"`
+	Sort       map[string]interface{} `json:"-"`
 }
 
 type TxResponse struct {

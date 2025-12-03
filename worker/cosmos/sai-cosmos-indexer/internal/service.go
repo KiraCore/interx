@@ -113,6 +113,9 @@ func (is *InternalService) Init() {
 }
 
 func (is *InternalService) ProcessIndexes() {
+	const maxAttempts = 10
+	const retryDelay = 5 * time.Second
+
 	var newBlockIndexes = []IndexData{
 		{
 			Keys:   []bson.M{{"block_id.hash": 1}},
@@ -134,19 +137,42 @@ func (is *InternalService) ProcessIndexes() {
 			Unique: false,
 		},
 		{
-			Keys:   []bson.M{{"timestamp": 1}},
+			Keys:   []bson.M{{"cr_time": 1}},
 			Unique: false,
 		},
 		{
 			Keys:   []bson.M{{"tx_result.code": 1}},
 			Unique: false,
 		},
+		{
+			Keys:   []bson.M{{"messages.from_address": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"messages.to_address": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"messages.address": 1}},
+			Unique: false,
+		},
 	}
 
-	blockIndexes, err := is.getIndexes(is.config.CollectionName + "_blocks")
-	if err != nil {
-		logger.Logger.Error("getIndexes > blockIndexes", zap.Error(err))
-		return
+	// Retry loop for block indexes
+	var blockIndexes interface{}
+	var err error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		blockIndexes, err = is.getIndexes(is.config.CollectionName + "_blocks")
+		if err == nil {
+			logger.Logger.Info("ProcessIndexes: storage connected", zap.Int("attempt", attempt))
+			break
+		}
+		if attempt == maxAttempts {
+			logger.Logger.Error("ProcessIndexes: failed to connect to storage after max attempts", zap.Error(err))
+			return
+		}
+		logger.Logger.Warn("ProcessIndexes: storage not ready, retrying", zap.Int("attempt", attempt), zap.Error(err))
+		time.Sleep(retryDelay)
 	}
 
 	if !hasRequiredIndexes(blockIndexes, newBlockIndexes) {
@@ -155,8 +181,9 @@ func (is *InternalService) ProcessIndexes() {
 			logger.Logger.Error("createIndexes > blockIndexes", zap.Error(err))
 			return
 		}
-
-		logger.Logger.Debug("ProcessIndexes", zap.Any("indexResp", indexResp))
+		logger.Logger.Info("ProcessIndexes: block indexes created", zap.Any("response", indexResp))
+	} else {
+		logger.Logger.Info("ProcessIndexes: block indexes already exist")
 	}
 
 	transactionIndexes, err := is.getIndexes(is.config.CollectionName + "_txs")
@@ -171,10 +198,10 @@ func (is *InternalService) ProcessIndexes() {
 			logger.Logger.Error("createIndexes > transactionIndexes", zap.Error(err))
 			return
 		}
-
-		logger.Logger.Debug("ProcessIndexes", zap.Any("indexResp", indexResp))
+		logger.Logger.Info("ProcessIndexes: transaction indexes created", zap.Any("response", indexResp))
+	} else {
+		logger.Logger.Info("ProcessIndexes: transaction indexes already exist")
 	}
-
 }
 
 func hasRequiredIndexes(data interface{}, required []IndexData) bool {
