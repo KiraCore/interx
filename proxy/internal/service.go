@@ -51,10 +51,19 @@ func (is *InternalService) handleHttpConnections(w http.ResponseWriter, r *http.
 
 	if r.Method == "GET" {
 		queryParams := r.URL.Query()
-		paramMap := make(map[string]string)
+		paramMap := make(map[string]interface{})
 		for key, values := range queryParams {
 			if len(values) > 0 {
-				paramMap[key] = values[0]
+				normalizedKey := strings.TrimSuffix(key, "[]")
+				isArray := strings.HasSuffix(key, "[]")
+
+				if len(values) == 1 && strings.Contains(values[0], ",") {
+					paramMap[normalizedKey] = strings.Split(values[0], ",")
+				} else if isArray || len(values) > 1 {
+					paramMap[normalizedKey] = values
+				} else {
+					paramMap[normalizedKey] = values[0]
+				}
 			}
 		}
 		requestData = paramMap

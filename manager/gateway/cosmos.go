@@ -27,6 +27,9 @@ import (
 	kiraUbi "github.com/KiraCore/sai-interx-manager/proto-gen/kira/ubi"
 	kiraUpgrades "github.com/KiraCore/sai-interx-manager/proto-gen/kira/upgrade"
 
+	"github.com/KiraCore/sai-interx-manager/logger"
+	"github.com/KiraCore/sai-interx-manager/types"
+	"github.com/KiraCore/sai-service/service"
 	sekaitypes "github.com/KiraCore/sekai/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -41,9 +44,6 @@ import (
 	"github.com/cosmos/go-bip39"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/KiraCore/sai-interx-manager/logger"
-	"github.com/KiraCore/sai-interx-manager/types"
-	"github.com/KiraCore/sai-service/service"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -277,7 +277,7 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 	var req types.InboundRequest
 
 	if err := json.Unmarshal(data, &req); err != nil {
-		logger.Logger.Error("CosmosGateway - Handle - Unmarshal request failed", zap.Error(err))
+		logger.Logger.Error("CosmosGateway - Handle - Unmarshal request failed", zap.Error(err), zap.Any("req", req))
 		return nil, err
 	}
 

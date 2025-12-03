@@ -175,17 +175,17 @@ type TransactionResultResponse struct {
 }
 
 type QueryTxsParams struct {
-	Hash       string                 `json:"hash,omitempty"`
-	Height     string                 `json:"height,omitempty"`
-	Address    string                 `json:"address,omitempty"`
-	StartDate  int64                  `json:"start_date,string,omitempty"`
-	EndDate    int64                  `json:"end_date,string,omitempty"`
-	Directions []string               `json:"directions,omitempty"`
-	Statuses   []string               `json:"statuses,omitempty"`
-	Types      []string               `json:"types,omitempty"`
-	Offset     int                    `json:"offset,string,omitempty"`
-	Limit      int                    `json:"limit,string,omitempty"`
-	Sort       map[string]interface{} `json:"sort,omitempty"`
+	Hash       string   `json:"hash,omitempty"`
+	Height     string   `json:"height,omitempty"`
+	Address    string   `json:"address,omitempty"`
+	StartDate  string   `json:"start_date,string,omitempty"`
+	EndDate    string   `json:"end_date,string,omitempty"`
+	Directions []string `json:"directions,omitempty"`
+	Statuses   []string `json:"statuses,omitempty"`
+	Types      []string `json:"types,omitempty"`
+	Offset     int      `json:"offset,string,omitempty"`
+	Limit      int      `json:"limit,string,omitempty"`
+	Sort       string   `json:"sort,omitempty"`
 }
 
 type TxResponse struct {
