@@ -178,8 +178,8 @@ type QueryTxsParams struct {
 	Hash       string   `json:"hash,omitempty"`
 	Height     string   `json:"height,omitempty"`
 	Address    string   `json:"address,omitempty"`
-	StartDate  string   `json:"start_date,string,omitempty"`
-	EndDate    string   `json:"end_date,string,omitempty"`
+	StartDate  string   `json:"start_date,omitempty"`
+	EndDate    string   `json:"end_date,omitempty"`
 	Directions []string `json:"directions,omitempty"`
 	Statuses   []string `json:"statuses,omitempty"`
 	Types      []string `json:"types,omitempty"`

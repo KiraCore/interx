@@ -425,18 +425,18 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 
 	if request.StartDate != "" {
 		criteria["timestamp"] = map[string]interface{}{
-			"$gt": request.StartDate,
+			"$gte": request.StartDate,
 		}
 
 		if request.EndDate != "" {
 			criteria["timestamp"] = map[string]interface{}{
-				"$gt": request.StartDate,
-				"$lt": request.EndDate,
+				"$gte": request.StartDate,
+				"$lte": request.EndDate,
 			}
 		}
 	} else if request.EndDate != "" {
 		criteria["timestamp"] = map[string]interface{}{
-			"$lt": request.EndDate,
+			"$lte": request.EndDate,
 		}
 	}
 
@@ -475,7 +475,7 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		if len(request.Directions) == 0 {
 			orConditions = []map[string]interface{}{
 				{"messages.from_address": request.Address},
-				{"messages.to_address": request.Address},
+				{"pf": request.Address},
 				{"tx_result.events.attributes.value": request.Address},
 			}
 		} else {
