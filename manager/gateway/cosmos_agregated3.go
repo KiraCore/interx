@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 	sekaitypes "github.com/KiraCore/sekai/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/KiraCore/sai-storage-mongo/external/adapter"
 	"go.uber.org/zap"
 
 	"github.com/KiraCore/sai-interx-manager/logger"
@@ -361,6 +361,8 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		Limit:  sekaitypes.PageIterationLimit - 1,
 	}
 
+	logger.Logger.Debug("[query-transactions] request", zap.Any("req", req))
+
 	jsonData, err := json.Marshal(req.Payload)
 	if err != nil {
 		logger.Logger.Error("[query-transactions] Invalid request format", zap.Error(err))
@@ -374,32 +376,27 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 	}
 
 	sortMap := make(map[string]interface{})
-	if request.Sort != nil {
-		sortMap = request.Sort
-	} else if req.Payload["sort"] != nil {
-		sortStr, ok := req.Payload["sort"].(string)
-		if ok && sortStr != "" {
-			parts := strings.Split(sortStr, ":")
-			var field string
-			var direction string
+	if request.Sort != "" {
+		parts := strings.Split(request.Sort, ":")
+		var field string
+		var direction string
 
-			if len(parts) == 2 {
-				field = strings.TrimSpace(parts[0])
-				direction = strings.TrimSpace(parts[1])
-			} else if len(parts) == 1 {
-				field = "cr_time"
-				direction = strings.TrimSpace(parts[0])
-			}
+		if len(parts) == 2 {
+			field = strings.TrimSpace(parts[0])
+			direction = strings.TrimSpace(parts[1])
+		} else if len(parts) == 1 {
+			field = "cr_time"
+			direction = strings.TrimSpace(parts[0])
+		}
 
-			if field != "" {
-				var dirValue int
-				if direction == "desc" || direction == "-1" {
-					dirValue = -1
-				} else {
-					dirValue = 1
-				}
-				sortMap[field] = dirValue
+		if field != "" {
+			var dirValue int
+			if direction == "desc" || direction == "-1" {
+				dirValue = -1
+			} else {
+				dirValue = 1
 			}
+			sortMap[field] = dirValue
 		}
 	}
 
@@ -426,20 +423,20 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		}
 	}
 
-	if request.StartDate > 0 {
+	if request.StartDate != "" {
 		criteria["timestamp"] = map[string]interface{}{
-			"$gt": request.StartDate,
+			"$gte": request.StartDate,
 		}
 
-		if request.EndDate > 0 {
+		if request.EndDate != "" {
 			criteria["timestamp"] = map[string]interface{}{
-				"$gt": request.StartDate,
-				"$lt": request.EndDate,
+				"$gte": request.StartDate,
+				"$lte": request.EndDate,
 			}
 		}
-	} else if request.EndDate > 0 {
+	} else if request.EndDate != "" {
 		criteria["timestamp"] = map[string]interface{}{
-			"$lt": request.EndDate,
+			"$lte": request.EndDate,
 		}
 	}
 
@@ -467,21 +464,43 @@ func (g *CosmosGateway) transactions(req types.InboundRequest) (interface{}, err
 		return nil, fmt.Errorf("directions filter requires address to be specified")
 	}
 
+	logger.Logger.Debug("[query-transactions] request",
+		zap.Any("request.Directions", request.Directions),
+		zap.Any("request.Address", request.Address),
+	)
+
 	if request.Address != "" {
 		orConditions := []map[string]interface{}{}
 
 		if len(request.Directions) == 0 {
 			orConditions = []map[string]interface{}{
 				{"messages.from_address": request.Address},
-				{"messages.to_address": request.Address},
+				{"pf": request.Address},
+				{"tx_result.events.attributes.value": request.Address},
 			}
 		} else {
 			for _, direction := range request.Directions {
 				switch direction {
 				case "inbound":
 					orConditions = append(orConditions, map[string]interface{}{"messages.to_address": request.Address})
+					orConditions = append(orConditions, map[string]interface{}{
+						"tx_result.events.attributes": map[string]interface{}{
+							"$elemMatch": map[string]interface{}{
+								"key":   "recipient",
+								"value": request.Address,
+							},
+						},
+					})
 				case "outbound":
 					orConditions = append(orConditions, map[string]interface{}{"messages.from_address": request.Address})
+					orConditions = append(orConditions, map[string]interface{}{
+						"tx_result.events.attributes": map[string]interface{}{
+							"$elemMatch": map[string]interface{}{
+								"key":   "sender",
+								"value": request.Address,
+							},
+						},
+					})
 				}
 			}
 		}
