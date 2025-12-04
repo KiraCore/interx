@@ -48,6 +48,7 @@ type InternalService struct {
 	storageConfig model.StorageConfig
 	notifier      Notifier
 	client        http.Client
+	indexed       bool
 }
 
 func (is *InternalService) Init() {
@@ -108,19 +109,29 @@ func (is *InternalService) Init() {
 	if is.currentBlock < startBlock {
 		is.currentBlock = startBlock
 	}
-
-	is.ProcessIndexes()
 }
 
 func (is *InternalService) ProcessIndexes() {
 	var newBlockIndexes = []IndexData{
 		{
+			Keys:   []bson.M{{"cr_time": 1}},
+			Unique: false,
+		},
+		{
 			Keys:   []bson.M{{"block_id.hash": 1}},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"block_id.height": 1}},
 			Unique: false,
 		},
 	}
 
 	var newTransactionIndexes = []IndexData{
+		{
+			Keys:   []bson.M{{"cr_time": 1}},
+			Unique: false,
+		},
 		{
 			Keys:   []bson.M{{"hash": 1}},
 			Unique: false,
@@ -139,6 +150,17 @@ func (is *InternalService) ProcessIndexes() {
 		},
 		{
 			Keys:   []bson.M{{"tx_result.code": 1}},
+			Unique: false,
+		},
+		{
+			Keys: []bson.M{
+				{"tx_result.events.attributes.key": 1},
+				{"tx_result.events.attributes.value": 1},
+			},
+			Unique: false,
+		},
+		{
+			Keys:   []bson.M{{"tx_result.events.attributes.value": 1}},
 			Unique: false,
 		},
 	}
@@ -175,6 +197,7 @@ func (is *InternalService) ProcessIndexes() {
 		logger.Logger.Debug("ProcessIndexes", zap.Any("indexResp", indexResp))
 	}
 
+	is.indexed = true
 }
 
 func hasRequiredIndexes(data interface{}, required []IndexData) bool {
@@ -315,6 +338,7 @@ func (is *InternalService) handleBlockTxs() error {
 	}
 
 	if len(txArray) > 0 {
+
 		err = is.sendTxsToStorage(txArray)
 		if err != nil {
 			logger.Logger.Error("handleBlockTxs", zap.Error(err))
@@ -431,6 +455,10 @@ func (is *InternalService) sendTxsToStorage(txs []model.Tx) error {
 		if err != nil {
 			continue
 		}
+	}
+
+	if !is.indexed {
+		is.ProcessIndexes()
 	}
 
 	return nil
