@@ -159,6 +159,7 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultRes
 		Offset int    `json:"offset,string,omitempty"`
 		HasTxs int    `json:"has_txs,string,omitempty"`
 		Order  string `json:"order_by,omitempty"`
+		Sort   string `json:"sort,omitempty"`
 	}
 
 	request := BlocksRequest{
@@ -180,10 +181,38 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultRes
 		return nil, err
 	}
 
+	sortMap := make(map[string]interface{})
+	if request.Sort != "" {
+		parts := strings.Split(request.Sort, ":")
+		var field string
+		var direction string
+
+		if len(parts) == 2 {
+			field = strings.TrimSpace(parts[0])
+			direction = strings.TrimSpace(parts[1])
+		} else if len(parts) == 1 {
+			field = "block.header.height"
+			direction = strings.TrimSpace(parts[0])
+		}
+
+		if field != "" {
+			var dirValue int
+			if direction == "desc" || direction == "-1" {
+				dirValue = -1
+			} else {
+				dirValue = 1
+			}
+			sortMap[field] = dirValue
+		}
+	} else {
+		sortMap["block.header.height"] = -1
+	}
+
 	options := &adapter.Options{
 		Count: 1,
 		Limit: int64(request.Limit),
 		Skip:  int64(request.Offset),
+		Sort:  sortMap,
 	}
 
 	if request.Height != "" {
