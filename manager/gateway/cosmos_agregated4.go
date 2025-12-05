@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	sekaitypes "github.com/KiraCore/sekai/types"
@@ -197,8 +198,8 @@ func (g *CosmosGateway) proposalsCount() (int, error) {
 	return totalCount, nil
 }
 
-func (g *CosmosGateway) getProposals(req types.InboundRequest) (*types.ProposalsResponse, error) {
-	proposals := new(types.ProposalsResponse)
+func (g *CosmosGateway) getProposals(req types.InboundRequest) ([]interface{}, error) {
+	var proposalsInterface []interface{}
 	limit := sekaitypes.PageIterationLimit - 1
 	offset := 0
 
@@ -231,24 +232,18 @@ func (g *CosmosGateway) getProposals(req types.InboundRequest) (*types.Proposals
 			break
 		}
 
-		if afterProposalID, afterOk := req.Payload["afterProposalId"].(string); afterOk {
-			for _, proposal := range subResult.Proposals {
-				if proposal.ProposalID > afterProposalID {
-					proposals.Proposals = append(proposals.Proposals, proposal)
-				}
-			}
-		} else {
-			proposals.Proposals = append(proposals.Proposals, subResult.Proposals...)
+		for _, proposal := range subResult.Proposals {
+			proposalsInterface = append(proposalsInterface, proposal)
 		}
 
 		offset += limit
 	}
 
-	return proposals, nil
+	return proposalsInterface, nil
 }
 
 func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error) {
-	var lastId = "0"
+	const cacheTTL = 300
 
 	var proposalsResponse = types.ProposalsResponse{
 		Pagination: types.Pagination{
@@ -274,6 +269,25 @@ func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error)
 		return proposalsResponse, err
 	}
 
+	now := time.Now().Unix()
+	cacheExpired := false
+
+	if len(cachedTotal.Result) > 0 {
+		if cachedAtI, ok := cachedTotal.Result[0]["cr_time"]; ok {
+			if cachedAt, ok := cachedAtI.(int64); ok {
+				if now-cachedAt > cacheTTL {
+					cacheExpired = true
+				}
+			} else if cachedAtFloat, ok := cachedAtI.(float64); ok {
+				if now-int64(cachedAtFloat) > cacheTTL {
+					cacheExpired = true
+				}
+			}
+		} else {
+			cacheExpired = true
+		}
+	}
+
 	count, err := g.proposalsCount()
 	if err != nil {
 		logger.Logger.Error("[query-proposals] Failed to count proposals", zap.Error(err))
@@ -284,29 +298,21 @@ func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error)
 		return proposalsResponse, nil
 	}
 
-	if len(cachedTotal.Result) > 0 {
-		if lastIdI, ok := cachedTotal.Result[0]["proposalId"]; ok {
-			if lastIdR, ok := lastIdI.(string); ok {
-				lastId = lastIdR
+	if cacheExpired || count > cachedTotal.Count {
+		if cacheExpired {
+			_, err = g.storage.Delete("proposals_cache", criteria)
+			if err != nil {
+				logger.Logger.Error("[query-proposals] Failed to clear expired cache", zap.Error(err))
 			}
 		}
-	}
 
-	if count > cachedTotal.Count {
-		req.Payload["afterProposalId"] = lastId
 		newProposals, err := g.getProposals(req)
 		if err != nil {
 			logger.Logger.Error("[query-proposals] Failed to get new proposals", zap.Error(err))
 			return proposalsResponse, err
 		}
 
-		// Convert []types.Proposal to []interface{} for storage
-		proposalsInterface := make([]interface{}, len(newProposals.Proposals))
-		for i, proposal := range newProposals.Proposals {
-			proposalsInterface[i] = proposal
-		}
-
-		_, err = g.storage.Create("proposals_cache", proposalsInterface)
+		_, err = g.storage.Create("proposals_cache", newProposals)
 		if err != nil {
 			logger.Logger.Error("[query-proposals] Failed to save proposals cache", zap.Error(err))
 			return proposalsResponse, err
@@ -328,16 +334,38 @@ func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error)
 		return proposalsResponse, err
 	}
 
+	sortMap := make(map[string]interface{})
+	if request.Sort != "" {
+		parts := strings.Split(request.Sort, ":")
+		var field string
+		var direction string
+
+		if len(parts) == 2 {
+			field = strings.TrimSpace(parts[0])
+			direction = strings.TrimSpace(parts[1])
+		} else if len(parts) == 1 {
+			field = "proposalId"
+			direction = strings.TrimSpace(parts[0])
+		}
+
+		if field != "" {
+			var dirValue int
+			if direction == "desc" || direction == "-1" {
+				dirValue = -1
+			} else {
+				dirValue = 1
+			}
+			sortMap[field] = dirValue
+		}
+	} else {
+		sortMap["proposalId"] = -1
+	}
+
 	options := &adapter.Options{
 		Limit: request.Limit,
 		Skip:  request.Offset,
-		Count: request.CountTotal,
-	}
-
-	if request.SortBy == "dateASC" {
-		options.Sort = map[string]interface{}{"timestamp": 1}
-	} else {
-		options.Sort = map[string]interface{}{"timestamp": -1}
+		Count: 1,
+		Sort:  sortMap,
 	}
 
 	if request.Proposer != "" {
@@ -390,7 +418,7 @@ func (g *CosmosGateway) proposals(req types.InboundRequest) (interface{}, error)
 	proposalsResponse.Proposals = proposals
 	proposalsResponse.Pagination.Total = response.Count
 
-	return proposals, nil
+	return proposalsResponse, nil
 }
 
 func (g *CosmosGateway) faucet(req types.InboundRequest) (interface{}, error) {
