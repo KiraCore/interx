@@ -19,10 +19,11 @@ type Request struct {
 }
 
 type Options struct {
-	Limit int64       `json:"limit"`
-	Skip  int64       `json:"skip"`
-	Sort  interface{} `json:"sort"`
-	Count int64       `json:"count"`
+	Limit           int64       `json:"limit"`
+	Skip            int64       `json:"skip"`
+	Sort            interface{} `json:"sort"`
+	Count           int64       `json:"count"`
+	NumericOrdering bool        `json:"numeric_ordering"`
 }
 
 func (r Request) GetMethod() string {

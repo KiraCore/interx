@@ -150,6 +150,10 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 		requestOptions.SetProjection(projection)
 	}
 
+	if inputOptions.NumericOrdering {
+		requestOptions.Collation.NumericOrdering = true
+	}
+
 	collection := c.GetCollection(collectionName)
 	selector = c.preprocessSelector(selector)
 
