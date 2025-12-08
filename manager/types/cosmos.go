@@ -248,6 +248,7 @@ type ProposalsRequest struct {
 	DateStart  int      `json:"date_start,string,omitempty"`
 	DateEnd    int      `json:"date_end,string,omitempty"`
 	SortBy     string   `json:"sort_by,omitempty"`
+	Sort       string   `json:"sort,omitempty"`
 	Types      []string `json:"types,omitempty"`
 	Statuses   []string `json:"statuses,omitempty"`
 	Voter      string   `json:"voter,omitempty"`

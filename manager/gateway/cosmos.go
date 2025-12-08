@@ -564,7 +564,7 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
 					return nil, err
 				}
-				return g.getProposals(req)
+				return g.proposals(req)
 			})
 		}
 	case "/kira/tokens/aliases":
