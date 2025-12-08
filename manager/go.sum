@@ -63,6 +63,10 @@ github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d/go.mod h1:
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/KeisukeYamashita/go-jsonrpc v1.0.1 h1:mkg8th2I7C1y3tnAsxroQbmQcXEZ22AkQ5pazRd/KDM=
 github.com/KeisukeYamashita/go-jsonrpc v1.0.1/go.mod h1:NyiYd1oDwaSsIflCju5dKRvLdG5rZ/I4E07ygRYYmgc=
+github.com/KiraCore/sai-service v1.0.5 h1:AZQof+UGMNeZmnoHBHSOoVDW3SjZTkjw3qmh5xl5CMc=
+github.com/KiraCore/sai-service v1.0.5/go.mod h1:WDUOx/Eb4K6mFwp2mKNT3c25q/MqakvcWxWkY2MDaxQ=
+github.com/KiraCore/sai-storage-mongo v1.1.9 h1:hVPge433R6ub20GaTgz8RFzFiYxdYzO8euakXjZUZM8=
+github.com/KiraCore/sai-storage-mongo v1.1.9/go.mod h1:qtfzydkxN6LLAoBDjoxwaF1RMtuwIqkVhCDNlQO2Vi0=
 github.com/KiraCore/sekai v0.4.13 h1:WGRyV+OTK/qIO9o/yvIyFaXDSRsFrP0ja1YKUexLspc=
 github.com/KiraCore/sekai v0.4.13/go.mod h1:G9WTP5pUebDPMa699uKjvQZ+lyLt9iRNdaLd9N1PuMg=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
@@ -499,12 +503,6 @@ github.com/rs/zerolog v1.30.0/go.mod h1:/tk+P47gFdPXq4QYjvCmT5/Gsug2nagsFWBWhAiS
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-github.com/saiset-co/sai-interx-manager v1.0.0 h1:dvLGK3pckjFSvutJO9OUDu6LUBmx/ZCrR504Q1qxxd0=
-github.com/saiset-co/sai-interx-manager v1.0.0/go.mod h1:mmShNmvf9xYysd5tmLfKnYFJ1VpWG8YuzNUV4BKOFvU=
-github.com/saiset-co/sai-service v1.0.5 h1:gYuzy/ZycSkzj1/PfLAzCneHFMOL/NuSGvR+mz5i7jU=
-github.com/saiset-co/sai-service v1.0.5/go.mod h1:BhcyROqAW7OnZmhiL0dWhM38AjWuI6uxfcRit7eQnyo=
-github.com/saiset-co/sai-storage-mongo v1.1.4 h1:77AXGhGvqaSi7S7UzZIfa4YnH23C1sBe93mtwg38BDA=
-github.com/saiset-co/sai-storage-mongo v1.1.4/go.mod h1:QDSkABdAKSfsEWnz/R6RWcy3Vd3Oltdtb+AhLE1zTZA=
 github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71efZx0=
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible h1:Bn1aCHHRnjv4Bl16T8rcaFjYSrGrIZvpiGO6P3Q4GpU=

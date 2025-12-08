@@ -150,8 +150,13 @@ func (c Client) Find(collectionName string, selector map[string]interface{}, inp
 		requestOptions.SetProjection(projection)
 	}
 
-	if inputOptions.NumericOrdering {
-		requestOptions.Collation.NumericOrdering = true
+	if inputOptions != nil && inputOptions.NumericOrdering {
+		collation := &options.Collation{
+			Locale:          "en_US",
+			NumericOrdering: true,
+		}
+
+		requestOptions.SetCollation(collation)
 	}
 
 	collection := c.GetCollection(collectionName)
