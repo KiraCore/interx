@@ -14,7 +14,7 @@ common:
     port: 8881                   # WebSocket port
 
 # Service version for compatibility checks
-version: "v0.21.0"
+version: "v0.22.0"
 
 # ----------------------------------------------------------------------------
 # STORAGE SERVICE (sai-storage-mongo)
