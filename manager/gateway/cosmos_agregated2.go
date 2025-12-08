@@ -209,10 +209,11 @@ func (g *CosmosGateway) blocks(req types.InboundRequest) (*types.BlocksResultRes
 	}
 
 	options := &adapter.Options{
-		Count: 1,
-		Limit: int64(request.Limit),
-		Skip:  int64(request.Offset),
-		Sort:  sortMap,
+		Count:           1,
+		Limit:           int64(request.Limit),
+		Skip:            int64(request.Offset),
+		Sort:            sortMap,
+		NumericOrdering: true,
 	}
 
 	if request.Height != "" {
