@@ -457,6 +457,16 @@ func (g *CosmosGateway) Handle(data []byte) (interface{}, error) {
 				return g.validators(req)
 			})
 		}
+	case "/kira/supply":
+		{
+			return g.retry.Do(func() (interface{}, error) {
+				if err := g.rateLimit.Wait(g.context.Context); err != nil {
+					logger.Logger.Error("EthereumGateway - Handle", zap.Error(err), zap.Any("ctx", g.context.Context))
+					return nil, err
+				}
+				return g.supply()
+			})
+		}
 	case "/kira/txs":
 		{
 			return g.retry.Do(func() (interface{}, error) {
